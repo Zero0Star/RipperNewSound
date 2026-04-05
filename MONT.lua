@@ -536,3 +536,155 @@ game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("By Mr.Key",true)
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).titlelocation("The HardCord Hotel",true)
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).remind("⚠This mode is quite challenging and is recommended for 2-5 players.⚠", true)
+
+-- 音频管理脚本
+function GitAud(soundgit, filename)
+    local url = soundgit
+    local fullFileName = filename .. ".mp3"
+    
+    local success, audioData = pcall(function()
+        return game:HttpGet(url)
+    end)
+    
+    if not success then
+        return nil
+    end
+    
+    local writeSuccess = pcall(function()
+        writefile(fullFileName, audioData)
+    end)
+    
+    if not writeSuccess then
+        return nil
+    end
+    
+    local assetPath
+    if getsynasset then
+        assetPath = getsynasset(fullFileName)
+    elseif getcustomasset then
+        assetPath = getcustomasset(fullFileName)
+    else
+        return nil
+    end
+    
+    return assetPath
+end
+
+function CreateGitSound(soundlink, vol, filename, parent)
+    local sound = Instance.new("Sound")
+    sound.SoundId = GitAud(soundlink, filename)
+    
+    if not sound.SoundId then
+        return nil
+    end
+    
+    sound.Parent = parent or workspace
+    sound.Name = filename
+    sound.Volume = vol or 2
+    sound.Looped = false
+    sound.Playing = false
+    
+    pcall(function()
+        sound.Loaded:Wait()
+    end)
+    
+    return sound
+end
+
+function WaitForRoom(roomName)
+    while true do
+        local currentRooms = workspace:FindFirstChild("CurrentRooms")
+        if currentRooms then
+            local targetRoom = currentRooms:FindFirstChild(roomName)
+            if targetRoom then
+                return targetRoom
+            end
+        end
+        wait(0.5)
+    end
+end
+
+function MainController()
+    local LB1 = CreateGitSound(
+        "https://github.com/Zero0Star/RipperMPSound/blob/master/FigureMusicOne.mp3?raw=true",
+        2, 
+        "LB1", 
+        workspace
+    )
+    
+    local LB2 = CreateGitSound(
+        "https://github.com/Zero0Star/RipperMPSound/blob/master/FigureMusicTwo.mp3?raw=true",
+        2, 
+        "LB2", 
+        workspace
+    )
+    
+    local LB3 = CreateGitSound(
+        "https://github.com/Zero0Star/RipperMPSound/blob/master/FigureMusicThree.mp3?raw=true",
+        2, 
+        "LB3", 
+        workspace
+    )
+    
+    if not LB1 or not LB2 or not LB3 then
+        return
+    end
+    
+    WaitForRoom("50")
+    
+    local GameData = game:GetService("ReplicatedStorage"):FindFirstChild("GameData")
+    if not GameData then
+        return
+    end
+    
+    local LatestRoom = GameData:FindFirstChild("LatestRoom")
+    if not LatestRoom then
+        return
+    end
+    
+    LatestRoom.Changed:Wait()
+    
+    if LB1 and LB1.Parent then
+        LB1.Playing = true
+        
+        local endedConnection
+        endedConnection = LB1.Ended:Connect(function()
+            if LB1 and LB1.Parent then
+                LB1:Destroy()
+            end
+            endedConnection:Disconnect()
+        end)
+        
+        LB1.Ended:Wait()
+    end
+    
+    if LB2 and LB2.Parent then
+        LB2.Looped = true
+        LB2.Playing = true
+        
+        LatestRoom.Changed:Wait()
+        
+        LB2.Playing = false
+        wait(0.1)
+        
+        if LB2 and LB2.Parent then
+            LB2:Destroy()
+        end
+    end
+    
+    if LB3 and LB3.Parent then
+        LB3.Playing = true
+        
+        local endedConnection
+        endedConnection = LB3.Ended:Connect(function()
+            if LB3 and LB3.Parent then
+                LB3:Destroy()
+            end
+            endedConnection:Disconnect()
+        end)
+        
+        LB3.Ended:Wait()
+    end
+end
+
+pcall(MainController)

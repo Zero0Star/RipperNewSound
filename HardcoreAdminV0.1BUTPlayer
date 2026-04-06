@@ -633,7 +633,7 @@ function LoadCustomInstance(source, parent)
     return model
 end
 
-local s = LoadCustomInstance(106313350183955, workspace)
+local s = LoadCustomInstance(81636416579715, workspace)
 if not s then
     warn("Failed to load Frost entity.")
     return

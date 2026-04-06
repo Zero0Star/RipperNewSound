@@ -467,28 +467,30 @@ addDexButton("Cobalt", "Cobalt", function()
 end)
 
 addDexButton("Deleteall", "Delete all", function()
-    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+   local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
 Event:FireServer(
-    "DELETE ALL",
-    {}
-)
-    local function deleteDirectChildModels()
-    local workspace = game:GetService("Workspace")
-    local modelNames = {
-        "A-200", "A60", "Amin-60", "Black-A60", "Deer god", "DeerGod",
-        "Frostbite", "@&%^#*$Indescribable God!@$*&^!Q(* ", "LightSpeed",
-        "Rebound", "Ripper", "Following_ENEMY", "Silence", "smiler", "Chainsmoker"
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "7298463798",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "7298463798",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
     }
-    
-    for _, name in ipairs(modelNames) do
-        local model = workspace:FindFirstChild(name)
-        if model and model:IsA("Model") then
-            model:Destroy()
-        end
-    end
-end
-
-deleteDirectChildModels()
+)
 end)
 
 addDexButton("JeffTheKillerHighlight", "JeffKiller Light", function()

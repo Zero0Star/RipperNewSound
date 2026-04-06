@@ -1822,6 +1822,82 @@ for _, entity in pairs(workspace:GetChildren()) do
         end
     end
 end
+----DEL ALL
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+     local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "DELETE ALL",
+    {}
+)
+    local function deleteDirectChildModels()
+    local workspace = game:GetService("Workspace")
+    local modelNames = {
+        "A-200", "A60", "Amin-60", "Black-A60", "Deer god", "DeerGod",
+        "Frostbite", "@&%^#*$Indescribable God!@$*&^!Q(* ", "LightSpeed",
+        "Rebound", "Ripper", "Following_ENEMY", "Silence", "smiler", "Chainsmoker"
+    }
+    
+    for _, name in ipairs(modelNames) do
+        local model = workspace:FindFirstChild(name)
+        if model and model:IsA("Model") then
+            model:Destroy()
+        end
+    end
+end
+
+deleteDirectChildModels()
+
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140736591220630" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
 -----smiler
 local checkedEntities = {}
 local listeningSounds = {}

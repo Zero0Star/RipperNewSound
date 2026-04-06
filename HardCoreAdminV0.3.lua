@@ -474,30 +474,327 @@ addDexButton("Cobalt", "Cobalt", function()
 end)
 
 addDexButton("Deleteall", "Delete all", function()
-    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
 Event:FireServer(
-    "DELETE ALL",
-    {}
-)
-    local function deleteDirectChildModels()
-    local workspace = game:GetService("Workspace")
-    local modelNames = {
-        "A-200", "A60", "Amin-60", "Black-A60", "Deer god", "DeerGod",
-        "Frostbite", "@&%^#*$Indescribable God!@$*&^!Q(* ", "LightSpeed",
-        "Rebound", "Ripper", "Following_ENEMY", "Silence", "smiler", "Chainsmoker"
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "140736591220630",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "140736591220630",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
     }
-    
-    for _, name in ipairs(modelNames) do
-        local model = workspace:FindFirstChild(name)
-        if model and model:IsA("Model") then
-            model:Destroy()
+)
+   end)
+
+addDexButton("Spwna", "Spwna BackRooms1", function()
+function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    warn("Executor không hỗ trợ file APIs.")
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(14961029770, workspace)
+if not s then
+    warn("Failed to load Frost entity.")
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 5, -15)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
         end
     end
 end
-
-deleteDirectChildModels()
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
 end)
 
+end)
+
+addDexButton("Spwna", "Spwna BackRooms2", function()
+   function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    warn("Executor không hỗ trợ file APIs.")
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(86817060059749, workspace)
+if not s then
+    warn("Failed to load Frost entity.")
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 5, -15)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
+        end
+    end
+end
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
+end)
+wait(5)
+function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    warn("Executor không hỗ trợ file APIs.")
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(14961029770, workspace)  -- 可以直接使用数字ID
+if not s then
+    warn("Failed to load Frost entity.")
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 5, -15)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
+        end
+    end
+end
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
+end)
+end)
 addDexButton("JeffTheKillerHighlight", "JeffKiller Light", function()
     local Workspace = game:GetService("Workspace")
 

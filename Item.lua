@@ -432,9 +432,9 @@ task.spawn(function()
         ["tipjar"] = {assetId = 82962070519273},
         ["gweensoda"] = {assetId = 123708207888191},
         ["shakelight"] = {assetId = 71349337541000},
-        ["starvial"] = {assetId = 94221773495375},
+        ["starvial"] = {assetId = 75495333223363},
         ["starbottle"] = {assetId = 85527257914363},
-        ["knockbackstick"] = {assetId = 128089163384066}  -- 修改为新ID
+        ["knockbackstick"] = {assetId = 128089163384066}
     }
 
     local CHECK_INTERVAL = 0.3

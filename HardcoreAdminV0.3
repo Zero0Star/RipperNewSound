@@ -1166,31 +1166,12 @@ addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
     end
 end)
 
-addDexButton("SubSpace Mine", "SubSpace Mine", function()
-local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
-Event:FireServer(
-    "Spawn Custom Entity",
-    {
-        ["Fog Image ID"] = "9712725118",
-        ["Face Image ID"] = "9712725118",
-        ["Fog Color"] = Color3.new(0, 0, 0),
-        Rebounds = 0,
-        ["Far Sound"] = {
-            Pitch = 1,
-            AudioId = "124942412759969",
-            Speed = 0
-        },
-        ["Light Color"] = Color3.new(0, 0, 0),
-        Speed = 0,
-        ["Close Sound"] = {
-            Pitch = 1,
-            AudioId = "124942412759969",
-            Speed = 0
-        },
-        Delay = 100,
-        Damage = 0
-    }
-)
+addDexButton("Placeholder", "Placeholder", function()
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("End Room Task",true)
+end)
+
+addDexButton("Place2", "End", function()
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("这把枪看起来有点生锈..我该小心使用..",true)
 end)
 
 addDexButton("CuriousLight", "Curious Light", function()
@@ -2039,7 +2020,7 @@ Event:FireServer(
             AudioId = "135376180128296",
             Speed = 0
         },
-        Delay = 0,
+        Delay = 100,
         Damage = 0
     }
 )

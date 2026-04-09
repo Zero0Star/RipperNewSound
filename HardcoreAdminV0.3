@@ -1532,6 +1532,33 @@ Event:FireServer(
 )
 end)
 
+addMonsterButton("A-333", "A-333", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "136073454817575",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "136073454817575",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
 addMonsterButton("A500", "A-500", function()
        local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
 Event:FireServer(

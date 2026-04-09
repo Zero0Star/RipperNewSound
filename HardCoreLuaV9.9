@@ -1,0 +1,282 @@
+-- Main UI Creation
+local v1 = Instance.new("ScreenGui")
+v1.Name = "TechWindow"
+v1.ResetOnSpawn = false
+v1.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Main frame
+local v2 = Instance.new("Frame")
+v2.Name = "MainFrame"
+v2.BackgroundColor3 = Color3.fromRGB(28, 0, 0)
+v2.BackgroundTransparency = 1  -- Start transparent for fade-in
+v2.BorderColor3 = Color3.fromRGB(255, 50, 50)
+v2.BorderSizePixel = 2
+v2.Position = UDim2.new(0.5, -150, 0.5, -100)
+v2.Size = UDim2.new(0, 300, 0, 200)
+v2.Parent = v1
+
+-- Add futuristic glow effect
+local v3 = Instance.new("UIStroke")
+v3.Name = "Glow"
+v3.Color = Color3.fromRGB(255, 80, 80)
+v3.Thickness = 3
+v3.Transparency = 1  -- Start transparent
+v3.Parent = v2
+
+-- Title
+local v4 = Instance.new("TextLabel")
+v4.Name = "Title"
+v4.BackgroundTransparency = 1
+v4.Position = UDim2.new(0, 0, 0, 10)
+v4.Size = UDim2.new(1, 0, 0, 30)
+v4.Font = Enum.Font.SciFi
+v4.Text = "TECH CONTROL PANEL"
+v4.TextColor3 = Color3.fromRGB(255, 150, 150)
+v4.TextScaled = true
+v4.TextStrokeTransparency = 1  -- Start transparent
+v4.TextTransparency = 1  -- Start transparent
+v4.Parent = v2
+
+-- Close button (X)
+local v5 = Instance.new("TextButton")
+v5.Name = "CloseButton"
+v5.BackgroundTransparency = 1
+v5.Position = UDim2.new(1, -30, 0, 0)
+v5.Size = UDim2.new(0, 30, 0, 30)
+v5.Font = Enum.Font.SciFi
+v5.Text = "X"
+v5.TextColor3 = Color3.fromRGB(255, 100, 100)
+v5.TextScaled = true
+v5.TextTransparency = 1  -- Start transparent
+v5.Parent = v2
+
+-- Button container
+local v6 = Instance.new("Frame")
+v6.Name = "ButtonContainer"
+v6.BackgroundTransparency = 1
+v6.Position = UDim2.new(0, 20, 0, 60)
+v6.Size = UDim2.new(1, -40, 0, 120)
+v6.Parent = v2
+
+-- Function to create buttons
+local function v7(name, text, position)
+	local v8 = Instance.new("TextButton")
+	v8.Name = name
+	v8.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
+	v8.BackgroundTransparency = 1  -- Start transparent
+	v8.BorderColor3 = Color3.fromRGB(255, 50, 50)
+	v8.BorderSizePixel = 2
+	v8.Position = position
+	v8.Size = UDim2.new(0, 120, 0, 40)
+	v8.Font = Enum.Font.SciFi
+	v8.Text = text
+	v8.TextColor3 = Color3.fromRGB(255, 150, 150)
+	v8.TextScaled = true
+	v8.TextTransparency = 1  -- Start transparent
+	
+	-- Button glow
+	local v9 = Instance.new("UIStroke")
+	v9.Color = Color3.fromRGB(255, 80, 80)
+	v9.Thickness = 2
+	v9.Transparency = 1  -- Start transparent
+	v9.Parent = v8
+	
+	return v8, v9
+end
+
+-- Create buttons
+local v10, v10glow = v7("LuaOne", "LuaOne", UDim2.new(0, 0, 0, 0))
+local v11, v11glow = v7("LuaTwo", "LuaTwo", UDim2.new(1, -120, 0, 0))
+local v12, v12glow = v7("Music", "Music", UDim2.new(0, 0, 1, -40))
+local v13, v13glow = v7("OMMGD", "?", UDim2.new(1, -120, 1, -40))
+
+-- Add buttons to container
+v10.Parent = v6
+v11.Parent = v6
+v12.Parent = v6
+v13.Parent = v6
+
+-- Function for fade-in animation
+local function v14()
+	-- Fade in main frame background
+	local v15 = game:GetService("TweenService")
+	local v16 = v15:Create(v2, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 0.1
+	})
+	
+	-- Fade in border glow
+	local v17 = v15:Create(v3, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 0.3
+	})
+	
+	-- Fade in title
+	local v18 = v15:Create(v4, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		TextTransparency = 0,
+		TextStrokeTransparency = 0.8
+	})
+	
+	-- Fade in close button
+	local v19 = v15:Create(v5, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		TextTransparency = 0
+	})
+	
+	-- Fade in all buttons
+	local v20 = v15:Create(v10, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 0,
+		TextTransparency = 0
+	})
+	
+	local v21 = v15:Create(v10glow, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 0
+	})
+	
+	local v22 = v15:Create(v11, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 0,
+		TextTransparency = 0
+	})
+	
+	local v23 = v15:Create(v11glow, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 0
+	})
+	
+	local v24 = v15:Create(v12, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 0,
+		TextTransparency = 0
+	})
+	
+	local v25 = v15:Create(v12glow, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 0
+	})
+	
+	local v26 = v15:Create(v13, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 0,
+		TextTransparency = 0
+	})
+	
+	local v27 = v15:Create(v13glow, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 0
+	})
+	
+	-- Play all animations
+	v16:Play()
+	v17:Play()
+	v18:Play()
+	v19:Play()
+	v20:Play()
+	v21:Play()
+	v22:Play()
+	v23:Play()
+	v24:Play()
+	v25:Play()
+	v26:Play()
+	v27:Play()
+end
+
+-- Function for fade-out animation
+local function v28()
+	-- Fade out all elements
+	local v29 = game:GetService("TweenService")
+	local v30 = v29:Create(v2, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1
+	})
+	
+	local v31 = v29:Create(v3, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 1
+	})
+	
+	local v32 = v29:Create(v4, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		TextTransparency = 1,
+		TextStrokeTransparency = 1
+	})
+	
+	local v33 = v29:Create(v5, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		TextTransparency = 1
+	})
+	
+	local v34 = v29:Create(v10, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1,
+		TextTransparency = 1
+	})
+	
+	local v35 = v29:Create(v10glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 1
+	})
+	
+	local v36 = v29:Create(v11, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1,
+		TextTransparency = 1
+	})
+	
+	local v37 = v29:Create(v11glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 1
+	})
+	
+	local v38 = v29:Create(v12, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1,
+		TextTransparency = 1
+	})
+	
+	local v39 = v29:Create(v12glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 1
+	})
+	
+	local v40 = v29:Create(v13, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1,
+		TextTransparency = 1
+	})
+	
+	local v41 = v29:Create(v13glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 1
+	})
+	
+	-- Play all fade-out animations
+	v30:Play()
+	v31:Play()
+	v32:Play()
+	v33:Play()
+	v34:Play()
+	v35:Play()
+	v36:Play()
+	v37:Play()
+	v38:Play()
+	v39:Play()
+	v40:Play()
+	v41:Play()
+	
+	-- Destroy UI after fade-out completes
+	wait(0.35)
+	v1:Destroy()
+end
+
+-- Function to handle button clicks
+local function v42()
+	v28()
+end
+
+-- Button functions
+v10.MouseButton1Click:Connect(function()
+	loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua.lua?raw=true"))()
+end)
+
+v11.MouseButton1Click:Connect(function()
+	loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/Item.lua?raw=true"))()
+end)
+
+v12.MouseButton1Click:Connect(function()
+	loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/Music.lua?raw=true"))()
+end)
+
+v13.MouseButton1Click:Connect(function()
+	require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("你为什么好奇?",true)
+end)
+
+v5.MouseButton1Click:Connect(v42)
+
+v1.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- Add entrance animation
+v2:TweenPosition(UDim2.new(0.5, -150, 0.5, -120), Enum.EasingDirection.Out, Enum.EasingStyle.Back, 0.5, true)
+
+-- Start fade-in animation
+wait(0.1)  -- Small delay for entrance animation
+v14()

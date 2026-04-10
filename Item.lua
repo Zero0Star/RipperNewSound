@@ -766,3 +766,7 @@ task.spawn(function()
     initialize()
     setupPlayerEvents()
 end)
+-----
+local hint = Instance.new("Hint", Workspace)
+hint.Text = "LoadingItem... Doors HardCore V9.8 By Mr.key & HeavenNow :)"
+game.Debris:AddItem(hint, 5)

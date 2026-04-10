@@ -680,6 +680,697 @@ for _, entity in pairs(workspace:GetChildren()) do
         end
     end
 end
+-----------admin gun
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local REPLACEMENT_CONFIG = {
+    ["goldgun"] = {assetId = 103918224361341}
+}
+local CHECK_INTERVAL = 0.3
+local trackedTargets = {}
+
+local miscHandles = {}
+
+local function loadAssetLocally(assetId)
+    local success, result = pcall(function()
+        return game:GetObjects("rbxassetid://" .. assetId)[1]
+    end)
+    if success and result then
+        return result:Clone()
+    end
+    return nil
+end
+
+local function processGoldGunSounds(goldGun)
+    if not goldGun or not goldGun.Parent then return false end
+    
+    local processedSounds = 0
+    
+    for _, descendant in ipairs(goldGun:GetDescendants()) do
+        if descendant:IsA("Sound") then
+            local soundName = descendant.Name:lower()
+            
+            if soundName == "sound_equip" or soundName == "sound_throw_client" then
+                if not trackedTargets[goldGun] then
+                    trackedTargets[goldGun] = {sounds = {}}
+                end
+                if not trackedTargets[goldGun].sounds then
+                    trackedTargets[goldGun].sounds = {}
+                end
+                
+                trackedTargets[goldGun].sounds[soundName] = {
+                    originalSound = descendant:Clone(),
+                    parent = descendant.Parent,
+                    name = descendant.Name
+                }
+                
+                descendant:Destroy()
+                processedSounds = processedSounds + 1
+            end
+            
+            if soundName == "sound_throw" then
+                local newSoundId = "rbxassetid://139620337204036"
+                
+                if descendant.SoundId ~= newSoundId then
+                    if not trackedTargets[goldGun] then
+                        trackedTargets[goldGun] = {sounds = {}}
+                    end
+                    if not trackedTargets[goldGun].sounds then
+                        trackedTargets[goldGun].sounds = {}
+                    end
+                    
+                    if not trackedTargets[goldGun].sounds["sound_throw"] then
+                        trackedTargets[goldGun].sounds["sound_throw"] = {
+                            originalSoundId = descendant.SoundId,
+                            originalSound = descendant:Clone()
+                        }
+                    end
+                    
+                    descendant.SoundId = newSoundId
+                    descendant.Volume = 0.5
+                    descendant.MaxDistance = 100
+                    descendant.EmitterSize = 5
+                    
+                    processedSounds = processedSounds + 1
+                end
+            end
+            
+            if soundName == "sound_inspect" then
+                local newSoundId = "rbxassetid://134995295985396"
+                
+                if descendant.SoundId ~= newSoundId then
+                    if not trackedTargets[goldGun] then
+                        trackedTargets[goldGun] = {sounds = {}}
+                    end
+                    if not trackedTargets[goldGun].sounds then
+                        trackedTargets[goldGun].sounds = {}
+                    end
+                    
+                    if not trackedTargets[goldGun].sounds["sound_inspect"] then
+                        trackedTargets[goldGun].sounds["sound_inspect"] = {
+                            originalSoundId = descendant.SoundId,
+                            originalSound = descendant:Clone()
+                        }
+                    end
+                    
+                    descendant.SoundId = newSoundId
+                    descendant.Volume = 0.6
+                    descendant.MaxDistance = 80
+                    descendant.EmitterSize = 4
+                    
+                    processedSounds = processedSounds + 1
+                end
+            end
+        end
+    end
+    
+    return processedSounds > 0
+end
+
+local function restoreGoldGunSounds(goldGun)
+    local data = trackedTargets[goldGun]
+    if not data or not data.sounds then return end
+    
+    for soundName, soundData in pairs(data.sounds) do
+        if soundData.originalSound and soundData.parent and soundData.name then
+            local existingSound = soundData.parent:FindFirstChild(soundData.name)
+            if not existingSound then
+                local newSound = soundData.originalSound:Clone()
+                newSound.Parent = soundData.parent
+            end
+        end
+        
+        if soundData.originalSoundId then
+            local targetSound = nil
+            
+            for _, descendant in ipairs(goldGun:GetDescendants()) do
+                if descendant:IsA("Sound") and descendant.Name:lower() == soundName then
+                    targetSound = descendant
+                    break
+                end
+            end
+            
+            if targetSound and soundData.originalSound then
+                targetSound.SoundId = soundData.originalSoundId
+                targetSound.Volume = soundData.originalSound.Volume
+                targetSound.MaxDistance = soundData.originalSound.MaxDistance
+                targetSound.EmitterSize = soundData.originalSound.EmitterSize
+                targetSound.RollOffMode = soundData.originalSound.RollOffMode
+            end
+        end
+    end
+    
+    data.sounds = {}
+end
+
+local function disableModelCollision(model)
+    for _, part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("MeshPart") then
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+        end
+    end
+end
+
+local function hideGoldGunParts(goldGun)
+    if not goldGun or not goldGun.Parent then return end
+    
+    local function hideRecursive(obj)
+        if obj:IsA("MeshPart") or obj:IsA("BasePart") then
+            if not trackedTargets[goldGun] then
+                trackedTargets[goldGun] = {originalParts = {}}
+            end
+            if not trackedTargets[goldGun].originalParts then
+                trackedTargets[goldGun].originalParts = {}
+            end
+            trackedTargets[goldGun].originalParts[obj] = {transparency = obj.Transparency}
+            obj.Transparency = 1
+        end
+        
+        if obj:IsA("ParticleEmitter") or obj:IsA("Beam") or obj:IsA("Trail") then
+            if not trackedTargets[goldGun] then
+                trackedTargets[goldGun] = {originalParts = {}}
+            end
+            if not trackedTargets[goldGun].originalParts then
+                trackedTargets[goldGun].originalParts = {}
+            end
+            trackedTargets[goldGun].originalParts[obj] = {enabled = obj.Enabled}
+            obj.Enabled = false
+        end
+        
+        if obj:IsA("Texture") or obj:IsA("Decal") or obj:IsA("SurfaceAppearance") then
+            if not trackedTargets[goldGun] then
+                trackedTargets[goldGun] = {originalParts = {}}
+            end
+            if not trackedTargets[goldGun].originalParts then
+                trackedTargets[goldGun].originalParts = {}
+            end
+            trackedTargets[goldGun].originalParts[obj] = {transparency = obj.Transparency}
+            obj.Transparency = 1
+        end
+        
+        for _, child in ipairs(obj:GetChildren()) do
+            hideRecursive(child)
+        end
+    end
+    
+    hideRecursive(goldGun)
+end
+
+local function restoreGoldGun(goldGun)
+    local data = trackedTargets[goldGun]
+    if not data then return end
+    
+    if data.originalParts then
+        for part, partData in pairs(data.originalParts) do
+            if part and part.Parent then
+                if (part:IsA("MeshPart") or part:IsA("BasePart")) and partData.transparency then
+                    part.Transparency = partData.transparency
+                elseif (part:IsA("ParticleEmitter") or part:IsA("Beam") or part:IsA("Trail")) and partData.enabled ~= nil then
+                    part.Enabled = partData.enabled
+                elseif (part:IsA("Texture") or part:IsA("Decal") or part:IsA("SurfaceAppearance")) and partData.transparency then
+                    part.Transparency = partData.transparency
+                end
+            end
+        end
+    end
+    
+    restoreGoldGunSounds(goldGun)
+end
+
+local function getItemConfig(itemName)
+    local nameLower = itemName:lower()
+    return REPLACEMENT_CONFIG[nameLower]
+end
+
+local function getTargetCFrame(target)
+    if target:IsA("BasePart") or target:IsA("MeshPart") then
+        return target.CFrame
+    elseif target:IsA("Tool") and target:FindFirstChild("Handle") then
+        return target.Handle.CFrame
+    elseif target:IsA("Model") then
+        if target.PrimaryPart then
+            return target:GetPivot()
+        elseif target:FindFirstChildWhichIsA("BasePart") then
+            return target:FindFirstChildWhichIsA("BasePart").CFrame
+        end
+    end
+    return nil
+end
+
+local function createFollowEffect(target, assetId)
+    local effectModel = loadAssetLocally(assetId)
+    if not effectModel then 
+        return nil 
+    end
+    
+    effectModel.Name = "GoldGun_Follower"
+    effectModel.Parent = workspace
+    disableModelCollision(effectModel)
+    
+    if not effectModel.PrimaryPart then
+        if effectModel:FindFirstChildWhichIsA("BasePart") then
+            effectModel.PrimaryPart = effectModel:FindFirstChildWhichIsA("BasePart")
+        else
+            effectModel:Destroy()
+            return nil
+        end
+    end
+    
+    local targetCFrame = getTargetCFrame(target)
+    if targetCFrame then
+        local rotationCFrame = targetCFrame * CFrame.Angles(math.rad(180), math.rad(90), 0)
+        local offsetCFrame = rotationCFrame + rotationCFrame.UpVector * 0.2
+        effectModel:PivotTo(offsetCFrame)
+    end
+    
+    return effectModel
+end
+
+local function updateEffectPosition(data, target)
+    if not data.effect or not data.effect.Parent or not target or not target.Parent then
+        return false
+    end
+    
+    local targetCFrame = getTargetCFrame(target)
+    if not targetCFrame then
+        return false
+    end
+    
+    local rotationCFrame = targetCFrame * CFrame.Angles(math.rad(-90), math.rad(180), 0)
+    local offsetCFrame = rotationCFrame + rotationCFrame.UpVector * 0.2
+    data.effect:PivotTo(offsetCFrame)
+    return true
+end
+
+local function startTrackingTarget(target, config)
+    if trackedTargets[target] then 
+        return trackedTargets[target] 
+    end
+    
+    local effectModel = createFollowEffect(target, config.assetId)
+    if not effectModel then 
+        return nil 
+    end
+    
+    hideGoldGunParts(target)
+    processGoldGunSounds(target)
+    
+    trackedTargets[target] = {
+        effect = effectModel, 
+        target = target,
+        config = config
+    }
+    
+    local data = trackedTargets[target]
+    
+    data.connection = RunService.RenderStepped:Connect(function()
+        if not updateEffectPosition(data, target) then
+            if data.connection then
+                data.connection:Disconnect()
+            end
+            if data.effect and data.effect.Parent then
+                data.effect:Destroy()
+            end
+            restoreGoldGunSounds(target)
+            trackedTargets[target] = nil
+        end
+    end)
+    
+    return trackedTargets[target]
+end
+
+local function stopTrackingTarget(target, restoreVisibility)
+    local data = trackedTargets[target]
+    if not data then return end
+    
+    if restoreVisibility then
+        restoreGoldGun(target)
+    end
+    
+    if data.effect and data.effect.Parent then
+        data.effect:Destroy()
+    end
+    
+    if data.connection then
+        data.connection:Disconnect()
+    end
+    
+    restoreGoldGunSounds(target)
+    trackedTargets[target] = nil
+end
+
+local function cleanupDestroyedTargets()
+    for target, data in pairs(trackedTargets) do
+        if not target or not target.Parent then
+            if data.effect and data.effect.Parent then
+                data.effect:Destroy()
+            end
+            if data.connection then
+                data.connection:Disconnect()
+            end
+            restoreGoldGunSounds(target)
+            trackedTargets[target] = nil
+        end
+    end
+end
+
+-- 查找Misc文件夹中的Handle
+local function findMiscHandle()
+    local handle = nil
+    
+    local miscFolder = workspace:FindFirstChild("Misc")
+    if miscFolder then
+        handle = miscFolder:FindFirstChild("Handle")
+        if handle and handle:IsA("MeshPart") then
+            return handle
+        end
+    end
+    
+    return nil
+end
+
+-- 隐藏Misc Handle
+local function hideMiscHandle(handle)
+    if not handle or not handle.Parent then return false end
+    
+    if miscHandles[handle] and miscHandles[handle].originalHandleData then
+        return false
+    end
+    
+    if not miscHandles[handle] then
+        miscHandles[handle] = {}
+    end
+    
+    miscHandles[handle].originalHandleData = {
+        transparency = handle.Transparency,
+        canCollide = handle.CanCollide,
+        canTouch = handle.CanTouch,
+        canQuery = handle.CanQuery
+    }
+    
+    handle.Transparency = 1
+    handle.CanCollide = false
+    handle.CanTouch = false
+    handle.CanQuery = false
+    
+    return true
+end
+
+-- 恢复Misc Handle
+local function restoreMiscHandle(handle)
+    local data = miscHandles[handle]
+    if not data or not data.originalHandleData then return end
+    
+    if handle and handle.Parent then
+        handle.Transparency = data.originalHandleData.transparency
+        handle.CanCollide = data.originalHandleData.canCollide
+        handle.CanTouch = data.originalHandleData.canTouch
+        handle.CanQuery = data.originalHandleData.canQuery
+    end
+    
+    data.originalHandleData = nil
+end
+
+local function processMiscHandle()
+    local handle = findMiscHandle()
+    if not handle or miscHandles[handle] then return end
+    
+    local config = getItemConfig("goldgun")
+    if not config then return end
+    
+    hideMiscHandle(handle)
+    
+    local effectModel = loadAssetLocally(config.assetId)
+    if not effectModel then return end
+    
+    effectModel.Name = "GoldGun_Misc_Follower"
+    effectModel.Parent = workspace
+    disableModelCollision(effectModel)
+    
+    if not effectModel.PrimaryPart then
+        if effectModel:FindFirstChildWhichIsA("BasePart") then
+            effectModel.PrimaryPart = effectModel:FindFirstChildWhichIsA("BasePart")
+        else
+            effectModel:Destroy()
+            return
+        end
+    end
+    
+    local rotationCFrame = handle.CFrame * CFrame.Angles(math.rad(180), math.rad(90), 0)
+    local offsetCFrame = rotationCFrame + rotationCFrame.UpVector * -0.2
+    effectModel:PivotTo(offsetCFrame)
+    
+    miscHandles[handle] = {
+        effect = effectModel,
+        handle = handle
+    }
+    
+    local data = miscHandles[handle]
+    
+    data.connection = RunService.RenderStepped:Connect(function()
+        if not data.effect or not data.effect.Parent or not handle or not handle.Parent then
+            if data.connection then
+                data.connection:Disconnect()
+            end
+            if data.effect and data.effect.Parent then
+                data.effect:Destroy()
+            end
+            restoreMiscHandle(handle)
+            miscHandles[handle] = nil
+        else
+            local rotationCFrame = handle.CFrame * CFrame.Angles(math.rad(180), math.rad(90), 0)
+            local offsetCFrame = rotationCFrame + rotationCFrame.UpVector * -0.2
+            data.effect:PivotTo(offsetCFrame)
+        end
+    end)
+end
+
+local function stopMiscHandle(handle)
+    local data = miscHandles[handle]
+    if not data then return end
+    
+    if data.effect and data.effect.Parent then
+        data.effect:Destroy()
+    end
+    
+    if data.connection then
+        data.connection:Disconnect()
+    end
+    
+    restoreMiscHandle(handle)
+    
+    miscHandles[handle] = nil
+end
+
+-- 清理Misc Handle
+local function cleanupMiscHandles()
+    for handle, data in pairs(miscHandles) do
+        if not handle or not handle.Parent then
+            if data.effect and data.effect.Parent then
+                data.effect:Destroy()
+            end
+            if data.connection then
+                data.connection:Disconnect()
+            end
+            restoreMiscHandle(handle)
+            miscHandles[handle] = nil
+        end
+    end
+end
+
+local function findAllGoldGuns()
+    local targets = {}
+    
+    local function findGoldGunsRecursive(parent)
+        for _, child in ipairs(parent:GetChildren()) do
+            if child.Name:lower() == "goldgun" then
+                local config = getItemConfig(child.Name)
+                if config then
+                    table.insert(targets, {target = child, config = config})
+                end
+            end
+            findGoldGunsRecursive(child)
+        end
+    end
+    
+    findGoldGunsRecursive(workspace)
+    return targets
+end
+
+-- 监控并处理所有GoldGun音效
+local function monitorAllGoldGuns()
+    while true do
+        for _, targetData in ipairs(findAllGoldGuns()) do
+            processGoldGunSounds(targetData.target)
+        end
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            local backpack = player:FindFirstChild("Backpack")
+            if backpack then
+                local goldGun = backpack:FindFirstChild("GoldGun")
+                if goldGun then
+                    processGoldGunSounds(goldGun)
+                end
+                
+                if not backpack.ChildAddedConnection then
+                    backpack.ChildAddedConnection = backpack.ChildAdded:Connect(function(child)
+                        if child.Name == "GoldGun" then
+                            task.wait(0.1)
+                            processGoldGunSounds(child)
+                        end
+                    end)
+                end
+            end
+            
+            local character = player.Character
+            if character then
+                local goldGun = character:FindFirstChild("GoldGun")
+                if goldGun then
+                    processGoldGunSounds(goldGun)
+                end
+            end
+        end
+        
+        task.wait(1)
+    end
+end
+
+local function startDetection()
+    local lastCheckTime = 0
+    
+    while true do
+        local currentTime = tick()
+        
+        if currentTime - lastCheckTime >= CHECK_INTERVAL then
+            lastCheckTime = currentTime
+            
+            cleanupDestroyedTargets()
+            cleanupMiscHandles()
+            
+            local allGoldGuns = findAllGoldGuns()
+            
+            for _, targetData in ipairs(allGoldGuns) do
+                if not trackedTargets[targetData.target] then
+                    startTrackingTarget(targetData.target, targetData.config)
+                end
+            end
+            
+            processMiscHandle()
+            
+            for target, data in pairs(trackedTargets) do
+                if target and target.Parent then
+                    local isValid = false
+                    local parent = target.Parent
+                    
+                    while parent do
+                        if parent == workspace then
+                            isValid = true
+                            break
+                        end
+                        parent = parent.Parent
+                    end
+                    
+                    if not isValid then
+                        stopTrackingTarget(target, true)
+                    end
+                end
+            end
+        end
+        
+        RunService.Heartbeat:Wait()
+    end
+end
+
+local function initialize()
+    task.spawn(startDetection)
+    task.spawn(monitorAllGoldGuns)
+end
+
+local function cleanup()
+    for target, _ in pairs(trackedTargets) do
+        stopTrackingTarget(target, true)
+    end
+    
+    for handle, _ in pairs(miscHandles) do
+        stopMiscHandle(handle)
+    end
+    
+    trackedTargets = {}
+    miscHandles = {}
+end
+
+local function setupPlayerEvents()
+    local player = Players.LocalPlayer
+    if player then
+        player:GetPropertyChangedSignal("Character"):Connect(function()
+            cleanupDestroyedTargets()
+        end)
+        
+        player.AncestryChanged:Connect(function(_, parent)
+            if not parent then
+                cleanup()
+            end
+        end)
+    end
+end
+
+initialize()
+setupPlayerEvents()
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://128471328667052" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
 -----------GL
 local checkedEntities = {}
 local listeningSounds = {}
@@ -2935,6 +3626,746 @@ for _, entity in pairs(workspace:GetChildren()) do
         end
     end
 end
+----------ggggl
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://10460221938"
+sound.Volume = 2
+sound.Parent = workspace
+sound:Play()
+
+function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(79757298507315, workspace)
+if not s then
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+if entity then
+    entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 3, -5)
+
+    local partInModel = s:FindFirstChildOfClass("Part")
+    if partInModel then
+        partInModel.CFrame = entity.CFrame
+    end
+end
+
+local RunService = game:GetService("RunService")
+local model = workspace:FindFirstChild("GuidingLight")
+
+if not model or not model.PrimaryPart then
+    return
+end
+
+local root = model.PrimaryPart
+local smoothness = 0.2
+local time = 0
+local lastUpdate = 0
+local UPDATE_INTERVAL = 1/60
+
+RunService.Heartbeat:Connect(function(deltaTime)
+    time = time + deltaTime
+    lastUpdate = lastUpdate + deltaTime
+    
+    if lastUpdate < UPDATE_INTERVAL then
+        return
+    end
+    
+    lastUpdate = 0
+    
+    local closestPlayer
+    local closestDistance = math.huge
+    local myPos = root.Position
+    
+    for _, player in pairs(game.Players:GetPlayers()) do
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local hrp = char.HumanoidRootPart
+            local dist = (hrp.Position - myPos).Magnitude
+            if dist < closestDistance then
+                closestDistance = dist
+                closestPlayer = hrp
+            end
+        end
+    end
+    
+    if closestPlayer then
+        local targetPos = closestPlayer.Position
+        local lookPos = Vector3.new(targetPos.X, myPos.Y, targetPos.Z)
+        
+        local currentCF = root.CFrame
+        local targetCF = CFrame.lookAt(myPos, lookPos)
+        
+        local newCFrame = currentCF:Lerp(targetCF, smoothness)
+        local _, y, _ = newCFrame:ToEulerAnglesYXZ()
+        
+        root.CFrame = CFrame.new(myPos) * CFrame.Angles(0, y, 0)
+    end
+end)
+
+local Workspace = game:GetService("Workspace")
+local GuidingLight = Workspace:FindFirstChild("GuidingLight")
+if not GuidingLight then
+    return
+end
+
+local humanoid = GuidingLight:FindFirstChildOfClass("Humanoid")
+if not humanoid then
+    for _, child in ipairs(GuidingLight:GetChildren()) do
+        print("  -", child.Name, "["..child.ClassName.."]")
+    end
+    if GuidingLight:IsA("Model") then
+        humanoid = Instance.new("Humanoid")
+        humanoid.Name = "Humanoid"
+        humanoid.Parent = GuidingLight
+    else
+        return
+    end
+end
+
+local animator = humanoid:FindFirstChildOfClass("Animator")
+if not animator then
+    animator = Instance.new("Animator")
+    animator.Parent = humanoid
+end
+
+local animationId = "rbxassetid://101845046666732"
+local success, errorMsg = pcall(function()
+    local animation = Instance.new("Animation")
+    animation.AnimationId = animationId
+    animation.Name = "GuidingLightAnimation"
+    
+    local animationTrack = humanoid:LoadAnimation(animation)
+    if animationTrack then
+        animationTrack.Looped = true
+        animationTrack:Play()
+
+        wait(0.3)
+        if animationTrack.IsPlaying then
+        else
+        end
+        
+        return animationTrack
+    end
+    return nil
+end)
+if not success then
+else
+end
+local UserInputService = game:GetService("UserInputService")
+
+local function waitForSoundToEnd()
+    while sound.IsPlaying do
+        wait(1)
+    end
+end
+
+waitForSoundToEnd()
+
+if GuidingLight and GuidingLight.Parent then
+    GuidingLight:Destroy()
+end
+
+if sound and sound.Parent then
+    sound:Stop()
+    sound:Destroy()
+end
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://139371088930869" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+--------ANM
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+achievementGiver({
+Title = "Torn Apart",
+Desc = "被撕成碎片.",
+Reason = "成功幸存于开膛手.",
+Image = "rbxassetid://12231244908"
+})
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140585136431105" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+-----------REAN
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+achievementGiver({
+Title = "Out of many Rebound",
+Desc = "它还会回来吗?",
+Reason = "成功幸存于反弹.",
+Image = "rbxassetid://11759928678"
+})
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://137097894782334" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+----------
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+achievementGiver({
+Title = "Mouth Close Ear Open",
+Desc = "我听到了什么??",
+Reason = "成功幸存于寂静.",
+Image = "rbxassetid://71258076152603"
+})
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://128462216922227" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+-------------
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+achievementGiver({
+Title = "Why are you running?",
+Desc = "这很不让人理解...不不不...",
+Reason = "成功幸存于鹿神.",
+Image = "rbxassetid://11395249132"
+})
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://123590946605210" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+-----------
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+achievementGiver({
+Title = "A Great Clamity Is Approaching",
+Desc = "我想知道它一直这么疯狂吗?",
+Reason = "成功幸存于A-60.",
+Image = "rbxassetid://71559348904263"
+})
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://120300179122784" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+----------
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+achievementGiver({
+Title = "Winter arrives",
+Desc = "我想我该多加件外套?",
+Reason = "成功幸存于冻霜.",
+Image = "rbxassetid://11949062415"
+})
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://104494720137050" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+------------
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+achievementGiver({
+Title = "Super crazy!",
+Desc = "它真是疯了...",
+Reason = "成功幸存于复仇杰夫杀手.",
+Image = "rbxassetid://668614178"
+})
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://91855870334213" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+--------------
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+achievementGiver({
+Title = "Hide and Seek",
+Desc = "看不见我..看不见我..",
+Reason = "成功幸存于那个眼睛.",
+Image = "rbxassetid://123386445373745"
+})
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://91358358405366" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+
 local hint = Instance.new("Hint", Workspace)
 hint.Text = "LoadingTwo... Doors HardCore V9.8 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 10)

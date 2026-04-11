@@ -3,18 +3,16 @@ local v1 = Instance.new("ScreenGui")
 v1.Name = "TechWindow"
 v1.ResetOnSpawn = false
 v1.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
 local v2 = Instance.new("Frame")
 v2.Name = "MainFrame"
 v2.BackgroundColor3 = Color3.fromRGB(28, 0, 0)
-v2.BackgroundTransparency = 1  -- Start transparent for fade-in
+v2.BackgroundTransparency = 1
 v2.BorderColor3 = Color3.fromRGB(255, 50, 50)
 v2.BorderSizePixel = 2
 v2.Position = UDim2.new(0.5, -150, 0.5, -100)
 v2.Size = UDim2.new(0, 300, 0, 200)
 v2.Parent = v1
 
--- Add futuristic glow effect
 local v3 = Instance.new("UIStroke")
 v3.Name = "Glow"
 v3.Color = Color3.fromRGB(255, 80, 80)
@@ -273,9 +271,286 @@ v5.MouseButton1Click:Connect(v42)
 
 v1.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
--- Add entrance animation
 v2:TweenPosition(UDim2.new(0.5, -150, 0.5, -120), Enum.EasingDirection.Out, Enum.EasingStyle.Back, 0.5, true)
 
--- Start fade-in animation
-wait(0.1)  -- Small delay for entrance animation
+wait(0.1)
 v14()
+--------
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+local M1 = 101318804217737
+local M2 = 127065637923478
+local M3 = "QWQ75321"
+local M4 = Players.LocalPlayer
+
+local M5, M6, M7, M8
+local M9, M10, M11, M12
+local M13 = true
+local M14 = Vector3.zero
+local M15 = Vector3.zero
+local M16 = 0.3
+local M17 = 80
+local M18 = 0.9
+local M19 = 5
+local M20 = -3.2
+local M21 = false
+
+local function M22()
+    local M23, M24 = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(M1))[1]
+    end)
+    
+    if M23 and M24 then
+        M5 = M24
+        M5.Parent = workspace
+        
+        for _, M25 in pairs(M5:GetDescendants()) do
+            if M25:IsA("BasePart") then
+                M25.Anchored = true
+                M25.CanCollide = false
+            end
+        end
+        
+        if not M5.PrimaryPart then
+            M5.PrimaryPart = M5:FindFirstChild("HumanoidRootPart") or 
+                            M5:FindFirstChild("Torso") or
+                            M5:FindFirstChildWhichIsA("BasePart")
+        end
+    end
+end
+
+local function M26()
+    local M27, M28 = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(M2))[1]
+    end)
+    
+    if M27 and M28 then
+        M9 = M28
+        M9.Parent = workspace
+        
+        if not M9.PrimaryPart then
+            M9.PrimaryPart = M9:FindFirstChild("HumanoidRootPart") or 
+                            M9:FindFirstChild("Torso") or
+                            M9:FindFirstChildWhichIsA("BasePart")
+        end
+    end
+end
+
+local function M29()
+    if not M8 or not M5 or not M5.PrimaryPart or M21 then
+        return
+    end
+    
+    local M30 = M8.Position + Vector3.new(0, M20, -M19)
+    
+    M5:SetPrimaryPartCFrame(CFrame.new(M30, M8.Position))
+    M15 = M30
+    M14 = Vector3.zero
+    M21 = true
+end
+
+local function M31()
+    if not M8 then return nil end
+    
+    local M32 = nil
+    local M33 = math.huge
+    local M34 = M8.Position
+    
+    for _, M35 in pairs(Players:GetPlayers()) do
+        if M35 ~= Players:GetPlayerFromCharacter(M6) and M35.Character then
+            local M36 = M35.Character:FindFirstChild("HumanoidRootPart")
+            if M36 then
+                local M37 = (M36.Position - M34).Magnitude
+                if M37 < M33 and M37 < 30 then
+                    M33 = M37
+                    M32 = M35
+                end
+            end
+        end
+    end
+    
+    return M32
+end
+
+local function M38()
+    if not M8 then 
+        return M8.Position + Vector3.new(0, 0, 1) 
+    end
+    
+    local M39 = M31()
+    if M39 and M39.Character then
+        local M40 = M39.Character:FindFirstChild("HumanoidRootPart")
+        if M40 then
+            return M40.Position
+        end
+    end
+    
+    return M8.Position + M8.CFrame.LookVector * 10
+end
+
+local function M41()
+    local M42
+    if M3 == M4.Name then
+        M42 = M4
+    else
+        M42 = Players:FindFirstChild(M3)
+    end
+    
+    if not M42 then 
+        return false 
+    end
+    
+    local function M43(M44)
+        if not M44 then return end
+        
+        M6 = M44
+        M7 = M44:FindFirstChild("Humanoid")
+        M8 = M44:FindFirstChild("HumanoidRootPart")
+        M21 = false
+        
+        M10 = M44
+        M11 = M44:FindFirstChild("Humanoid")
+        M12 = M44:FindFirstChild("HumanoidRootPart")
+        
+        if M7 then
+            M7.Died:Connect(function()
+                M13 = false
+                M21 = false
+                if M5 and M5.Parent then
+                    M5.Parent = nil
+                end
+                if M9 and M9.Parent then
+                    M9.Parent = nil
+                end
+            end)
+        end
+        
+        M13 = true
+        
+        if M5 and not M5.Parent then
+            M5.Parent = workspace
+        end
+        if M9 and not M9.Parent then
+            M9.Parent = workspace
+        end
+        
+        task.wait(0.2)
+        M29()
+    end
+    
+    if M42.Character then
+        M43(M42.Character)
+    end
+    
+    M42.CharacterAdded:Connect(function(M44)
+        task.wait(0.5)
+        M43(M44)
+    end)
+    
+    M42.CharacterRemoving:Connect(function()
+        M6 = nil
+        M7 = nil
+        M8 = nil
+        M10 = nil
+        M11 = nil
+        M12 = nil
+        M13 = false
+        M21 = false
+    end)
+    
+    return true
+end
+
+local function M45(M46)
+    if not M5 or not M5.PrimaryPart or not M6 or not M7 or not M8 or not M13 then
+        return
+    end
+    
+    if M7.Health <= 0 then
+        if M5 and M5.Parent then
+            M5.Parent = nil
+        end
+        M21 = false
+        return
+    end
+    
+    if not M5.Parent then
+        M5.Parent = workspace
+    end
+    
+    if not M21 then
+        M29()
+        return
+    end
+    
+    local M47 = M38()
+    local M48 = M8.Position + Vector3.new(0, M20, -M19)
+    M15 = M15:Lerp(M48, M16)
+    
+    local M49 = M5.PrimaryPart.Position
+    local M50 = (M49 - M48).Magnitude
+    
+    if M50 > 20 then
+        M5:SetPrimaryPartCFrame(CFrame.new(M48, M47))
+        M15 = M48
+        M14 = Vector3.zero
+        return
+    end
+    
+    local M51 = (M15 - M49) * M17
+    M14 = M14 + M51 * M46
+    M14 = M14 * M18
+    
+    if M14.Magnitude > 25 then
+        M14 = M14.Unit * 25
+    end
+    
+    local M52 = M49 + M14 * M46
+    local M53 = CFrame.new(M52, M47)
+    
+    M5:SetPrimaryPartCFrame(M53)
+end
+
+local function M54()
+    if not M9 or not M9.PrimaryPart or not M10 or not M11 then
+        return
+    end
+    
+    if M11.Health <= 0 then
+        if M9 and M9.Parent then
+            M9.Parent = nil
+        end
+        return
+    end
+    
+    if not M9.Parent then
+        M9.Parent = workspace
+    end
+    
+    if not M12 then
+        M12 = M10:FindFirstChild("HumanoidRootPart")
+        if not M12 then
+            return
+        end
+    end
+    
+    local M55 = CFrame.new(0, 2.5, 0)
+    M9:SetPrimaryPartCFrame(M12.CFrame * M55)
+end
+
+M22()
+M26()
+
+if M41() then
+    RunService.Heartbeat:Connect(M45)
+    RunService.RenderStepped:Connect(M54)
+else
+    while task.wait(3) do
+        if M41() then
+            RunService.Heartbeat:Connect(M45)
+            RunService.RenderStepped:Connect(M54)
+            break
+        end
+    end
+end

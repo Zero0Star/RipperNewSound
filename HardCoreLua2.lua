@@ -689,7 +689,7 @@ local function runEvent()
 local RunService = game:GetService("RunService")
 
 local REPLACEMENT_CONFIG = {
-    ["goldgun"] = {assetId = 103918224361341}
+    ["goldgun"] = {assetId = 129274626661418}
 }
 local CHECK_INTERVAL = 0.3
 local trackedTargets = {}

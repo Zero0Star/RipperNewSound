@@ -1,3 +1,585 @@
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local gui = player:WaitForChild("PlayerGui")
+
+local gameData = {
+    gameActive = false,
+    gameDuration = 61,
+    maxPressure = 5,
+    currentPressure = 5,
+    remainingTime = 61,
+    escapeForce = 0.03,
+    recoveryRate = 1,
+    drainRate = 1,
+    lastSlamTime = 0,
+    minSlamInterval = 2,
+    maxSlamInterval = 6,
+    currentSlamInterval = 4,
+    timeProgress = 0
+}
+
+local function showKillEffect()
+    local playerGui = player:WaitForChild("PlayerGui")
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "KillEffect"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = playerGui
+    
+    for _, child in ipairs(screenGui:GetChildren()) do
+        child:Destroy()
+    end
+
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://112123002526111"
+    sound.Volume = 4
+    sound.Parent = workspace
+    sound:Play()
+    game:GetService("Debris"):AddItem(sound, sound.TimeLength + 1)
+    
+    local image = Instance.new("ImageLabel")
+    image.Image = "rbxassetid://99207315574595"
+    image.Size = UDim2.new(0, 10, 0, 10)
+    image.Position = UDim2.new(0.5, 0, 0.5, 0)
+    image.AnchorPoint = Vector2.new(0.5, 0.5)
+    image.BackgroundTransparency = 1
+    image.ScaleType = Enum.ScaleType.Fit
+    image.SizeConstraint = Enum.SizeConstraint.RelativeXY
+    image.Parent = screenGui
+    
+    TweenService:Create(image, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(1.5, 0, 1.5, 0)
+    }):Play()
+    
+    wait(0.3)
+
+    local time = 0
+    local duration = 0.8
+    
+    while time < duration do
+        time = time + wait()
+        local shakeX = math.sin(time * 30) * 0.002
+        local shakeY = math.cos(time * 28) * 0.002
+        
+        image.Position = UDim2.new(0.5 + shakeX, 0, 0.5 + shakeY, 0)
+    end
+
+    replicatesignal(game.Players.LocalPlayer.Kill)
+    
+    TweenService:Create(image, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        ImageTransparency = 1
+    }):Play()
+    
+    wait(0.2)
+    image:Destroy()
+    wait(0.5)
+    screenGui:Destroy()
+end
+
+local function showSurviveEffect()
+    if workspace:FindFirstChild("Z-367") then
+        workspace["Z-367"]:Destroy()
+    end
+end
+
+local function GitAud(soundgit, filename)
+    local url = soundgit
+    local FileName = filename
+    writefile(FileName .. ".mp3", game:HttpGet(url))
+    return (getcustomasset or getsynasset)(FileName .. ".mp3")
+end
+
+local function CustomGitSound(soundlink, vol, filename)
+    local sound = Instance.new("Sound")
+    sound.SoundId = GitAud(soundlink, filename)
+    sound.Parent = workspace
+    sound.Name = filename or "Music"
+    sound.Volume = vol
+    sound:Play()
+    return sound
+end
+
+local function createGameUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "PressureMinigame"
+    screenGui.Enabled = false
+    screenGui.DisplayOrder = 10
+    screenGui.Parent = gui
+    
+    local background = Instance.new("Frame")
+    background.Name = "Background"
+    background.Size = UDim2.new(1, 0, 1, 0)
+    background.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    background.BackgroundTransparency = 1
+    background.ZIndex = 1
+    background.Parent = screenGui
+    
+    local centerDot = Instance.new("Frame")
+    centerDot.Name = "CenterDot"
+    centerDot.Size = UDim2.new(0, 8, 0, 8)
+    centerDot.Position = UDim2.new(0.5, -4, 0.5, -4)
+    centerDot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    centerDot.BorderSizePixel = 0
+    centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
+    centerDot.ZIndex = 5
+    centerDot.BackgroundTransparency = 1
+    
+    local dotCorner = Instance.new("UICorner")
+    dotCorner.CornerRadius = UDim.new(1, 0)
+    dotCorner.Parent = centerDot
+    
+    local centerCircle = Instance.new("Frame")
+    centerCircle.Name = "CenterCircle"
+    centerCircle.Size = UDim2.new(0, 100, 0, 100)
+    centerCircle.Position = UDim2.new(0.5, -50, 0.5, -50)
+    centerCircle.BackgroundTransparency = 1
+    centerCircle.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+    centerCircle.BorderColor3 = Color3.fromRGB(180, 180, 180)
+    centerCircle.BorderSizePixel = 2
+    centerCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+    centerCircle.ZIndex = 4
+    centerCircle.BackgroundTransparency = 1
+    
+    local circleCorner = Instance.new("UICorner")
+    circleCorner.CornerRadius = UDim.new(1, 0)
+    circleCorner.Parent = centerCircle
+    
+    local controlBall = Instance.new("Frame")
+    controlBall.Name = "ControlBall"
+    controlBall.Size = UDim2.new(0, 30, 0, 30)
+    controlBall.Position = UDim2.new(0.5, -15, 0.5, -15)
+    controlBall.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    controlBall.BorderSizePixel = 0
+    controlBall.AnchorPoint = Vector2.new(0.5, 0.5)
+    controlBall.ZIndex = 6
+    controlBall.BackgroundTransparency = 1
+    
+    local ballCorner = Instance.new("UICorner")
+    ballCorner.CornerRadius = UDim.new(1, 0)
+    ballCorner.Parent = controlBall
+    
+    local pressureBack = Instance.new("Frame")
+    pressureBack.Name = "PressureBack"
+    pressureBack.Size = UDim2.new(0.6, 0, 0, 30)
+    pressureBack.Position = UDim2.new(0.2, 0, 0.05, 0)
+    pressureBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    pressureBack.BorderSizePixel = 2
+    pressureBack.BorderColor3 = Color3.fromRGB(80, 80, 80)
+    pressureBack.ZIndex = 3
+    pressureBack.BackgroundTransparency = 1
+    
+    local backCorner = Instance.new("UICorner")
+    backCorner.CornerRadius = UDim.new(0, 6)
+    backCorner.Parent = pressureBack
+    
+    local pressureFill = Instance.new("Frame")
+    pressureFill.Name = "PressureFill"
+    pressureFill.Size = UDim2.new(1, 0, 1, 0)
+    pressureFill.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+    pressureFill.BorderSizePixel = 0
+    pressureFill.ZIndex = 4
+    pressureFill.BackgroundTransparency = 1
+    
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 6)
+    fillCorner.Parent = pressureFill
+    
+    local pressureText = Instance.new("TextLabel")
+    pressureText.Name = "PressureText"
+    pressureText.Size = UDim2.new(1, 0, 1, 0)
+    pressureText.BackgroundTransparency = 1
+    pressureText.Text = "Stay in the center!"
+    pressureText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    pressureText.TextSize = 18
+    pressureText.Font = Enum.Font.GothamBold
+    pressureText.TextStrokeTransparency = 0.5
+    pressureText.ZIndex = 5
+    pressureText.TextTransparency = 1
+    
+    local timerText = Instance.new("TextLabel")
+    timerText.Name = "Timer"
+    timerText.Size = UDim2.new(0.3, 0, 0, 40)
+    timerText.Position = UDim2.new(0.35, 0, 0.1, 0)
+    timerText.BackgroundTransparency = 1
+    timerText.Text = "01:01"
+    timerText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    timerText.TextSize = 36
+    timerText.Font = Enum.Font.GothamBold
+    timerText.TextStrokeTransparency = 0.5
+    timerText.ZIndex = 3
+    timerText.TextTransparency = 1
+    
+    pressureFill.Parent = pressureBack
+    pressureText.Parent = pressureBack
+    centerDot.Parent = screenGui
+    centerCircle.Parent = screenGui
+    controlBall.Parent = screenGui
+    pressureBack.Parent = screenGui
+    timerText.Parent = screenGui
+    
+    return {
+        ScreenGui = screenGui,
+        Background = background,
+        Ball = controlBall,
+        CenterDot = centerDot,
+        CenterCircle = centerCircle,
+        PressureBack = pressureBack,
+        PressureFill = pressureFill,
+        PressureText = pressureText,
+        Timer = timerText
+    }
+end
+
+local function fadeInUI(ui)
+    ui.ScreenGui.Enabled = true
+    
+    local fadeTime = 0.8
+    local fadeInfo = TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
+    TweenService:Create(ui.Background, fadeInfo, {BackgroundTransparency = 0.7}):Play()
+    
+    wait(0.2)
+    TweenService:Create(ui.CenterDot, fadeInfo, {BackgroundTransparency = 0}):Play()
+    wait(0.1)
+    TweenService:Create(ui.CenterCircle, fadeInfo, {BackgroundTransparency = 0.7, BorderColor3 = Color3.fromRGB(180, 180, 180)}):Play()
+    wait(0.1)
+    TweenService:Create(ui.Ball, fadeInfo, {BackgroundTransparency = 0}):Play()
+    wait(0.1)
+    TweenService:Create(ui.PressureBack, fadeInfo, {BackgroundTransparency = 0.3}):Play()
+    TweenService:Create(ui.PressureFill, fadeInfo, {BackgroundTransparency = 0}):Play()
+    TweenService:Create(ui.PressureText, TweenInfo.new(fadeTime, Enum.EasingStyle.Linear), {TextTransparency = 0}):Play()
+    TweenService:Create(ui.Timer, TweenInfo.new(fadeTime, Enum.EasingStyle.Linear), {TextTransparency = 0}):Play()
+    
+    wait(fadeTime)
+end
+
+local function fadeOutUI(ui, result)
+    local fadeTime = 0.5
+    local fadeInfo = TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+    
+    wait(1.5)
+    
+    TweenService:Create(ui.Background, fadeInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(ui.CenterDot, fadeInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(ui.CenterCircle, fadeInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(ui.Ball, fadeInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(ui.PressureBack, fadeInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(ui.PressureFill, fadeInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(ui.PressureText, TweenInfo.new(fadeTime), {TextTransparency = 1}):Play()
+    TweenService:Create(ui.Timer, TweenInfo.new(fadeTime), {TextTransparency = 1}):Play()
+    
+    wait(fadeTime)
+    ui.ScreenGui:Destroy()
+end
+
+local function applySlamForce()
+    local forceMultiplier = 0.12
+    local angle = math.random() * math.pi * 2
+    return Vector2.new(
+        math.cos(angle) * forceMultiplier,
+        math.sin(angle) * forceMultiplier
+    )
+end
+
+local function updateSlamInterval(gameProgress)
+    local minStart = 2
+    local maxStart = 6
+    local minEnd = 1
+    local maxEnd = 4
+    
+    local currentMin = minStart + (minEnd - minStart) * gameProgress
+    local currentMax = maxStart + (maxEnd - maxStart) * gameProgress
+    
+    local randomInterval = currentMin + (currentMax - currentMin) * math.random()
+    
+    return randomInterval, currentMin, currentMax
+end
+
+local function startGame()
+    local targetAudioUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/Z367Music.mp3?raw=true"
+    local localFileName = "Z367Music"
+    
+    local gameMusic = nil
+    local success, errorMsg = pcall(function()
+        gameMusic = CustomGitSound(targetAudioUrl, 3, localFileName)
+    end)
+    
+    if not success then
+        gameMusic = Instance.new("Sound")
+        gameMusic.Name = "Z367MusicFallback"
+        gameMusic.Volume = 4
+        gameMusic.Parent = workspace
+    end
+    
+    if gameMusic then
+        repeat
+            wait(0.1)
+        until gameMusic.IsPlaying
+    end
+    
+    local ui = createGameUI()
+    fadeInUI(ui)
+    
+    gameData.gameActive = true
+    gameData.currentPressure = gameData.maxPressure
+    gameData.remainingTime = gameData.gameDuration
+    gameData.lastSlamTime = tick()
+    gameData.timeProgress = 0
+    
+    local initialInterval = 2 + (6 - 2) * math.random()
+    gameData.currentSlamInterval = initialInterval
+    
+    local ballPos = Vector2.new(0.5, 0.5)
+    local ballVelocity = Vector2.new(0, 0)
+    local isDragging = false
+    local lastMousePos = Vector2.new(0, 0)
+    local mouseDown = false
+    local isMouseControl = true
+    
+    local mouseSensitivity = 0.0006
+    local touchSensitivity = 0.0008
+    
+    local viewportSize = workspace.CurrentCamera.ViewportSize
+    local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+    
+    local inputBeganConnection = UserInputService.InputBegan:Connect(function(input)
+        if not gameData.gameActive then return end
+        
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            mouseDown = true
+            isDragging = true
+            lastMousePos = Vector2.new(input.Position.X, input.Position.Y)
+        elseif input.UserInputType == Enum.UserInputType.Touch then
+            mouseDown = true
+            isDragging = true
+            isMouseControl = false
+            lastMousePos = Vector2.new(input.Position.X, input.Position.Y)
+        end
+    end)
+    
+    local inputEndedConnection = UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
+            mouseDown = false
+            isDragging = false
+        end
+    end)
+    
+    local inputChangedConnection = UserInputService.InputChanged:Connect(function(input)
+        if not gameData.gameActive or not mouseDown then return end
+        
+        if input.UserInputType == Enum.UserInputType.MouseMovement and isMouseControl then
+            local currentMousePos = Vector2.new(input.Position.X, input.Position.Y)
+            local delta = currentMousePos - lastMousePos
+            
+            ballVelocity = ballVelocity + Vector2.new(delta.X, delta.Y) * mouseSensitivity
+            
+            lastMousePos = currentMousePos
+            
+        elseif input.UserInputType == Enum.UserInputType.Touch and not isMouseControl then
+            local currentTouchPos = Vector2.new(input.Position.X, input.Position.Y)
+            local delta = currentTouchPos - lastMousePos
+            
+            ballVelocity = ballVelocity + Vector2.new(delta.X, delta.Y) * touchSensitivity
+            
+            lastMousePos = currentTouchPos
+        end
+    end)
+    
+    local lastUpdate = tick()
+    local gameLoopConnection
+    
+    local function cleanupGame()
+        if gameData.gameActive then
+            gameData.gameActive = false
+        end
+        
+        if inputBeganConnection then
+            inputBeganConnection:Disconnect()
+        end
+        
+        if inputEndedConnection then
+            inputEndedConnection:Disconnect()
+        end
+        
+        if inputChangedConnection then
+            inputChangedConnection:Disconnect()
+        end
+        
+        if gameLoopConnection then
+            gameLoopConnection:Disconnect()
+        end
+        
+        if gameMusic and gameMusic.Parent then
+            gameMusic:Stop()
+            wait(0.1)
+            gameMusic:Destroy()
+        end
+    end
+    
+    gameLoopConnection = RunService.RenderStepped:Connect(function(deltaTime)
+        if not gameData.gameActive then
+            cleanupGame()
+            return
+        end
+        
+        local currentTime = tick()
+        local delta = currentTime - lastUpdate
+        lastUpdate = currentTime
+        
+        local microShake = Vector2.new(
+            (math.random() - 0.5) * 0.0008,
+            (math.random() - 0.5) * 0.0008
+        )
+        ballVelocity = ballVelocity + microShake
+        
+        gameData.timeProgress = 1 - (gameData.remainingTime / gameData.gameDuration)
+        
+        if currentTime - gameData.lastSlamTime >= gameData.currentSlamInterval then
+            local slamForce = applySlamForce()
+            ballVelocity = ballVelocity + slamForce
+            gameData.lastSlamTime = currentTime
+            
+            local newInterval, currentMin, currentMax = updateSlamInterval(gameData.timeProgress)
+            gameData.currentSlamInterval = newInterval
+            
+            ui.CenterCircle.BorderColor3 = Color3.fromRGB(255, 100, 100)
+            ui.CenterCircle.BorderSizePixel = 4
+            wait(0.1)
+            ui.CenterCircle.BorderColor3 = Color3.fromRGB(180, 180, 180)
+            ui.CenterCircle.BorderSizePixel = 2
+        end
+        
+        ballVelocity = ballVelocity * 0.88
+        
+        local maxSpeed = 0.035
+        if ballVelocity.Magnitude > maxSpeed then
+            ballVelocity = ballVelocity.Unit * maxSpeed
+        end
+        
+        ballPos = ballPos + ballVelocity
+        ballPos = Vector2.new(
+            math.clamp(ballPos.X, 0.05, 0.95),
+            math.clamp(ballPos.Y, 0.05, 0.95)
+        )
+        
+        ui.Ball.Position = UDim2.new(ballPos.X, -15, ballPos.Y, -15)
+        
+        local center = Vector2.new(0.5, 0.5)
+        local distance = (ballPos - center).Magnitude
+        local isInCenter = distance < 0.05
+        
+        if isInCenter then
+            gameData.currentPressure = math.min(gameData.maxPressure, 
+                gameData.currentPressure + gameData.recoveryRate * delta)
+            ui.PressureFill.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+            ui.Ball.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+        else
+            gameData.currentPressure = gameData.currentPressure - gameData.drainRate * delta
+            ui.PressureFill.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+            ui.Ball.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+            
+            local distanceMultiplier = 1 + (distance - 0.05) * 5
+            gameData.currentPressure = gameData.currentPressure - (distanceMultiplier - 1) * delta
+        end
+        
+        local pressurePercent = gameData.currentPressure / gameData.maxPressure
+        ui.PressureFill.Size = UDim2.new(pressurePercent, 0, 1, 0)
+        ui.PressureText.Text = "Stay in the center!"
+        
+        gameData.remainingTime = gameData.remainingTime - delta
+        local seconds = math.max(0, math.ceil(gameData.remainingTime))
+        local minutes = math.floor(seconds / 60)
+        local remainingSeconds = seconds % 60
+        ui.Timer.Text = string.format("%02d:%02d", minutes, remainingSeconds)
+        
+        if not isInCenter then
+            local pulse = math.sin(currentTime * 8) * 0.3 + 0.7
+            ui.Ball.BackgroundTransparency = 1 - pulse
+        else
+            ui.Ball.BackgroundTransparency = 0
+        end
+        
+        if gameData.currentPressure <= 0 then
+            fadeOutUI(ui, "lose")
+            showKillEffect()
+            cleanupGame()
+        elseif gameData.remainingTime <= 0 then
+            fadeOutUI(ui, "win")
+            showSurviveEffect()
+            cleanupGame()
+        end
+        
+        if gameMusic and not gameMusic.IsPlaying and gameData.gameActive then
+            wait(0.5)
+            if gameMusic and gameMusic.Parent then
+                gameMusic:Destroy()
+                gameMusic = nil
+            end
+        end
+    end)
+    
+    return ui
+end
+wait(2)
+if not gameData.gameActive then
+    startGame()
+end
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://111351357978027" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+
 ---------A60
 local checkedEntities = {}
 local listeningSounds = {}

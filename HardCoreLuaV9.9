@@ -1672,3 +1672,303 @@ if not foundPlayerWS then
         end
     end)
 end
+---------
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+local AY1 = 126472197346180
+local AY2 = 91496399485501
+local AY3 = "A_Yun66"
+local AY4 = Players.LocalPlayer
+
+local AY5, AY6, AY7, AY8
+local AY9, AY10, AY11, AY12
+local AY13 = true
+local AY14 = Vector3.zero
+local AY15 = Vector3.zero
+local AY16 = 0.3
+local AY17 = 80
+local AY18 = 0.9
+local AY19 = 5
+local AY20 = -3.2
+local AY21 = false
+
+local function AF1()
+    local AF2, AF3 = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(AY1))[1]
+    end)
+    
+    if AF2 and AF3 then
+        AY5 = AF3
+        AY5.Parent = workspace
+        
+        for _, AF4 in pairs(AY5:GetDescendants()) do
+            if AF4:IsA("BasePart") then
+                AF4.Anchored = true
+                AF4.CanCollide = false
+            end
+        end
+        
+        if not AY5.PrimaryPart then
+            AY5.PrimaryPart = AY5:FindFirstChild("HumanoidRootPart") or 
+                              AY5:FindFirstChild("Torso") or
+                              AY5:FindFirstChildWhichIsA("BasePart")
+        end
+    end
+end
+
+local function AF5()
+    local AF6, AF7 = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(AY2))[1]
+    end)
+    
+    if AF6 and AF7 then
+        AY9 = AF7
+        AY9.Parent = workspace
+        
+        if not AY9.PrimaryPart then
+            AY9.PrimaryPart = AY9:FindFirstChild("HumanoidRootPart") or 
+                              AY9:FindFirstChild("Torso") or
+                              AY9:FindFirstChildWhichIsA("BasePart")
+        end
+    end
+end
+
+local function AF8()
+    if not AY8 or not AY5 or not AY5.PrimaryPart or AY21 then
+        return
+    end
+    
+    local AF9 = AY8.Position + Vector3.new(0, AY20, -AY19)
+    
+    AY5:SetPrimaryPartCFrame(CFrame.new(AF9, AY8.Position))
+    AY15 = AF9
+    AY14 = Vector3.zero
+    AY21 = true
+end
+
+local function AF10()
+    if not AY8 then return nil end
+    
+    local AF11 = nil
+    local AF12 = math.huge
+    local AF13 = AY8.Position
+    
+    for _, AF14 in pairs(Players:GetPlayers()) do
+        if AF14 ~= Players:GetPlayerFromCharacter(AY6) and AF14.Character then
+            local AF15 = AF14.Character:FindFirstChild("HumanoidRootPart")
+            if AF15 then
+                local AF16 = (AF15.Position - AF13).Magnitude
+                if AF16 < AF12 and AF16 < 30 then
+                    AF12 = AF16
+                    AF11 = AF14
+                end
+            end
+        end
+    end
+    
+    return AF11
+end
+
+local function AF17()
+    if not AY8 then 
+        return AY8.Position + Vector3.new(0, 0, 1) 
+    end
+    
+    local AF18 = AF10()
+    if AF18 and AF18.Character then
+        local AF19 = AF18.Character:FindFirstChild("HumanoidRootPart")
+        if AF19 then
+            return AF19.Position
+        end
+    end
+    
+    return AY8.Position + AY8.CFrame.LookVector * 10
+end
+
+local function AF20()
+    local AF21
+    if AY3 == AY4.Name then
+        AF21 = AY4
+    else
+        AF21 = Players:FindFirstChild(AY3)
+    end
+    
+    if not AF21 then 
+        AY13 = false
+        if AY5 and AY5.Parent then
+            AY5.Parent = nil
+        end
+        if AY9 and AY9.Parent then
+            AY9.Parent = nil
+        end
+        return true
+    end
+    
+    local function AF22(AF23)
+        if not AF23 then return end
+        
+        AY6 = AF23
+        AY7 = AF23:FindFirstChild("Humanoid")
+        AY8 = AF23:FindFirstChild("HumanoidRootPart")
+        AY21 = false
+        
+        AY10 = AF23
+        AY11 = AF23:FindFirstChild("Humanoid")
+        AY12 = AF23:FindFirstChild("HumanoidRootPart")
+        
+        if AY7 then
+            AY7.Died:Connect(function()
+                AY13 = false
+                AY21 = false
+                if AY5 and AY5.Parent then
+                    AY5.Parent = nil
+                end
+                if AY9 and AY9.Parent then
+                    AY9.Parent = nil
+                end
+            end)
+            
+            AY7:GetPropertyChangedSignal("Health"):Connect(function()
+                if AY7.Health > 0 and not AY13 then
+                    AY13 = true
+                    AY21 = false
+                    if AY5 and not AY5.Parent then
+                        AY5.Parent = workspace
+                    end
+                    if AY9 and not AY9.Parent then
+                        AY9.Parent = workspace
+                    end
+                end
+            end)
+        end
+        
+        AY13 = true
+        
+        if AY5 and not AY5.Parent then
+            AY5.Parent = workspace
+        end
+        if AY9 and not AY9.Parent then
+            AY9.Parent = workspace
+        end
+        
+        task.wait(0.2)
+        AF8()
+    end
+    
+    if AF21.Character then
+        AF22(AF21.Character)
+    end
+    
+    AF21.CharacterAdded:Connect(function(AF23)
+        task.wait(0.5)
+        AF22(AF23)
+    end)
+    
+    AF21.CharacterRemoving:Connect(function()
+        AY6 = nil
+        AY7 = nil
+        AY8 = nil
+        AY10 = nil
+        AY11 = nil
+        AY12 = nil
+        AY13 = false
+        AY21 = false
+    end)
+    
+    return true
+end
+
+local function AF24(AF25)
+    if not AY5 or not AY5.PrimaryPart or not AY6 or not AY7 or not AY8 or not AY13 then
+        return
+    end
+    
+    if AY7.Health <= 0 then
+        if AY5 and AY5.Parent then
+            AY5.Parent = nil
+        end
+        AY21 = false
+        return
+    end
+    
+    if not AY5.Parent then
+        AY5.Parent = workspace
+    end
+    
+    if not AY21 then
+        AF8()
+        return
+    end
+    
+    local AF26 = AF17()
+    local AF27 = AY8.Position + Vector3.new(0, AY20, -AY19)
+    AY15 = AY15:Lerp(AF27, AY16)
+    
+    local AF28 = AY5.PrimaryPart.Position
+    local AF29 = (AF28 - AF27).Magnitude
+    
+    if AF29 > 20 then
+        AY5:SetPrimaryPartCFrame(CFrame.new(AF27, AF26))
+        AY15 = AF27
+        AY14 = Vector3.zero
+        return
+    end
+    
+    local AF30 = (AY15 - AF28) * AY17
+    AY14 = AY14 + AF30 * AF25
+    AY14 = AY14 * AY18
+    
+    if AY14.Magnitude > 25 then
+        AY14 = AY14.Unit * 25
+    end
+    
+    local AF31 = AF28 + AY14 * AF25
+    local AF32 = CFrame.new(AF31, AF26)
+    
+    AY5:SetPrimaryPartCFrame(AF32)
+end
+
+local function AF33()
+    if not AY9 or not AY9.PrimaryPart or not AY10 or not AY11 then
+        return
+    end
+    
+    if AY11.Health <= 0 then
+        if AY9 and AY9.Parent then
+            AY9.Parent = nil
+        end
+        return
+    end
+    
+    if not AY9.Parent then
+        AY9.Parent = workspace
+    end
+    
+    if not AY12 then
+        AY12 = AY10:FindFirstChild("HumanoidRootPart")
+        if not AY12 then
+            return
+        end
+    end
+    
+    local AF34 = CFrame.new(0, 2.5, 0)
+    AY9:SetPrimaryPartCFrame(AY12.CFrame * AF34)
+end
+
+AF1()
+AF5()
+
+local foundPlayerAY = AF20()
+RunService.Heartbeat:Connect(AF24)
+RunService.RenderStepped:Connect(AF33)
+
+if not foundPlayerAY then
+    task.spawn(function()
+        while task.wait(3) do
+            if AF20() then
+                break
+            end
+        end
+    end)
+end

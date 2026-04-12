@@ -2,6 +2,457 @@ loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master
 -----------
 local checkedEntities = {}
 local listeningSounds = {}
+
+local function runEvent()
+    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local Camera = workspace.CurrentCamera
+local entityModel
+local chaseConnection = nil
+local customSpeed = 70
+local activationRange = 70
+
+local isChasing = false
+local soundSystemActive = false
+local bangSounds = {}
+local attackSound = nil
+local chaseStartTime = 0
+local isShakingCamera = false
+local soundManagerConnection = nil
+local pandemoniumEyesBeam = nil 
+local entity = spawner.Create({
+	Entity = {
+		Name = "Z-367",
+		Asset = "100118518576966",
+HeightOffset = -3},Lights = {Flicker = {Enabled = true,Duration = 1.5},Shatter = false,Repair = false},
+Earthquake = {Enabled = false},CameraShake = {Enabled = false,Range = 20,Values = {1.5, 20, 0.1, 1}},
+Movement = {Speed = 50,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",
+Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 20,Amount = 0},
+Crucifixion = {Enabled = true,Range = 70,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Z-367 击败了...", "你该多练练准星!", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}
+})
+local function findSoundsAndBeam()
+    local zModel = Workspace:FindFirstChild("Z-367")
+    if not zModel then return false end
+    
+    local pandemoniumPart = zModel:FindFirstChild("Pandemonium")
+    if not pandemoniumPart then return false end
+    pandemoniumEyesBeam = pandemoniumPart:FindFirstChild("PandemoniumEyes")
+    if pandemoniumEyesBeam and pandemoniumEyesBeam:IsA("Beam") then
+        pandemoniumEyesBeam.Enabled = false
+    end
+    
+    attackSound = pandemoniumPart:FindFirstChild("Attack")
+    
+    for i = 1, 4 do
+        local bangSound = pandemoniumPart:FindFirstChild("Bang"..i)
+        if bangSound and bangSound:IsA("Sound") then
+            table.insert(bangSounds, bangSound)
+        end
+    end
+    
+    return attackSound ~= nil and #bangSounds > 0
+end
+
+local function setPandemoniumEyesEnabled(enabled)
+    if pandemoniumEyesBeam and pandemoniumEyesBeam:IsA("Beam") then
+        pandemoniumEyesBeam.Enabled = enabled
+    end
+end
+
+local function playRandomBang()
+    if #bangSounds == 0 then return end
+    
+    local randomIndex = math.random(1, #bangSounds)
+    local selectedSound = bangSounds[randomIndex]
+    
+    if selectedSound then
+        selectedSound:Play()
+    end
+end
+local function startSoundManager()
+    if soundManagerConnection then
+        soundManagerConnection:Disconnect()
+    end
+    
+    local bangTimer = 0
+    local nextBangInterval = math.random(2, 6)
+    
+    soundManagerConnection = RunService.Heartbeat:Connect(function(dt)
+        if not soundSystemActive then return end
+        
+        local currentTime = os.clock()
+        local elapsedTime = currentTime - chaseStartTime
+
+        if elapsedTime < 0.1 and attackSound and not attackSound.Playing then
+            attackSound:Play()
+        end
+
+        if elapsedTime >= 6 and attackSound and attackSound.Volume > 0.1 then
+            attackSound.Volume = 0.1
+
+        end
+
+        if elapsedTime >= 6 and elapsedTime < 66 then
+            bangTimer = bangTimer + dt
+            
+            if bangTimer >= nextBangInterval then
+                playRandomBang()
+                bangTimer = 0
+                nextBangInterval = math.random(2, 6)
+            end
+        end
+
+        if elapsedTime >= 66 then
+            soundSystemActive = false
+            soundManagerConnection:Disconnect()
+            soundManagerConnection = nil
+        end
+    end)
+end
+
+local function startCameraShake()
+    if isShakingCamera then return end
+    
+    isShakingCamera = true
+    
+    task.spawn(function()
+        while isShakingCamera and soundSystemActive do
+            local shakeIntensity = math.random(5, 15) / 100
+            local shakeDuration = math.random(5, 10) / 100
+            
+            local startTime = os.clock()
+            while os.clock() - startTime < shakeDuration and isShakingCamera and soundSystemActive do
+                local offset = Vector3.new(
+                    (math.random() - 0.5) * 2 * shakeIntensity,
+                    (math.random() - 0.5) * 2 * shakeIntensity,
+                    0
+                )
+                Camera.CFrame = Camera.CFrame + offset
+                task.wait(0.01)
+            end
+            task.wait(math.random(5, 20) / 10)
+        end
+    end)
+end
+
+local function startSoundSystem()
+    if soundSystemActive then return end
+    
+    soundSystemActive = true
+    chaseStartTime = os.clock()
+    
+    startSoundManager()
+    startCameraShake()
+end
+
+local function stopSoundSystem()
+    if not soundSystemActive then return end
+    
+    soundSystemActive = false
+    isShakingCamera = false
+    
+    if soundManagerConnection then
+        soundManagerConnection:Disconnect()
+        soundManagerConnection = nil
+    end
+    
+    if attackSound then
+        attackSound:Stop()
+        attackSound.Volume = 1
+    end
+    
+    for _, sound in ipairs(bangSounds) do
+        if sound and sound.Playing then
+            sound:Stop()
+        end
+    end
+end
+
+local function startChaseSystem()
+    if not entityModel or not entityModel.PrimaryPart then
+        return
+    end
+
+    if chaseConnection then
+        chaseConnection:Disconnect()
+        chaseConnection = nil
+    end
+
+    chaseConnection = RunService.Heartbeat:Connect(function(dt)
+
+        if not entityModel 
+            or not entityModel.PrimaryPart 
+            or not HumanoidRootPart 
+            or not HumanoidRootPart.Parent 
+        then 
+            return 
+        end
+        
+        local pos = entityModel.PrimaryPart.Position
+        local target = HumanoidRootPart.Position
+        local distance = (target - pos).Magnitude
+
+        if distance <= activationRange then
+            local dir = (target - pos).Unit
+            local moveVec = dir * customSpeed * dt
+            local newCFrame = CFrame.new(pos + moveVec, target)
+            entityModel:SetPrimaryPartCFrame(newCFrame)
+
+            setPandemoniumEyesEnabled(true)
+
+            if not isChasing then
+                isChasing = true
+                startSoundSystem()
+            end
+        else
+
+            setPandemoniumEyesEnabled(false)
+
+            if isChasing then
+                isChasing = false
+                stopSoundSystem()
+            end
+        end
+    end)
+end
+
+entity:SetCallback("OnSpawned", function()
+    entityModel = entity.Model
+
+    if entityModel then
+        if not entityModel.PrimaryPart then
+            local primaryPart = entityModel:FindFirstChild("Main") or entityModel:FindFirstChildWhichIsA("BasePart")
+            if primaryPart then
+                entityModel.PrimaryPart = primaryPart
+            end
+        end
+    end
+
+    findSoundsAndBeam()
+    startChaseSystem()
+end)
+
+entity:SetCallback("OnDespawning", function()
+    if chaseConnection then
+        chaseConnection:Disconnect()
+        chaseConnection = nil
+    end
+    
+    stopSoundSystem()
+    setPandemoniumEyesEnabled(false)
+end)
+
+entity:SetCallback("OnDamagePlayer", function(newHealth)
+    if newHealth == 0 then
+        if chaseConnection then
+            chaseConnection:Disconnect()
+            chaseConnection = nil
+        end
+        
+        stopSoundSystem()
+        setPandemoniumEyesEnabled(false)
+
+        if entityModel and entityModel.PrimaryPart then
+            local currentPos = entityModel.PrimaryPart.Position
+            local forwardDir = entityModel.PrimaryPart.CFrame.LookVector
+            local targetPos = currentPos + forwardDir * 10
+            
+            entityModel:SetPrimaryPartCFrame(CFrame.new(currentPos, targetPos))
+        end
+    end
+end)
+
+entity:SetCallback("OnRebounding", function(startOfRebound)
+    if not entityModel then return end
+    
+    local main = entityModel:FindFirstChild("Main")
+    if not main then return end
+    
+    local attachment = main:WaitForChild("Attachment")
+    local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+    local sounds = {
+        footsteps = main:WaitForChild("Footsteps"),
+        playSound = main:WaitForChild("PlaySound"),
+        switch = main:WaitForChild("Switch"),
+        switchBack = main:WaitForChild("SwitchBack")
+    }
+
+    for _, c in attachment:GetChildren() do
+        c.Enabled = (not startOfRebound)
+    end
+    for _, c in AttachmentSwitch:GetChildren() do
+        c.Enabled = startOfRebound
+    end
+
+    if startOfRebound == true then
+        sounds.footsteps.PlaybackSpeed = 0.35
+        sounds.playSound.PlaybackSpeed = 0.25
+        sounds.switch:Play()
+    else
+        sounds.footsteps.PlaybackSpeed = 0.25
+        sounds.playSound.PlaybackSpeed = 0.16
+        sounds.switchBack:Play()
+    end
+end)
+
+entity:Run()
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://122666487907498" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+----------
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
+local entity = spawner.Create({
+	Entity = {
+		Name = "Z-367",
+		Asset = "100118518576966",
+HeightOffset = -3},Lights = {Flicker = {Enabled = true,Duration = 1.5},Shatter = false,Repair = false},
+Earthquake = {Enabled = false},CameraShake = {Enabled = false,Range = 20,Values = {1.5, 20, 0.1, 1}},
+Movement = {Speed = 50,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",
+Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 20,Amount = 0},
+Crucifixion = {Enabled = true,Range = 70,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Z-367 击败了...", "你该多练练准星!", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}
+})
+entity:SetCallback("OnRebounding", function(startOfRebound)
+
+	local entityModel = entity.Model
+	local main = entityModel:WaitForChild("Main")
+	local attachment = main:WaitForChild("Attachment")
+	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+	local sounds = {
+		footsteps = main:WaitForChild("Footsteps"),
+		playSound = main:WaitForChild("PlaySound"),
+		switch = main:WaitForChild("Switch"),
+		switchBack = main:WaitForChild("SwitchBack")
+	}
+
+	for _, c in attachment:GetChildren() do
+		c.Enabled = (not startOfRebound)
+	end
+	for _, c in AttachmentSwitch:GetChildren() do
+		c.Enabled = startOfRebound
+	end
+
+	-- Play sounds
+	if startOfRebound == true then
+		sounds.footsteps.PlaybackSpeed = 0.35
+		sounds.playSound.PlaybackSpeed = 0.25
+		sounds.switch:Play()
+	else
+		sounds.footsteps.PlaybackSpeed = 0.25
+		sounds.playSound.PlaybackSpeed = 0.16
+		sounds.switchBack:Play()
+	end
+	
+end)
+
+---====== Run entity ======---
+
+entity:Run()
+
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://1845474773" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+-----------
+local checkedEntities = {}
+local listeningSounds = {}
 local function runEvent()
     function GitAud(soundgit, filename)
         local url = soundgit
@@ -4188,6 +4639,66 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 ----------
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+achievementGiver({
+Title = "From pressure",
+Desc = "等等,他该出现在这里吗?",
+Reason = "成功幸存于Z-367.",
+Image = "rbxassetid://78666140831420"
+})
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://87305819765843" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+------------
 local checkedEntities = {}
 local listeningSounds = {}
 

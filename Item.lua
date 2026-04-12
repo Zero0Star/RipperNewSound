@@ -415,7 +415,7 @@ local Entities = ReplicatedStorage:FindFirstChild("Entities") or Instance.new("F
 Entities.Name = "Entities"
 Entities.Parent = ReplicatedStorage
 
-local MODEL_ID = 115745533260843
+local MODEL_ID = 118003122248349
 local model = game:GetObjects("rbxassetid://" .. MODEL_ID)[1]
 model.Parent = Entities
 

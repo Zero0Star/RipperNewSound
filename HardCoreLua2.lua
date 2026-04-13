@@ -4613,13 +4613,13 @@ end
 
 pcall(function()
     local mainGame = require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-    mainGame.caption("I think the purpose of my coming.", true)
+    mainGame.caption(".......", true)
     wait(10)
-    mainGame.caption("I have something very important to tell you, please listen to me until I finish.", true)
+    mainGame.caption("I warned you.", true)
     wait(10)
-    mainGame.caption("That egg is very dangerous, please do not use it.", true)
+    mainGame.caption("That was the last time I helped you.", true)
     wait(10)
-    mainGame.caption("Otherwise, you will bear the consequences yourself....", true)
+    mainGame.caption("I can't help you anymore; take care of yourself.", true)
 end)
 wait(6)
 if Workspace:FindFirstChild("MISHX") then

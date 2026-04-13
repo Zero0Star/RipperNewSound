@@ -4219,10 +4219,9 @@ local checkedEntities = {}
 local listeningSounds = {}
 
 local function runEvent()
-    local RunService = game:GetService("RunService")
+   local RunService = game:GetService("RunService")
 local modelId = 86112457302745
 local loadedModel
-
 local success, result = pcall(function()
     return game:GetObjects("rbxassetid://" .. modelId)[1]
 end)
@@ -4230,7 +4229,6 @@ end)
 if success and result and result:IsA("Model") then
     loadedModel = result
     loadedModel.Parent = workspace
-    loadedModel.Name = "Following_ENEMY"
 else
     return
 end
@@ -4249,7 +4247,7 @@ local function findGroundskeeper()
     if not currentRooms then return nil end
 
     for _, room in ipairs(currentRooms:GetChildren()) do
-        if room:IsA("Model") or room:IsA("Folder") then
+        if room:IsA("Model") then
             local target = room:FindFirstChild("Groundskeeper", true)
             if target and target:IsA("Model") then
                 return target
@@ -4346,25 +4344,44 @@ local function processDeleteSounds(model)
     end
 end
 
+local function deleteGroundskeeperSounds()
+    local foundAny = false
+    local function searchAndDelete(parent)
+        for _, child in ipairs(parent:GetChildren()) do
+            if child.Name == "Groundskeeper" and child:IsA("Model") then
+                processDeleteSounds(child)
+            end
+            searchAndDelete(child)
+        end
+    end
+    searchAndDelete(workspace)
+    return foundAny
+end
+
+deleteGroundskeeperSounds()
+
 local function setupSoundDeletionMonitor()
     local connections = {}
+    local function processNewSound(sound)
+        if not sound:IsA("Sound") then return end
+        local current = sound
+        while current and current ~= game do
+            if current.Name == "Groundskeeper" and current:IsA("Model") then
+                sound:Destroy()
+                break
+            end
+            current = current.Parent
+        end
+    end
     local function monitorDescendantAdded(parent)
         local connection = parent.DescendantAdded:Connect(function(descendant)
             if descendant:IsA("Sound") then
-                local current = descendant
-                while current and current ~= game do
-                    if current.Name == "Groundskeeper" and current:IsA("Model") then
-                        descendant:Destroy()
-                        break
-                    end
-                    current = current.Parent
-                end
+                processNewSound(descendant)
             end
         end)
         table.insert(connections, connection)
     end
     monitorDescendantAdded(workspace)
-    
     local groundskeeperConnection
     groundskeeperConnection = workspace.DescendantAdded:Connect(function(descendant)
         if descendant.Name == "Groundskeeper" and descendant:IsA("Model") then
@@ -4373,7 +4390,6 @@ local function setupSoundDeletionMonitor()
         end
     end)
     table.insert(connections, groundskeeperConnection)
-    
     return function()
         for _, conn in ipairs(connections) do
             conn:Disconnect()
@@ -4385,8 +4401,7 @@ local soundMonitor = setupSoundDeletionMonitor()
 
 local followConnection
 followConnection = RunService.Heartbeat:Connect(function()
-    if not targetModel or not targetModel.PrimaryPart or not loadedModel or not loadedModel.PrimaryPart or 
-       not targetModel.PrimaryPart.Parent or not loadedModel.Parent then
+    if not targetModel or not targetModel.PrimaryPart or not loadedModel or not loadedModel.PrimaryPart or not targetModel.PrimaryPart.Parent or not loadedModel.Parent then
         if followConnection then
             followConnection:Disconnect()
         end
@@ -4396,244 +4411,7 @@ followConnection = RunService.Heartbeat:Connect(function()
     loadedModel:PivotTo(targetCFrame)
 end)
 
-local function playLaserEffect()
-    local RunService = game:GetService("RunService")
-    local Workspace = game:GetService("Workspace")
-    local Players = game:GetService("Players")
-    
-    local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://138148333"
-    sound.Name = "WHOOP"
-    sound.Parent = workspace
-    sound:Play()
-    
-    local targetModel = workspace:FindFirstChild("Following_ENEMY")
-    if not targetModel then 
-        if sound and sound.Parent then sound:Destroy() end
-        return false 
-    end
-    
-    local currentRooms = Workspace:FindFirstChild("CurrentRooms")
-    local groundskeeperModel
-    if currentRooms then
-        for _, room in ipairs(currentRooms:GetChildren()) do
-            if room:IsA("Folder") or room:IsA("Model") then
-                local groundskeeper = room:FindFirstChild("Groundskeeper")
-                if groundskeeper and groundskeeper:IsA("Model") then
-                    groundskeeperModel = groundskeeper
-                    break
-                end
-            end
-        end
-    end
-    if not groundskeeperModel then 
-        if sound and sound.Parent then sound:Destroy() end
-        return false 
-    end
-    
-    if not groundskeeperModel.PrimaryPart then
-        local rootPart = groundskeeperModel:FindFirstChild("HumanoidRootPart") or groundskeeperModel:FindFirstChildWhichIsA("BasePart")
-        if rootPart then 
-            groundskeeperModel.PrimaryPart = rootPart 
-        else 
-            if sound and sound.Parent then sound:Destroy() end
-            return false
-        end
-    end
-    
-    task.wait(1.8)
-    
-    local laser1Id = 75823189898619
-    local laser1Model
-    local laser1Success, laser1Result = pcall(function()
-        return game:GetObjects("rbxassetid://" .. laser1Id)[1]
-    end)
-    
-    if laser1Success and laser1Result and laser1Result:IsA("Model") then
-        laser1Model = laser1Result
-        laser1Model.Name = "Laser1"
-        laser1Model.Parent = workspace
-        if not laser1Model.PrimaryPart then
-            local rootPart = laser1Model:FindFirstChild("HumanoidRootPart") or laser1Model:FindFirstChildWhichIsA("BasePart")
-            if rootPart then laser1Model.PrimaryPart = rootPart end
-        end
-    else
-        if sound and sound.Parent then sound:Destroy() end
-        return false
-    end
-    
-    local function hideModel(model)
-        for _, descendant in ipairs(model:GetDescendants()) do
-            if descendant:IsA("BasePart") or descendant:IsA("MeshPart") then
-                descendant.Transparency = 1
-            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
-                descendant.Transparency = 1
-            elseif descendant:IsA("SurfaceGui") or descendant:IsA("BillboardGui") then
-                descendant.Enabled = false
-            end
-        end
-    end
-    
-    local function restoreModelExceptRootPart(model)
-        for _, descendant in ipairs(model:GetDescendants()) do
-            if descendant.Name ~= "HumanoidRootPart" then
-                if descendant:IsA("BasePart") or descendant:IsA("MeshPart") then
-                    descendant.Transparency = 0
-                elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
-                    descendant.Transparency = 0
-                elseif descendant:IsA("SurfaceGui") or descendant:IsA("BillboardGui") then
-                    descendant.Enabled = true
-                end
-            end
-        end
-    end
-    
-    local laser1FollowConnection
-    if groundskeeperModel and groundskeeperModel.PrimaryPart and laser1Model and laser1Model.PrimaryPart then
-        laser1Model:PivotTo(groundskeeperModel.PrimaryPart.CFrame)
-        hideModel(targetModel)
-        laser1FollowConnection = RunService.Heartbeat:Connect(function()
-            if not groundskeeperModel or not groundskeeperModel.PrimaryPart or not laser1Model or not laser1Model.PrimaryPart or 
-               not groundskeeperModel.PrimaryPart.Parent or not laser1Model.Parent then
-                if laser1FollowConnection then 
-                    laser1FollowConnection:Disconnect() 
-                end
-                return
-            end
-            laser1Model:PivotTo(groundskeeperModel.PrimaryPart.CFrame)
-        end)
-    else
-        if laser1Model and laser1Model.Parent then laser1Model:Destroy() end
-        if sound and sound.Parent then sound:Destroy() end
-        return false
-    end
-    
-    task.wait(1.3)
-    
-    local laser2Id = 74088823220607
-    local laser2Model
-    local laser2Success, laser2Result = pcall(function()
-        return game:GetObjects("rbxassetid://" .. laser2Id)[1]
-    end)
-    
-    if laser2Success and laser2Result and laser2Result:IsA("Model") then
-        laser2Model = laser2Result
-        laser2Model.Name = "Laser2"
-        laser2Model.Parent = workspace
-        
-        if not laser2Model.PrimaryPart then
-            local rootPart = laser2Model:FindFirstChild("HumanoidRootPart") or laser2Model:FindFirstChildWhichIsA("BasePart")
-            if rootPart then laser2Model.PrimaryPart = rootPart end
-        end
-        
-        local player = Players.LocalPlayer
-        if player then
-            local camera = workspace.CurrentCamera
-            if camera then
-                local SHAKE_INTENSITY = 2
-                local SHAKE_DURATION = 10
-                local SHAKE_SPEED = 70
-                local startTime = tick()
-                local connection
-                
-                connection = RunService.RenderStepped:Connect(function()
-                    local elapsed = tick() - startTime
-                    if elapsed < SHAKE_DURATION then
-                        local decay = 1 - (elapsed / SHAKE_DURATION)
-                        local intensity = SHAKE_INTENSITY * decay
-                        local time = elapsed * SHAKE_SPEED
-                        local offset = Vector3.new(
-                            math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
-                            math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
-                            math.sin(time * 1.0) * intensity * 0.3
-                        )
-                        local lookVector = camera.CFrame.LookVector
-                        local currentPos = camera.CFrame.Position
-                        local newPos = currentPos + offset
-                        camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
-                    else
-                        if connection then connection:Disconnect() end
-                    end
-                end)
-            end
-        end
-    else
-        if laser1FollowConnection then laser1FollowConnection:Disconnect() end
-        if laser1Model and laser1Model.Parent then laser1Model:Destroy() end
-        if sound and sound.Parent then sound:Destroy() end
-        return false
-    end
-    
-    local laser2FollowConnection
-    if groundskeeperModel and groundskeeperModel.PrimaryPart and laser2Model and laser2Model.PrimaryPart then
-        laser2Model:PivotTo(groundskeeperModel.PrimaryPart.CFrame)
-        hideModel(laser1Model)
-        laser2FollowConnection = RunService.Heartbeat:Connect(function()
-            if not groundskeeperModel or not groundskeeperModel.PrimaryPart or not laser2Model or not laser2Model.PrimaryPart or 
-               not groundskeeperModel.PrimaryPart.Parent or not laser2Model.Parent then
-                if laser2FollowConnection then 
-                    laser2FollowConnection:Disconnect() 
-                end
-                return
-            end
-            laser2Model:PivotTo(groundskeeperModel.PrimaryPart.CFrame)
-        end)
-    else
-        if laser1FollowConnection then laser1FollowConnection:Disconnect() end
-        if laser2FollowConnection then laser2FollowConnection:Disconnect() end
-        if laser1Model and laser1Model.Parent then laser1Model:Destroy() end
-        if laser2Model and laser2Model.Parent then laser2Model:Destroy() end
-        if sound and sound.Parent then sound:Destroy() end
-        return false
-    end
-    
-    local soundFinished = false
-    local soundConnection
-    soundConnection = sound.Ended:Connect(function()
-        soundFinished = true
-        if soundConnection then soundConnection:Disconnect() end
-    end)
-    
-    while not soundFinished do 
-        task.wait(0.1) 
-    end
-    
-    if targetModel then 
-        restoreModelExceptRootPart(targetModel) 
-    end
-    
-    if laser1FollowConnection then laser1FollowConnection:Disconnect() end
-    if laser2FollowConnection then laser2FollowConnection:Disconnect() end
-    
-    if laser1Model and laser1Model.Parent then laser1Model:Destroy() end
-    if laser2Model and laser2Model.Parent then laser2Model:Destroy() end
-    if sound and sound.Parent then sound:Destroy() end
-    
-    return true
-end
-
-local function scheduleLaserEffects()
-    local endTime = tick() + 5 * 60
-    local count = 0
-    
-    while tick() < endTime do
-        count = count + 1
-        
-        playLaserEffect()
-        
-        local waitTime = math.random(12, 50)
-        
-        if tick() + waitTime > endTime then
-            local remainingTime = endTime - tick()
-            if remainingTime > 0 then
-                task.wait(remainingTime)
-            end
-            break
-        else
-            task.wait(waitTime)
-        end
-    end
-    
+return function()
     if followConnection then
         followConnection:Disconnect()
     end
@@ -4648,12 +4426,245 @@ local function scheduleLaserEffects()
     end
 end
 
-task.spawn(scheduleLaserEffects)
-
 end
 
 local function checkSound(sound)
     if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140719303781203" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+--------WHOOPDA
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://138148333"
+sound.Name = "WHOOP"
+sound.Parent = workspace
+sound:Play()
+
+local targetModel = workspace:FindFirstChild("Following_ENEMY")
+if not targetModel then return end
+
+if not targetModel.PrimaryPart then
+    local rootPart = targetModel:FindFirstChild("HumanoidRootPart") or targetModel:FindFirstChildWhichIsA("BasePart")
+    if rootPart then targetModel.PrimaryPart = rootPart else return end
+end
+
+local currentRooms = Workspace:FindFirstChild("CurrentRooms")
+local groundskeeperModel
+if currentRooms then
+    for _, room in ipairs(currentRooms:GetChildren()) do
+        if room:IsA("Folder") or room:IsA("Model") then
+            local groundskeeper = room:FindFirstChild("Groundskeeper")
+            if groundskeeper and groundskeeper:IsA("Model") then
+                groundskeeperModel = groundskeeper
+                break
+            end
+        end
+    end
+end
+if not groundskeeperModel then return end
+
+if not groundskeeperModel.PrimaryPart then
+    local rootPart = groundskeeperModel:FindFirstChild("HumanoidRootPart") or groundskeeperModel:FindFirstChildWhichIsA("BasePart")
+    if rootPart then groundskeeperModel.PrimaryPart = rootPart else return end
+end
+
+task.wait(1.8)
+
+local laser1Id = 75823189898619
+local laser1Model
+local laser1Success, laser1Result = pcall(function()
+    return game:GetObjects("rbxassetid://" .. laser1Id)[1]
+end)
+if laser1Success and laser1Result and laser1Result:IsA("Model") then
+    laser1Model = laser1Result
+    laser1Model.Name = "Laser1"
+    laser1Model.Parent = workspace
+    if not laser1Model.PrimaryPart then
+        local rootPart = laser1Model:FindFirstChild("HumanoidRootPart") or laser1Model:FindFirstChildWhichIsA("BasePart")
+        if rootPart then laser1Model.PrimaryPart = rootPart end
+    end
+else
+    return
+end
+
+local function hideModel(model)
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") or descendant:IsA("MeshPart") then
+            descendant.Transparency = 1
+        elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+            descendant.Transparency = 1
+        elseif descendant:IsA("SurfaceGui") or descendant:IsA("BillboardGui") then
+            descendant.Enabled = false
+        end
+    end
+end
+
+local function restoreModelExceptRootPart(model)
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant.Name ~= "HumanoidRootPart" then
+            if descendant:IsA("BasePart") or descendant:IsA("MeshPart") then
+                descendant.Transparency = 0
+            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+                descendant.Transparency = 0
+            elseif descendant:IsA("SurfaceGui") or descendant:IsA("BillboardGui") then
+                descendant.Enabled = true
+            end
+        end
+    end
+end
+
+local laser1FollowConnection
+if groundskeeperModel and groundskeeperModel.PrimaryPart and laser1Model and laser1Model.PrimaryPart then
+    laser1Model:PivotTo(groundskeeperModel.PrimaryPart.CFrame)
+    hideModel(targetModel)
+    laser1FollowConnection = RunService.Heartbeat:Connect(function()
+        if not groundskeeperModel or not groundskeeperModel.PrimaryPart or not laser1Model or not laser1Model.PrimaryPart or 
+           not groundskeeperModel.PrimaryPart.Parent or not laser1Model.Parent then
+            if laser1FollowConnection then laser1FollowConnection:Disconnect() end
+            return
+        end
+        laser1Model:PivotTo(groundskeeperModel.PrimaryPart.CFrame)
+    end)
+else
+    return
+end
+
+task.wait(1.3)
+
+local laser2Id = 74088823220607
+local laser2Model
+local laser2Success, laser2Result = pcall(function()
+    return game:GetObjects("rbxassetid://" .. laser2Id)[1]
+end)
+if laser2Success and laser2Result and laser2Result:IsA("Model") then
+    laser2Model = laser2Result
+    laser2Model.Name = "Laser2"
+    laser2Model.Parent = workspace
+    if not laser2Model.PrimaryPart then
+        local rootPart = laser2Model:FindFirstChild("HumanoidRootPart") or laser2Model:FindFirstChildWhichIsA("BasePart")
+        if rootPart then laser2Model.PrimaryPart = rootPart end
+    end
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local SHAKE_INTENSITY = 2
+    local SHAKE_DURATION = 10
+    local SHAKE_SPEED = 70
+    local player = Players.LocalPlayer
+    if not player then return end
+    local camera = workspace.CurrentCamera
+    local startTime = tick()
+    local originalPosition = camera.CFrame.Position
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        local elapsed = tick() - startTime
+        if elapsed < SHAKE_DURATION then
+            local decay = 1 - (elapsed / SHAKE_DURATION)
+            local intensity = SHAKE_INTENSITY * decay
+            local time = elapsed * SHAKE_SPEED
+            local offset = Vector3.new(
+                math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+                math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+                math.sin(time * 1.0) * intensity * 0.3
+            )
+            local lookVector = camera.CFrame.LookVector
+            local upVector = camera.CFrame.UpVector
+            local rightVector = camera.CFrame.RightVector
+            local currentPos = camera.CFrame.Position
+            local newPos = currentPos + offset
+            camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
+        else
+            if connection then connection:Disconnect() end
+        end
+    end)
+else
+    return
+end
+
+local laser2FollowConnection
+if groundskeeperModel and groundskeeperModel.PrimaryPart and laser2Model and laser2Model.PrimaryPart then
+    laser2Model:PivotTo(groundskeeperModel.PrimaryPart.CFrame)
+    hideModel(laser1Model)
+    laser2FollowConnection = RunService.Heartbeat:Connect(function()
+        if not groundskeeperModel or not groundskeeperModel.PrimaryPart or not laser2Model or not laser2Model.PrimaryPart or 
+           not groundskeeperModel.PrimaryPart.Parent or not laser2Model.Parent then
+            if laser2FollowConnection then laser2FollowConnection:Disconnect() end
+            return
+        end
+        laser2Model:PivotTo(groundskeeperModel.PrimaryPart.CFrame)
+    end)
+else
+    return
+end
+
+local soundFinished = false
+local soundConnection
+soundConnection = sound.Ended:Connect(function()
+    soundFinished = true
+    if soundConnection then soundConnection:Disconnect() end
+end)
+while not soundFinished do task.wait(0.1) end
+
+if targetModel then restoreModelExceptRootPart(targetModel) end
+
+if laser1FollowConnection then laser1FollowConnection:Disconnect() end
+if laser2FollowConnection then laser2FollowConnection:Disconnect() end
+
+if laser1Model and laser1Model.Parent then laser1Model:Destroy() end
+if laser2Model and laser2Model.Parent then laser2Model:Destroy() end
+if sound and sound.Parent then sound:Destroy() end
+
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://9044461391" then
         local parent = sound.Parent
         if parent and parent.Name == "Scary Entity" then
             local grandParent = parent.Parent

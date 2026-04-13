@@ -2,6 +2,214 @@ loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master
 -----------
 local checkedEntities = {}
 local listeningSounds = {}
+local function runEvent()
+    local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local JEFF_NAME = "JeffTheKiller"
+local MODEL_ID = 139609642724387
+local DURATION = 10
+
+local jeff = workspace:FindFirstChild(JEFF_NAME)
+if not jeff then return end
+
+local rootPart = jeff:FindFirstChild("HumanoidRootPart")
+if not rootPart then return end
+
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    local jeffPosition = rootPart.Position
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        local character = player.Character
+        if character then
+            local targetRootPart = character:FindFirstChild("HumanoidRootPart")
+            if targetRootPart then
+                local distance = (targetRootPart.Position - jeffPosition).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+local function loadModel()
+    local success, result = pcall(function()
+        local model = game:GetObjects("rbxassetid://" .. tostring(MODEL_ID))[1]
+        if model then
+            model.Parent = workspace
+            return model
+        end
+        return nil
+    end)
+    
+    if not success then
+        return nil
+    end
+    
+    return result
+end
+
+local function executeBehavior()
+    local closestPlayer = getClosestPlayer()
+    if not closestPlayer or not closestPlayer.Character then 
+        return 
+    end
+    
+    local targetRootPart = closestPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRootPart then 
+        return 
+    end
+    
+    local initialCFrame = rootPart.CFrame
+    local humanoid = jeff:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = 0
+        humanoid.JumpPower = 0
+    end
+    
+    local offset = targetRootPart.CFrame.LookVector * -5
+    rootPart.CFrame = CFrame.new(targetRootPart.Position + offset)
+    
+    task.wait(1)
+    
+    local direction = (targetRootPart.Position - rootPart.Position) * Vector3.new(1, 0, 1)
+    if direction.Magnitude > 0 then
+        local lookAtCFrame = CFrame.lookAt(rootPart.Position, rootPart.Position + direction)
+        rootPart.CFrame = CFrame.new(rootPart.Position) * lookAtCFrame.Rotation
+    end
+    
+    if humanoid then
+        humanoid.WalkSpeed = 50
+    end
+    
+    local isActive = true
+    
+    local model = loadModel()
+    if not model then
+        model = Instance.new("Part")
+        model.Name = "Effect"
+        model.Size = Vector3.new(3, 3, 3)
+        model.BrickColor = BrickColor.new("Bright red")
+        model.Material = Enum.Material.Neon
+        model.Parent = workspace
+    end
+    
+    local targetPosition = targetRootPart.Position
+    local startTime = time()
+    
+    local connection = RunService.Heartbeat:Connect(function(deltaTime)
+        if not isActive or not closestPlayer.Character or not targetRootPart.Parent then
+            connection:Disconnect()
+            return
+        end
+        
+        targetPosition = targetRootPart.Position
+        
+        local elapsed = time() - startTime
+        local speedMultiplier = 1 + (elapsed / DURATION) * 2
+        
+        local angle = math.sin(elapsed * 3) * math.pi
+        local radius = 5 + math.sin(elapsed * 2) * 2
+        
+        local x = math.cos(angle) * radius
+        local z = math.sin(angle) * radius
+        
+        local orbitPosition = Vector3.new(
+            targetPosition.X + x,
+            targetPosition.Y + 1,
+            targetPosition.Z + z
+        )
+        
+        local moveDirection = (orbitPosition - rootPart.Position).Unit
+        rootPart.CFrame = CFrame.lookAt(
+            rootPart.Position + moveDirection * 30 * speedMultiplier * deltaTime * 60,
+            targetPosition
+        )
+        
+        if model and model.Parent then
+            if model:IsA("Model") then
+                local primaryPart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
+                if primaryPart then
+                    primaryPart.CFrame = CFrame.new(rootPart.Position + Vector3.new(0, 3, 0))
+                end
+            else
+                model.CFrame = CFrame.new(rootPart.Position + Vector3.new(0, 3, 0))
+            end
+        end
+    end)
+    
+    task.wait(DURATION)
+    
+    isActive = false
+    connection:Disconnect()
+    
+    if model and model.Parent then
+        model:Destroy()
+    end
+    
+    if humanoid then
+        humanoid.WalkSpeed = 0
+    end
+    rootPart.CFrame = initialCFrame
+end
+
+executeBehavior()
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://129108783729677" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+-----------
+local checkedEntities = {}
+local listeningSounds = {}
 
 local function runEvent()
     local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
@@ -3635,6 +3843,348 @@ end
 
 local function checkSound(sound)
     if sound:IsA("Sound") and sound.SoundId == "rbxassetid://9045341575" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+-----------JEFF
+local checkedEntities = {}
+local listeningSounds = {}
+local function runEvent()
+    local RunService = game:GetService("RunService")
+local V1 = game:GetObjects("rbxassetid://81046861041760")[1]
+V1.Parent = workspace
+local V2 = workspace:WaitForChild("JeffTheKiller")
+
+local xOffset = 0
+local yOffset = 0
+local zOffset = 0
+
+if V1:IsA("Model") then
+    local primary = V1:FindFirstChildWhichIsA("BasePart")
+    if primary then
+        V1.PrimaryPart = primary
+    end
+end
+
+local function HS()
+    if not V2 then return end
+    
+    local function HP(obj)
+        if obj:IsA("BasePart") then
+            obj.Transparency = 1
+            obj.CanCollide = false
+        end
+        
+        for _, child in ipairs(obj:GetChildren()) do
+            if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") then
+                child.Transparency = 1
+            elseif child:IsA("ParticleEmitter") or child:IsA("Beam") or child:IsA("Trail") then
+                child.Enabled = false
+            end
+            
+            HP(child)
+        end
+    end
+    
+    local p1 = V2:FindFirstChild("Knife")
+    local p2 = V2:FindFirstChild("Head")
+    local p3 = V2:FindFirstChild("BoyAnimeHair_Black")
+    if p1 then HP(p1) end
+    if p2 then HP(p2) end
+    if p3 then
+        local h = p3:Clone()
+        h.Parent = V2
+        HP(h)
+    end
+    
+    local leftArm = V2:FindFirstChild("Left Arm")
+    local rightArm = V2:FindFirstChild("Right Arm")
+    if leftArm then HP(leftArm) end
+    if rightArm then HP(rightArm) end
+end
+
+HS()
+
+local connection
+connection = V2.AncestryChanged:Connect(function(_, parent)
+    if not parent then
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not V2 or not V2.Parent then 
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+        return 
+    end
+
+    local function findRootPart(model)
+        local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
+        if root then 
+            return root 
+        end
+        
+        for _, child in pairs(model:GetDescendants()) do
+            if (child.Name == "HumanoidRootPart" or child.Name == "Torso") and child:IsA("BasePart") then
+                return child
+            end
+        end
+        return nil
+    end
+    
+    local root = findRootPart(V2)
+    if not root then 
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+        return
+    end
+    
+    if V1:IsA("Model") then
+        if not V1.PrimaryPart then
+            local part = V1:FindFirstChildWhichIsA("BasePart")
+            if part then
+                V1.PrimaryPart = part
+            end
+        end
+        
+        if V1.PrimaryPart then
+            local newCFrame = CFrame.new(
+                root.CFrame.Position.X + xOffset,
+                root.CFrame.Position.Y + yOffset,
+                root.CFrame.Position.Z + zOffset
+            ) * root.CFrame.Rotation
+            V1:SetPrimaryPartCFrame(newCFrame)
+        end
+    elseif V1:IsA("BasePart") then
+        local newCFrame = CFrame.new(
+            root.CFrame.Position.X + xOffset,
+            root.CFrame.Position.Y + yOffset,
+            root.CFrame.Position.Z + zOffset
+        ) * root.CFrame.Rotation
+        V1.CFrame = newCFrame
+    end
+end)
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://103972512702681" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+----------JEFF STAR
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local RunService = game:GetService("RunService")
+
+local jeff = workspace:FindFirstChild("JeffTheKiller")
+local rootPart = jeff and jeff:FindFirstChild("HumanoidRootPart")
+
+if jeff and rootPart then
+    local humanoid = jeff:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = 0
+        humanoid.JumpPower = 0
+    end
+    
+    local initialPosition = rootPart.Position
+    
+    RunService.Heartbeat:Connect(function()
+        local jeffPosition = rootPart.Position
+        local closestPlayer = nil
+        local shortestDistance = math.huge
+        
+        for _, player in pairs(game.Players:GetPlayers()) do
+            local character = player.Character
+            if character then
+                local targetRootPart = character:FindFirstChild("HumanoidRootPart")
+                if targetRootPart then
+                    local distance = (targetRootPart.Position - jeffPosition).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        closestPlayer = player
+                    end
+                end
+            end
+        end
+        
+        if closestPlayer and closestPlayer.Character then
+            local targetRootPart = closestPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if targetRootPart then
+                local direction = (targetRootPart.Position - jeffPosition) * Vector3.new(1, 0, 1)
+                
+                if direction.Magnitude > 0 then
+                    local lookAtCFrame = CFrame.lookAt(jeffPosition, jeffPosition + direction)
+                    rootPart.CFrame = CFrame.new(jeffPosition) * lookAtCFrame.Rotation
+                end
+            end
+        end
+        
+        rootPart.CFrame = CFrame.new(initialPosition) * rootPart.CFrame.Rotation
+    end)
+end
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://126590329938074" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+-----JEFF GUN
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local sound1 = Instance.new("Sound")
+sound1.SoundId = "rbxassetid://3120031857"
+sound1.Volume = 1
+sound1.Parent = workspace
+local sound2 = Instance.new("Sound")
+sound2.SoundId = "rbxassetid://680140087"
+sound2.Volume = 1
+sound2.Parent = workspace
+sound1:Play()
+task.wait(1)
+sound2:Play()
+sound2.Ended:Wait()
+sound1:Destroy()
+sound2:Destroy()
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://83225089316779" then
         local parent = sound.Parent
         if parent and parent.Name == "Scary Entity" then
             local grandParent = parent.Parent

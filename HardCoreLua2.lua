@@ -3532,6 +3532,256 @@ for _, entity in pairs(workspace:GetChildren()) do
         end
     end
 end
+-----s
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    local modelID = 76379083600613
+local targetName = "Repentance_Skinned"
+local loadedVFX = nil
+local targetModel = nil
+local connections = {}
+local isFollowing = false
+
+local RunService = game:GetService("RunService")
+
+local function loadVFXPart()
+    if loadedVFX and loadedVFX.Parent then
+        loadedVFX:Destroy()
+        loadedVFX = nil
+    end
+    
+    local success, result = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(modelID))
+    end)
+    
+    if not success or not result or not result[1] then
+        return nil
+    end
+    
+    local model = result[1]
+    
+    local vfxPart
+    for _, child in ipairs(model:GetDescendants()) do
+        if child:IsA("BasePart") and child.Name:lower() == "vfx" then
+            vfxPart = child:Clone()
+            break
+        end
+    end
+    
+    if not vfxPart then
+        return nil
+    end
+    
+    vfxPart.Anchored = true
+    vfxPart.CanCollide = false
+    vfxPart.Transparency = 1
+    vfxPart.CanTouch = false
+    vfxPart.CanQuery = false
+    vfxPart.Massless = true
+    vfxPart.Parent = workspace
+    vfxPart.Name = "Following_VFX"
+    
+    return vfxPart
+end
+
+local function fadeOutVFX()
+    if not loadedVFX or not loadedVFX.Parent then return end
+    
+    local fadeDuration = 2
+    local fadeStart = tick()
+    
+    while loadedVFX and loadedVFX.Parent and tick() - fadeStart < fadeDuration do
+        local progress = (tick() - fadeStart) / fadeDuration
+        local transparency = progress
+        
+        for _, descendant in ipairs(loadedVFX:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.Transparency = transparency
+            elseif descendant:IsA("Beam") then
+                descendant.Transparency = NumberSequence.new(transparency)
+            elseif descendant:IsA("ParticleEmitter") then
+                descendant.Rate = descendant.Rate * (1 - progress)
+            end
+        end
+        
+        RunService.Heartbeat:Wait()
+    end
+    
+    if loadedVFX and loadedVFX.Parent then
+        loadedVFX:Destroy()
+        loadedVFX = nil
+    end
+end
+
+local function followTarget()
+    if not targetModel or not targetModel.Parent or not loadedVFX or not loadedVFX.Parent then
+        isFollowing = false
+        return
+    end
+    
+    isFollowing = true
+    loadedVFX.Anchored = true
+    
+    local loadTime = tick()
+    local fadeStarted = false
+    
+    while isFollowing and targetModel and targetModel.Parent and loadedVFX and loadedVFX.Parent do
+        RunService.Heartbeat:Wait()
+        
+        if loadedVFX.Anchored == false then
+            loadedVFX.Anchored = true
+        end
+        
+        if tick() - loadTime >= 8 and not fadeStarted then
+            fadeStarted = true
+            coroutine.wrap(fadeOutVFX)()
+        end
+        
+        if fadeStarted then
+            isFollowing = false
+            break
+        end
+        
+        local targetPos
+        if targetModel:IsA("Model") then
+            local primary = targetModel.PrimaryPart
+            if primary then
+                targetPos = primary.CFrame
+            else
+                for _, child in ipairs(targetModel:GetDescendants()) do
+                    if child:IsA("BasePart") then
+                        targetPos = child.CFrame
+                        break
+                    end
+                end
+            end
+        elseif targetModel:IsA("BasePart") then
+            targetPos = targetModel.CFrame
+        end
+        
+        if targetPos then
+            loadedVFX.CFrame = targetPos + Vector3.new(0, 4, 0)
+        end
+    end
+end
+
+local function start()
+    isFollowing = false
+    for _, conn in pairs(connections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    connections = {}
+    
+    if loadedVFX and loadedVFX.Parent then
+        loadedVFX:Destroy()
+        loadedVFX = nil
+    end
+    
+    targetModel = workspace:FindFirstChild(targetName)
+    if not targetModel or not targetModel:IsA("Model") then
+        return
+    end
+    
+    loadedVFX = loadVFXPart()
+    if not loadedVFX then
+        return
+    end
+    
+    local conn1 = targetModel.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            isFollowing = false
+            if loadedVFX and loadedVFX.Parent then
+                loadedVFX:Destroy()
+                loadedVFX = nil
+            end
+        end
+    end)
+    
+    local conn2 = loadedVFX.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            isFollowing = false
+            loadedVFX = nil
+        end
+    end)
+    
+    table.insert(connections, conn1)
+    table.insert(connections, conn2)
+    
+    coroutine.wrap(followTarget)()
+end
+
+local function init()
+    pcall(start)
+    
+    workspace.ChildAdded:Connect(function(child)
+        if child.Name == targetName and child:IsA("Model") then
+            wait(0.5)
+            pcall(start)
+        end
+    end)
+end
+
+wait(2)
+init()
+
+coroutine.wrap(function()
+    while true do
+        wait(5)
+        if loadedVFX and loadedVFX.Parent and loadedVFX.Anchored == false then
+            loadedVFX.Anchored = true
+        end
+    end
+end)()
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://1845303150" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
 -----------ML
 local checkedEntities = {}
 local listeningSounds = {}

@@ -14,7 +14,6 @@ local isFollowing = false
 local fadeStartTime = nil
 local isFading = false
 local isProcessing = false
-local isCompleted = false
 
 local RunService = game:GetService("RunService")
 
@@ -112,7 +111,6 @@ local function fadeOutModel()
     end
     
     isFading = false
-    isCompleted = true
     isProcessing = false
     
     if anchorPart and anchorPart.Parent then
@@ -152,7 +150,7 @@ local function followTarget()
 end
 
 local function processTarget()
-    if isProcessing or isCompleted then
+    if isProcessing then
         return
     end
     
@@ -234,7 +232,7 @@ local function processTarget()
 end
 
 local function waitForTargetAndProcess()
-    while not isCompleted do
+    while true do
         targetModel = workspace:FindFirstChild(targetName)
         if targetModel and targetModel:IsA("Model") and not isProcessing then
             processTarget()
@@ -250,8 +248,15 @@ end
 wait(2)
 init()
 
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == targetName and child:IsA("Model") and not isProcessing then
+        wait(0.5)
+        processTarget()
+    end
+end)
+
 coroutine.wrap(function()
-    while not isCompleted do
+    while true do
         wait(5)
         if anchorPart and anchorPart.Parent and anchorPart.Anchored == false then
             anchorPart.Anchored = true

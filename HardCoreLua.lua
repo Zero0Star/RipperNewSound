@@ -600,7 +600,7 @@ main()
 end
 
 local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://" then
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://111351357978027" then
         local parent = sound.Parent
         if parent and parent.Name == "Scary Entity" then
             local grandParent = parent.Parent

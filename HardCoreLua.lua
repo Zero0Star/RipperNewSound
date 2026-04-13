@@ -1,3 +1,5 @@
+loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/CUR.lua?raw=true"))()
+---------------------
 local checkedEntities = {}
 local listeningSounds = {}
 local function runEvent()

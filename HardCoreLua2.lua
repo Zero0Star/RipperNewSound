@@ -4498,6 +4498,1131 @@ for _, entity in pairs(workspace:GetChildren()) do
         end
     end
 end
+-------------HATRED
+local checkedEntities = {}
+local listeningSounds = {}
+
+local function runEvent()
+    
+    local Duration = 260 
+    local FlickerAmount = 30 
+    local LatestRoomValue = game.ReplicatedStorage.GameData.LatestRoom.Value 
+    local LatestRoom = workspace.CurrentRooms[LatestRoomValue] 
+    if LatestRoom then 
+        require(game.ReplicatedStorage.ModulesClient.Module_Events).flicker(LatestRoom, Duration, FlickerAmount) 
+    end 
+    
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    
+    local SHAKE_INTENSITY = 1 
+    local SHAKE_DURATION = 260 
+    local SHAKE_SPEED = 3 
+    
+    local player = Players.LocalPlayer
+    if not player then return end
+    
+    local camera = workspace.CurrentCamera
+    local startTime = tick()
+    local originalPosition = camera.CFrame.Position
+    local connection
+    
+    connection = RunService.RenderStepped:Connect(function()
+        local elapsed = tick() - startTime
+        
+        if elapsed < SHAKE_DURATION then
+            local decay = 1 - (elapsed / SHAKE_DURATION)
+            local intensity = SHAKE_INTENSITY * decay
+            local time = elapsed * SHAKE_SPEED
+            local offset = Vector3.new(
+                math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+                math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+                math.sin(time * 1.0) * intensity * 0.3
+            )
+            
+            local lookVector = camera.CFrame.LookVector
+            local upVector = camera.CFrame.UpVector
+            local rightVector = camera.CFrame.RightVector
+            
+            local currentPos = camera.CFrame.Position
+            local newPos = currentPos + offset
+            
+            camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
+        else
+            if connection then
+                connection:Disconnect()
+            end
+        end
+    end)
+    
+    function GitAud(soundgit, filename)
+        local url = soundgit
+        local FileName = filename
+        writefile(FileName .. ".mp3", game:HttpGet(url))
+        return (getcustomasset or getsynasset)(FileName .. ".mp3")
+    end
+    
+    function CustomGitSound(soundlink, vol, filename)
+        local sound = Instance.new("Sound")
+        sound.SoundId = GitAud(soundlink, filename)
+        sound.Parent = workspace
+        sound.Name = filename or "Music"
+        sound.Volume = vol or 1
+        sound:Play()
+    end
+    
+    local targetAudioUrl = "https://github.com/Zero0Star/RipperMPSound/blob/master/HatredBossMusic.mp3?raw=true"
+    local volume = 0.8
+    local localFileName = "Hatred"
+    CustomGitSound(targetAudioUrl, volume, localFileName)
+    
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("What is this?",true)
+    
+    local Workspace = game:GetService("Workspace")
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    
+    local player = Players.LocalPlayer
+    local character = player.Character
+    local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+    
+    if not humanoidRootPart then
+        if character then
+            humanoidRootPart = character:WaitForChild("HumanoidRootPart", 3)
+        else
+            character = player.CharacterAdded:Wait()
+            humanoidRootPart = character:WaitForChild("HumanoidRootPart", 3)
+        end
+    end
+    
+    if not humanoidRootPart then return end
+    
+    local MODEL_ID = 128445565656639
+    local START_DISTANCE = 120
+    local STOP_DISTANCE = 15
+    local APPROACH_DURATION = 20
+    local HOVER_DURATION = 260
+    
+    local function createGlowingModel()
+        local model = Instance.new("Model")
+        model.Name = "MovingModel"
+        
+        local mainPart = Instance.new("Part")
+        mainPart.Name = "Core"
+        mainPart.Size = Vector3.new(5, 5, 5)
+        mainPart.Shape = Enum.PartType.Ball
+        mainPart.Color = Color3.fromRGB(0, 200, 255)
+        mainPart.Material = Enum.Material.Neon
+        mainPart.Transparency = 0.2
+        mainPart.CanCollide = false
+        mainPart.Anchored = true
+        mainPart.Parent = model
+        
+        local pointLight = Instance.new("PointLight")
+        pointLight.Color = Color3.fromRGB(100, 200, 255)
+        pointLight.Range = 30
+        pointLight.Brightness = 5
+        pointLight.Parent = mainPart
+        
+        model.PrimaryPart = mainPart
+        return model
+    end
+    
+    local function loadModel()
+        local success, result = pcall(function()
+            local objects = game:GetObjects("rbxassetid://" .. tostring(MODEL_ID))
+            if objects and #objects > 0 then
+                return objects[1]:Clone()
+            end
+            return nil
+        end)
+        
+        if success and result then
+            return result
+        end
+        
+        return createGlowingModel()
+    end
+    
+    local function startAnimation()
+        local model = loadModel()
+        if not model then return end
+        
+        model.Name = "DistantModel"
+        model.Parent = Workspace
+        
+        local primaryPart = model.PrimaryPart
+        if not primaryPart then
+            for _, part in ipairs(model:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    model.PrimaryPart = part
+                    primaryPart = part
+                    break
+                end
+            end
+        end
+        
+        if not primaryPart then
+            model:Destroy()
+            return
+        end
+        
+        for _, part in ipairs(model:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+                part.Anchored = true
+            end
+        end
+        
+        local playerPos = humanoidRootPart.Position
+        local playerCFrame = humanoidRootPart.CFrame
+        local playerLook = playerCFrame.LookVector
+        local startPos = playerPos + (playerLook * START_DISTANCE)
+        startPos = startPos + Vector3.new(0, 10, 0)
+        
+        model:SetPrimaryPartCFrame(CFrame.new(startPos))
+        
+        local startTime = tick()
+        local isMoving = true
+        local isHovering = false
+        local hoverStartTime = 0
+        
+        local connection
+        
+        connection = RunService.Heartbeat:Connect(function(delta)
+            if not model or not model.Parent or not model:IsDescendantOf(Workspace) then
+                if connection then
+                    connection:Disconnect()
+                end
+                return
+            end
+            
+            if not humanoidRootPart or not humanoidRootPart.Parent then
+                if connection then
+                    connection:Disconnect()
+                end
+                if model and model.Parent then
+                    model:Destroy()
+                end
+                return
+            end
+            
+            local currentTime = tick()
+            local currentPlayerPos = humanoidRootPart.Position
+            local playerLookDirection = humanoidRootPart.CFrame.LookVector
+            
+            if isMoving then
+                local elapsed = currentTime - startTime
+                local progress = math.min(elapsed / APPROACH_DURATION, 1)
+                
+                if progress >= 1 then
+                    isMoving = false
+                    isHovering = true
+                    hoverStartTime = currentTime
+                    return
+                end
+                
+                local easedProgress = progress * progress
+                local targetPos = currentPlayerPos + (playerLookDirection * STOP_DISTANCE) + Vector3.new(0, 3, 0)
+                local currentPos = startPos:Lerp(targetPos, easedProgress)
+                
+                model:SetPrimaryPartCFrame(CFrame.new(currentPos))
+                
+                local lookDirection = (currentPlayerPos - currentPos)
+                if lookDirection.Magnitude > 0.1 then
+                    lookDirection = lookDirection.Unit
+                    model:SetPrimaryPartCFrame(CFrame.new(currentPos, currentPos + lookDirection))
+                end
+            elseif isHovering then
+                local hoverTime = currentTime - hoverStartTime
+                if hoverTime >= HOVER_DURATION then
+                    if model and model.Parent then
+                        model:Destroy()
+                    end
+                    if connection then
+                        connection:Disconnect()
+                    end
+                    return
+                end
+                
+                local targetPos = currentPlayerPos + (playerLookDirection * STOP_DISTANCE) + Vector3.new(0, 3, 0)
+                local currentPos = primaryPart.Position
+                local smoothedPos = currentPos:Lerp(targetPos, 0.1)
+                
+                model:SetPrimaryPartCFrame(CFrame.new(smoothedPos))
+                
+                local lookDirection = (currentPlayerPos - smoothedPos)
+                if lookDirection.Magnitude > 0.1 then
+                    lookDirection = lookDirection.Unit
+                    model:SetPrimaryPartCFrame(CFrame.new(smoothedPos, smoothedPos + lookDirection))
+                end
+            end
+        end)
+        
+        return function()
+            if connection then
+                connection:Disconnect()
+            end
+            if model and model.Parent then
+                model:Destroy()
+            end
+        end
+    end
+    
+    task.wait(0.5)
+    startAnimation()
+    
+    wait(20)
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("We meet again,little bug.",true)
+    wait(4)
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("I hope you can learn a lesson this time.",true)
+    wait(4)
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Let's get started.",true)
+    wait(1)
+    
+    local Players = game:GetService("Players")
+    local TweenService = game:GetService("TweenService")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local StarterGui = game:GetService("StarterGui")
+    
+    local player = Players.LocalPlayer
+    local playerGui = player:WaitForChild("PlayerGui")
+    
+    local GameState = {
+        isRunning = false,
+        currentPhase = 1,
+        overlay = nil,
+        gameUI = nil,
+        target = nil,
+        blueTarget = nil,
+        blueTarget2 = nil,
+        connections = {},
+        originalMouseBehavior = nil,
+        originalMouseIconEnabled = nil,
+        originalInventoryVisible = true,
+        inventoryFrame = nil
+    }
+    
+    local function hideInventory()
+        local inventoryPath = "MainUI/Settings/Inventory"
+        local pathParts = string.split(inventoryPath, "/")
+        local current = playerGui
+        
+        for _, partName in ipairs(pathParts) do
+            if current then
+                current = current:FindFirstChild(partName)
+            end
+        end
+        
+        if current and current:IsA("GuiObject") then
+            GameState.inventoryFrame = current
+            GameState.originalInventoryVisible = current.Visible
+            current.Visible = false
+        else
+            local allFrames = playerGui:GetDescendants()
+            for _, obj in ipairs(allFrames) do
+                if obj:IsA("GuiObject") and (obj.Name == "Inventory" or string.find(obj.Name:lower(), "inventory")) then
+                    GameState.inventoryFrame = obj
+                    GameState.originalInventoryVisible = obj.Visible
+                    obj.Visible = false
+                    break
+                end
+            end
+        end
+    end
+    
+    local function restoreInventory()
+        if GameState.inventoryFrame and GameState.inventoryFrame:IsA("GuiObject") then
+            GameState.inventoryFrame.Visible = GameState.originalInventoryVisible
+        end
+        GameState.inventoryFrame = nil
+        GameState.originalInventoryVisible = true
+    end
+    
+    local function createOverlay()
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "GameOverlay"
+        screenGui.ResetOnSpawn = false
+        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+        screenGui.IgnoreGuiInset = true
+        
+        local overlay = Instance.new("Frame")
+        overlay.Name = "BlackOverlay"
+        overlay.Size = UDim2.new(1, 0, 1, 0)
+        overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+        overlay.BackgroundTransparency = 1
+        overlay.ZIndex = 100
+        overlay.Parent = screenGui
+        
+        screenGui.Parent = playerGui
+        return overlay
+    end
+    
+    local function unlockMouse()
+        GameState.originalMouseBehavior = UserInputService.MouseBehavior
+        GameState.originalMouseIconEnabled = UserInputService.MouseIconEnabled
+        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+        UserInputService.MouseIconEnabled = true
+        task.wait(0.1)
+    end
+    
+    local function restoreMouse()
+        if GameState.originalMouseBehavior then
+            UserInputService.MouseBehavior = GameState.originalMouseBehavior
+        end
+        if GameState.originalMouseIconEnabled ~= nil then
+            UserInputService.MouseIconEnabled = GameState.originalMouseIconEnabled
+        end
+    end
+    
+    local function createGameUI()
+        local gameGui = Instance.new("ScreenGui")
+        gameGui.Name = "MiniGameUI"
+        gameGui.ResetOnSpawn = false
+        gameGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+        gameGui.IgnoreGuiInset = true
+        
+        local gameFrame = Instance.new("Frame")
+        gameFrame.Name = "GameFrame"
+        gameFrame.Size = UDim2.new(0.8, 0, 0.8, 0)
+        gameFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
+        gameFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+        gameFrame.BackgroundTransparency = 0.1
+        gameFrame.BorderSizePixel = 0
+        gameFrame.ZIndex = 101
+        gameFrame.Visible = false
+        gameFrame.Parent = gameGui
+        
+        local mouseHint = Instance.new("TextLabel")
+        mouseHint.Name = "MouseHint"
+        mouseHint.Size = UDim2.new(0.8, 0, 0.08, 0)
+        mouseHint.Position = UDim2.new(0.1, 0, 0.1, 0)
+        mouseHint.BackgroundTransparency = 1
+        mouseHint.TextColor3 = Color3.fromRGB(200, 200, 255)
+        mouseHint.Text = "Click the RED target! Avoid BLUE targets!"
+        mouseHint.TextSize = 18
+        mouseHint.Font = Enum.Font.SourceSansBold
+        mouseHint.TextWrapped = true
+        mouseHint.ZIndex = 102
+        mouseHint.Parent = gameFrame
+        
+        local phaseText = Instance.new("TextLabel")
+        phaseText.Name = "PhaseText"
+        phaseText.Size = UDim2.new(0.3, 0, 0.08, 0)
+        phaseText.Position = UDim2.new(0.35, 0, 0, 0)
+        phaseText.BackgroundTransparency = 1
+        phaseText.TextColor3 = Color3.fromRGB(255, 200, 50)
+        phaseText.Text = "Phase 1"
+        phaseText.TextSize = 20
+        phaseText.Font = Enum.Font.SciFi
+        phaseText.ZIndex = 102
+        phaseText.Parent = gameFrame
+        
+        local timerText = Instance.new("TextLabel")
+        timerText.Name = "Timer"
+        timerText.Size = UDim2.new(0.3, 0, 0.1, 0)
+        timerText.Position = UDim2.new(0.35, 0, 0.05, 0)
+        timerText.BackgroundTransparency = 1
+        timerText.TextColor3 = Color3.new(1, 1, 1)
+        timerText.TextScaled = true
+        timerText.Font = Enum.Font.SciFi
+        timerText.Text = "20"
+        timerText.ZIndex = 102
+        timerText.Parent = gameFrame
+        
+        local counterText = Instance.new("TextLabel")
+        counterText.Name = "Counter"
+        counterText.Size = UDim2.new(0.3, 0, 0.1, 0)
+        counterText.Position = UDim2.new(0.35, 0, 0.85, 0)
+        counterText.BackgroundTransparency = 1
+        counterText.TextColor3 = Color3.new(1, 1, 1)
+        counterText.TextScaled = true
+        counterText.Font = Enum.Font.SciFi
+        counterText.Text = "Clicks: 0/10"
+        counterText.ZIndex = 102
+        counterText.Parent = gameFrame
+        
+        local instructionText = Instance.new("TextLabel")
+        instructionText.Name = "Instruction"
+        instructionText.Size = UDim2.new(0.8, 0, 0.1, 0)
+        instructionText.Position = UDim2.new(0.1, 0, 0.2, 0)
+        instructionText.BackgroundTransparency = 1
+        instructionText.TextColor3 = Color3.new(1, 1, 1)
+        instructionText.TextScaled = true
+        instructionText.Font = Enum.Font.SciFi
+        instructionText.Text = "Click 10 times in 20 seconds!"
+        instructionText.TextWrapped = true
+        instructionText.ZIndex = 102
+        instructionText.Parent = gameFrame
+        
+        local target = Instance.new("TextButton")
+        target.Name = "RedTarget"
+        target.Size = UDim2.new(0, 60, 0, 60)
+        target.Position = UDim2.new(0.5, -30, 0.5, -30)
+        target.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        target.BackgroundTransparency = 0.2
+        target.BorderSizePixel = 0
+        target.ZIndex = 103
+        target.Text = ""
+        target.AutoButtonColor = false
+        target.Active = true
+        target.Selectable = false
+        target.Parent = gameFrame
+        
+        local targetCorner = Instance.new("UICorner")
+        targetCorner.CornerRadius = UDim.new(1, 0)
+        targetCorner.Parent = target
+        
+        local targetGlow = Instance.new("UIStroke")
+        targetGlow.Color = Color3.fromRGB(255, 150, 150)
+        targetGlow.Thickness = 3
+        targetGlow.Parent = target
+        
+        local clickEffect = Instance.new("Frame")
+        clickEffect.Name = "ClickEffect"
+        clickEffect.Size = UDim2.new(1, 0, 1, 0)
+        clickEffect.BackgroundColor3 = Color3.fromRGB(255, 255, 200)
+        clickEffect.BackgroundTransparency = 0.8
+        clickEffect.ZIndex = 104
+        clickEffect.Visible = false
+        local clickCorner = Instance.new("UICorner")
+        clickCorner.CornerRadius = UDim.new(1, 0)
+        clickCorner.Parent = clickEffect
+        clickEffect.Parent = target
+        
+        local blueTarget = Instance.new("TextButton")
+        blueTarget.Name = "BlueTarget1"
+        blueTarget.Size = UDim2.new(0, 50, 0, 50)
+        blueTarget.Position = UDim2.new(0.3, -25, 0.3, -25)
+        blueTarget.BackgroundColor3 = Color3.fromRGB(50, 100, 255)
+        blueTarget.BackgroundTransparency = 0.1
+        blueTarget.BorderSizePixel = 0
+        blueTarget.ZIndex = 103
+        blueTarget.Text = ""
+        blueTarget.AutoButtonColor = false
+        blueTarget.Active = true
+        blueTarget.Selectable = false
+        blueTarget.Visible = false
+        blueTarget.Parent = gameFrame
+        
+        local blueTargetCorner = Instance.new("UICorner")
+        blueTargetCorner.CornerRadius = UDim.new(1, 0)
+        blueTargetCorner.Parent = blueTarget
+        
+        local blueTargetGlow = Instance.new("UIStroke")
+        blueTargetGlow.Color = Color3.fromRGB(100, 150, 255)
+        blueTargetGlow.Thickness = 3
+        blueTargetGlow.Parent = blueTarget
+        
+        local blueTarget2 = Instance.new("TextButton")
+        blueTarget2.Name = "BlueTarget2"
+        blueTarget2.Size = UDim2.new(0, 50, 0, 50)
+        blueTarget2.Position = UDim2.new(0.7, -25, 0.7, -25)
+        blueTarget2.BackgroundColor3 = Color3.fromRGB(50, 100, 255)
+        blueTarget2.BackgroundTransparency = 0.1
+        blueTarget2.BorderSizePixel = 0
+        blueTarget2.ZIndex = 103
+        blueTarget2.Text = ""
+        blueTarget2.AutoButtonColor = false
+        blueTarget2.Active = true
+        blueTarget2.Selectable = false
+        blueTarget2.Visible = false
+        blueTarget2.Parent = gameFrame
+        
+        local blueTarget2Corner = Instance.new("UICorner")
+        blueTarget2Corner.CornerRadius = UDim.new(1, 0)
+        blueTarget2Corner.Parent = blueTarget2
+        
+        local blueTarget2Glow = Instance.new("UIStroke")
+        blueTarget2Glow.Color = Color3.fromRGB(100, 150, 255)
+        blueTarget2Glow.Thickness = 3
+        blueTarget2Glow.Parent = blueTarget2
+        
+        return gameGui, gameFrame, target, blueTarget, blueTarget2, timerText, counterText, instructionText, mouseHint, phaseText
+    end
+    
+    local function fadeIn(overlay)
+        if overlay and overlay:IsA("Frame") then
+            local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad)
+            local goal = {BackgroundTransparency = 0.5}
+            local tween = TweenService:Create(overlay, tweenInfo, goal)
+            tween:Play()
+            tween.Completed:Wait()
+            return true
+        end
+        return false
+    end
+    
+    local function fadeOut(overlay, gameUI)
+        if overlay and overlay:IsA("Frame") and overlay.Parent then
+            local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad)
+            local goal = {BackgroundTransparency = 1}
+            local tween = TweenService:Create(overlay, tweenInfo, goal)
+            tween:Play()
+            tween.Completed:Wait()
+            overlay.Parent:Destroy()
+        end
+        if gameUI and gameUI:IsA("ScreenGui") and gameUI.Parent then
+            gameUI:Destroy()
+        end
+        restoreInventory()
+        restoreMouse()
+        GameState.overlay = nil
+        GameState.gameUI = nil
+        GameState.target = nil
+        GameState.blueTarget = nil
+        GameState.blueTarget2 = nil
+        GameState.isRunning = false
+        GameState.currentPhase = 1
+    end
+    
+    local function getSafeRandomPosition(parentFrame, targetSize)
+        if not parentFrame or not targetSize then
+            return UDim2.new(0.5, 0, 0.5, 0)
+        end
+        local parentAbsSize = parentFrame.AbsoluteSize
+        local targetAbsSize = targetSize.AbsoluteSize
+        
+        if parentAbsSize.X <= 0 or parentAbsSize.Y <= 0 then
+            return UDim2.new(0.5, 0, 0.5, 0)
+        end
+        
+        local maxX = math.max(0, parentAbsSize.X - targetAbsSize.X)
+        local maxY = math.max(0, parentAbsSize.Y - targetAbsSize.Y)
+        
+        if maxX <= 0 or maxY <= 0 then
+            return UDim2.new(0.5, 0, 0.5, 0)
+        end
+        
+        local x = math.random(0, maxX)
+        local y = math.random(0, maxY)
+        return UDim2.new(0, x, 0, y)
+    end
+    
+    local function moveTarget(target, newPosition, duration)
+        if not target or not newPosition then return end
+        duration = duration or 0.3
+        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(target, tweenInfo, {Position = newPosition})
+        tween:Play()
+        return tween
+    end
+    
+    local function showClickEffect(clickEffect, color)
+        if not clickEffect then return end
+        clickEffect.Visible = true
+        clickEffect.BackgroundTransparency = 0.8
+        if color then
+            clickEffect.BackgroundColor3 = color
+        end
+        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad)
+        local tween = TweenService:Create(clickEffect, tweenInfo, { 
+            BackgroundTransparency = 1, 
+            Size = UDim2.new(1.5, 0, 1.5, 0) 
+        })
+        tween:Play()
+        tween.Completed:Connect(function()
+            clickEffect.Visible = false
+            clickEffect.Size = UDim2.new(1, 0, 1, 0)
+        end)
+    end
+    
+    local function showPhaseTransition(instructionText, newPhase)
+        if not instructionText then return end
+        if newPhase == 2 then
+            instructionText.Text = "PHASE 2 STARTING!"
+            instructionText.TextColor3 = Color3.fromRGB(255, 200, 0)
+            for i = 1, 3 do
+                instructionText.TextTransparency = 0.3
+                task.wait(0.2)
+                instructionText.TextTransparency = 0
+                task.wait(0.2)
+            end
+        elseif newPhase == 3 then
+            instructionText.Text = "FINAL PHASE STARTING!"
+            instructionText.TextColor3 = Color3.fromRGB(255, 100, 100)
+            for i = 1, 3 do
+                instructionText.TextTransparency = 0.3
+                task.wait(0.2)
+                instructionText.TextTransparency = 0
+                task.wait(0.2)
+            end
+        end
+    end
+    
+    local function startMiniGame(gameUI, gameFrame, target, blueTarget, blueTarget2, timerText, counterText, instructionText, mouseHint, phaseText)
+        if not gameUI or not gameFrame or not target or not blueTarget or not blueTarget2 or not timerText or not counterText or not instructionText then
+            return false
+        end
+        
+        gameFrame.Visible = true
+        
+        task.delay(3, function()
+            if mouseHint and mouseHint.Parent then
+                mouseHint.Visible = false
+            end
+        end)
+        
+        local timeLeft = 20
+        local currentClicks = 0
+        local isGameOver = false
+        local phaseStartTime = tick()
+        local clickConnection, blueClickConnection1, blueClickConnection2, gameConnection
+        
+        local clickEffect = target:FindFirstChild("ClickEffect")
+        
+        local blueClickEffect1 = Instance.new("Frame")
+        blueClickEffect1.Name = "ClickEffect"
+        blueClickEffect1.Size = UDim2.new(1, 0, 1, 0)
+        blueClickEffect1.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+        blueClickEffect1.BackgroundTransparency = 0.8
+        blueClickEffect1.ZIndex = 104
+        blueClickEffect1.Visible = false
+        local blueCorner1 = Instance.new("UICorner")
+        blueCorner1.CornerRadius = UDim.new(1, 0)
+        blueCorner1.Parent = blueClickEffect1
+        blueClickEffect1.Parent = blueTarget
+        
+        local blueClickEffect2 = Instance.new("Frame")
+        blueClickEffect2.Name = "ClickEffect"
+        blueClickEffect2.Size = UDim2.new(1, 0, 1, 0)
+        blueClickEffect2.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+        blueClickEffect2.BackgroundTransparency = 0.8
+        blueClickEffect2.ZIndex = 104
+        blueClickEffect2.Visible = false
+        local blueCorner2 = Instance.new("UICorner")
+        blueCorner2.CornerRadius = UDim.new(1, 0)
+        blueCorner2.Parent = blueClickEffect2
+        blueClickEffect2.Parent = blueTarget2
+        
+        local function updateTimer()
+            if timerText and timerText:IsA("TextLabel") then
+                timerText.Text = tostring(math.floor(timeLeft))
+                if timeLeft < 5 then
+                    timerText.TextColor3 = Color3.fromRGB(255, 50, 50)
+                else
+                    timerText.TextColor3 = Color3.new(1, 1, 1)
+                end
+            end
+        end
+        
+        local function updateCounter()
+            if counterText and counterText:IsA("TextLabel") then
+                if GameState.currentPhase == 1 then
+                    counterText.Text = "Clicks: " .. currentClicks .. "/10"
+                elseif GameState.currentPhase == 2 then
+                    counterText.Text = "Clicks: " .. currentClicks .. "/15"
+                else
+                    counterText.Text = "Clicks: " .. currentClicks .. "/20"
+                end
+                
+                if GameState.currentPhase == 1 and currentClicks >= 7 then
+                    counterText.TextColor3 = Color3.fromRGB(50, 255, 50)
+                elseif GameState.currentPhase == 2 and currentClicks >= 10 then
+                    counterText.TextColor3 = Color3.fromRGB(50, 255, 50)
+                elseif GameState.currentPhase == 3 and currentClicks >= 15 then
+                    counterText.TextColor3 = Color3.fromRGB(50, 255, 50)
+                else
+                    counterText.TextColor3 = Color3.new(1, 1, 1)
+                end
+            end
+        end
+        
+        local function updatePhase(phaseNum)
+            GameState.currentPhase = phaseNum
+            if phaseText and phaseText:IsA("TextLabel") then
+                phaseText.Text = "Phase " .. phaseNum
+                if phaseNum == 1 then
+                    phaseText.TextColor3 = Color3.fromRGB(255, 200, 50)
+                    instructionText.Text = "Click 10 times in 20 seconds!"
+                    target.Visible = true
+                    blueTarget.Visible = false
+                    blueTarget2.Visible = false
+                elseif phaseNum == 2 then
+                    phaseText.TextColor3 = Color3.fromRGB(200, 50, 200)
+                    instructionText.Text = "Avoid BLUE targets! Click RED only! 30s"
+                    target.Visible = true
+                    blueTarget.Visible = true
+                    blueTarget2.Visible = false
+                elseif phaseNum == 3 then
+                    phaseText.TextColor3 = Color3.fromRGB(255, 50, 50)
+                    instructionText.Text = "HARD MODE! 2 BLUE targets! 30s"
+                    target.Visible = true
+                    blueTarget.Visible = true
+                    blueTarget2.Visible = true
+                end
+            end
+        end
+        
+        local function randomMoveRedTarget()
+            if isGameOver or not target or not gameFrame then return end
+            local newPosition = getSafeRandomPosition(gameFrame, target)
+            if GameState.currentPhase == 1 then
+                moveTarget(target, newPosition, 0.3)
+            elseif GameState.currentPhase == 2 then
+                moveTarget(target, newPosition, 0.4)
+            else
+                moveTarget(target, newPosition, 0.2)
+            end
+        end
+        
+        local function randomMoveBlueTarget1()
+            if isGameOver or not blueTarget or not gameFrame or GameState.currentPhase == 1 then return end
+            local newPosition = getSafeRandomPosition(gameFrame, blueTarget)
+            moveTarget(blueTarget, newPosition, 0.8)
+        end
+        
+        local function randomMoveBlueTarget2()
+            if isGameOver or not blueTarget2 or not gameFrame or GameState.currentPhase < 3 then return end
+            local newPosition = getSafeRandomPosition(gameFrame, blueTarget2)
+            moveTarget(blueTarget2, newPosition, 0.8)
+        end
+        
+        local function startPhaseTwo()
+            GameState.currentPhase = 2
+            showPhaseTransition(instructionText, 2)
+            timeLeft = 30
+            phaseStartTime = tick()
+            currentClicks = 0
+            if timerText then
+                timerText.TextColor3 = Color3.new(1, 1, 1)
+            end
+            updateCounter()
+            updatePhase(2)
+            target.Size = UDim2.new(0, 50, 0, 50)
+            blueTarget.Size = UDim2.new(0, 50, 0, 50)
+            target.Position = UDim2.new(0.3, -25, 0.3, -25)
+            blueTarget.Position = UDim2.new(0.7, -25, 0.7, -25)
+        end
+        
+        local function startPhaseThree()
+            GameState.currentPhase = 3
+            showPhaseTransition(instructionText, 3)
+            timeLeft = 30
+            phaseStartTime = tick()
+            currentClicks = 0
+            if timerText then
+                timerText.TextColor3 = Color3.new(1, 1, 1)
+            end
+            updateCounter()
+            updatePhase(3)
+            target.Size = UDim2.new(0, 45, 0, 45)
+            blueTarget.Size = UDim2.new(0, 45, 0, 45)
+            blueTarget2.Size = UDim2.new(0, 45, 0, 45)
+            target.Position = UDim2.new(0.5, -22.5, 0.5, -22.5)
+            blueTarget.Position = UDim2.new(0.2, -22.5, 0.2, -22.5)
+            blueTarget2.Position = UDim2.new(0.8, -22.5, 0.8, -22.5)
+        end
+        
+        if target:IsA("TextButton") or target:IsA("ImageButton") then
+            clickConnection = target.MouseButton1Click:Connect(function()
+                if isGameOver then return end
+                currentClicks = currentClicks + 1
+                updateCounter()
+                if clickEffect then
+                    showClickEffect(clickEffect, Color3.fromRGB(255, 255, 200))
+                end
+                if GameState.currentPhase == 1 and currentClicks >= 10 then
+                    startPhaseTwo()
+                    return
+                elseif GameState.currentPhase == 2 and currentClicks >= 15 then
+                    startPhaseThree()
+                    return
+                elseif GameState.currentPhase == 3 and currentClicks >= 20 then
+                    isGameOver = true
+                    if instructionText and instructionText:IsA("TextLabel") then
+                        instructionText.Text = "Game Complete! Victory!"
+                        instructionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    end
+                    task.wait(2)
+                    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("It looks like you've made progress.Congratulations.",true)
+                    local workspace = game:GetService("Workspace")
+                    local hatredMusic = workspace:FindFirstChild("HATREDMusic")
+                    if hatredMusic then
+                        hatredMusic:Destroy()
+                    end
+                    local distantModel = workspace:FindFirstChild("DistantModel")
+                    if distantModel then
+                        distantModel:Destroy()
+                    end
+                    return
+                end
+                randomMoveRedTarget()
+            end)
+        end
+        
+        if blueTarget:IsA("TextButton") or blueTarget:IsA("ImageButton") then
+            blueClickConnection1 = blueTarget.MouseButton1Click:Connect(function()
+                if isGameOver or GameState.currentPhase == 1 then return end
+                timeLeft = timeLeft - 3
+                if timeLeft < 0 then
+                    timeLeft = 0
+                end
+                if instructionText and instructionText:IsA("TextLabel") then
+                    instructionText.Text = "-3 SECONDS! Avoid BLUE!"
+                    instructionText.TextColor3 = Color3.fromRGB(255, 50, 50)
+                    task.delay(1, function()
+                        if instructionText and instructionText.Parent then
+                            if GameState.currentPhase == 2 then
+                                instructionText.Text = "Avoid BLUE targets! Click RED only! 30s"
+                            else
+                                instructionText.Text = "HARD MODE! 2 BLUE targets! 30s"
+                            end
+                            instructionText.TextColor3 = Color3.new(1, 1, 1)
+                        end
+                    end)
+                end
+                if blueClickEffect1 then
+                    showClickEffect(blueClickEffect1, Color3.fromRGB(255, 100, 100))
+                end
+                randomMoveBlueTarget1()
+            end)
+        end
+        
+        if blueTarget2:IsA("TextButton") or blueTarget2:IsA("ImageButton") then
+            blueClickConnection2 = blueTarget2.MouseButton1Click:Connect(function()
+                if isGameOver or GameState.currentPhase < 3 then return end
+                timeLeft = timeLeft - 3
+                if timeLeft < 0 then
+                    timeLeft = 0
+                end
+                if instructionText and instructionText:IsA("TextLabel") then
+                    instructionText.Text = "-3 SECONDS! Avoid BLUE!"
+                    instructionText.TextColor3 = Color3.fromRGB(255, 50, 50)
+                    task.delay(1, function()
+                        if instructionText and instructionText.Parent then
+                            instructionText.Text = "HARD MODE! 2 BLUE targets! 30s"
+                            instructionText.TextColor3 = Color3.new(1, 1, 1)
+                        end
+                    end)
+                end
+                if blueClickEffect2 then
+                    showClickEffect(blueClickEffect2, Color3.fromRGB(255, 100, 100))
+                end
+                randomMoveBlueTarget2()
+            end)
+        end
+        
+        updateTimer()
+        updateCounter()
+        updatePhase(1)
+        target.Position = UDim2.new(0.5, -30, 0.5, -30)
+        
+        local lastRedMoveTime = tick()
+        local lastBlue1MoveTime = tick()
+        local lastBlue2MoveTime = tick()
+        local redMoveCooldown = 0.8
+        local blueMoveCooldown = 1.5
+        
+        gameConnection = RunService.Heartbeat:Connect(function(deltaTime)
+            if isGameOver then
+                if gameConnection then
+                    gameConnection:Disconnect()
+                end
+                return
+            end
+            
+            local currentTime = tick()
+            if GameState.currentPhase == 1 then
+                timeLeft = math.max(0, 20 - (currentTime - phaseStartTime))
+            else
+                timeLeft = math.max(0, 30 - (currentTime - phaseStartTime))
+            end
+            updateTimer()
+            
+            if currentTime - lastRedMoveTime >= redMoveCooldown then
+                randomMoveRedTarget()
+                lastRedMoveTime = currentTime
+                if redMoveCooldown > 0.4 then
+                    redMoveCooldown = redMoveCooldown - 0.005
+                end
+            end
+            
+            if GameState.currentPhase >= 2 and currentTime - lastBlue1MoveTime >= blueMoveCooldown then
+                randomMoveBlueTarget1()
+                lastBlue1MoveTime = currentTime
+            end
+            
+            if GameState.currentPhase == 3 and currentTime - lastBlue2MoveTime >= blueMoveCooldown then
+                randomMoveBlueTarget2()
+                lastBlue2MoveTime = currentTime
+            end
+            
+            if timeLeft <= 0 then
+                isGameOver = true
+                if instructionText and instructionText:IsA("TextLabel") then
+                    if GameState.currentPhase == 1 then
+                        instructionText.Text = "Time's up! Failed Phase 1!"
+                    elseif GameState.currentPhase == 2 then
+                        instructionText.Text = "Time's up! Failed Phase 2!"
+                    else
+                        instructionText.Text = "Time's up! Failed Final Phase!"
+                    end
+                    instructionText.TextColor3 = Color3.fromRGB(255, 50, 50)
+                end
+                
+                if gameConnection then
+                    gameConnection:Disconnect()
+                end
+                
+                task.wait(2)
+                require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("It seems you have lost to me once again.",true)
+                task.wait(3)
+                require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Well then, how should I deal with you?",true)
+                task.wait(3)
+                require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("haha",true)
+                task.wait(4)
+                require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("I think I should do this",true)
+                task.wait(3)
+                game.Players.LocalPlayer:Kick("Your Loser")
+            end
+        end)
+        
+        table.insert(GameState.connections, clickConnection)
+        table.insert(GameState.connections, blueClickConnection1)
+        table.insert(GameState.connections, blueClickConnection2)
+        table.insert(GameState.connections, gameConnection)
+        while not isGameOver do
+            task.wait(0.1)
+        end
+        if GameState.currentPhase == 3 and currentClicks >= 20 then
+            task.wait(2)
+        end
+        return (GameState.currentPhase == 3 and currentClicks >= 20)
+    end
+    local function main()
+        if GameState.isRunning then
+            return false
+        end
+        GameState.isRunning = true
+        hideInventory()
+        unlockMouse()
+        local overlay = createOverlay()
+        GameState.overlay = overlay
+        local gameUI, gameFrame, target, blueTarget, blueTarget2, timerText, counterText, instructionText, mouseHint, phaseText = createGameUI()
+        GameState.gameUI = gameUI
+        GameState.target = target
+        GameState.blueTarget = blueTarget
+        GameState.blueTarget2 = blueTarget2
+        local fadeSuccess = fadeIn(overlay)
+        if not fadeSuccess then
+            GameState.isRunning = false
+            restoreInventory()
+            return false
+        end
+        task.wait(1)
+        if gameUI and not gameUI.Parent then
+            gameUI.Parent = playerGui
+        end
+        local success = false
+        local successResult = pcall(function()
+            success = startMiniGame(gameUI, gameFrame, target, blueTarget, blueTarget2, timerText, counterText, instructionText, mouseHint, phaseText)
+        end)
+        fadeOut(overlay, gameUI)
+        return success
+    end
+    local function cleanup()
+        for _, connection in ipairs(GameState.connections) do
+            if connection then
+                pcall(function() connection:Disconnect() end)
+            end
+        end
+        GameState.connections = {}
+        
+        if GameState.overlay and GameState.overlay.Parent then
+            pcall(function() GameState.overlay.Parent:Destroy() end)
+        end
+        
+        if GameState.gameUI and GameState.gameUI.Parent then
+            pcall(function() GameState.gameUI:Destroy() end)
+        end
+        
+        restoreInventory()
+        restoreMouse()
+        GameState.isRunning = false
+        GameState.currentPhase = 1
+        GameState.overlay = nil
+        GameState.gameUI = nil
+        GameState.target = nil
+        GameState.blueTarget = nil
+        GameState.blueTarget2 = nil
+    end
+    player.CharacterRemoving:Connect(function()
+        cleanup()
+    end)
+    
+    local escConnection
+    escConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if not gameProcessed and input.KeyCode == Enum.KeyCode.Escape and GameState.isRunning then
+            cleanup()
+        end
+    end)
+    
+    table.insert(GameState.connections, escConnection)
+    task.wait(2)
+    
+    local function startGame()
+        if not GameState.isRunning then
+            local success, errorMsg = pcall(main)
+            if not success then
+                pcall(cleanup)
+            end
+        end
+    end
+    
+    task.wait(1)
+    startGame()
+    _G.StartMiniGame = startGame
+    _G.StopMiniGame = cleanup
+end
+
+local function checkSound(sound)
+    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://86930884029006" then
+        local parent = sound.Parent
+        if parent and parent.Name == "Scary Entity" then
+            local grandParent = parent.Parent
+            if grandParent and grandParent.Name == "CustomEntity" then
+                if not checkedEntities[grandParent] then
+                    checkedEntities[grandParent] = true
+                    runEvent()
+                end
+            end
+        end
+    end
+end
+
+workspace.DescendantAdded:Connect(function(obj)
+    wait(0.1)
+    if obj:IsA("Sound") then
+        checkSound(obj)
+        if not listeningSounds[obj] then
+            listeningSounds[obj] = true
+            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
+                checkSound(obj)
+            end)
+        end
+    end
+end)
+
+for _, entity in pairs(workspace:GetChildren()) do
+    if entity.Name == "CustomEntity" then
+        local scary = entity:FindFirstChild("Scary Entity")
+        if scary then
+            for _, child in pairs(scary:GetChildren()) do
+                if child:IsA("Sound") then
+                    checkSound(child)
+                    if not listeningSounds[child] then
+                        listeningSounds[child] = true
+                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
+                            checkSound(child)
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
 -----------JEFF
 local checkedEntities = {}
 local listeningSounds = {}

@@ -5,34 +5,50 @@ local marker = Instance.new("BoolValue")
 marker.Name = "HardcoreOne"
 marker.Value = true
 marker.Parent = workspace
+local function GitAud(soundgit, filename)
+    local url = soundgit
+    local FileName = filename
+    writefile(FileName .. ".mp3", game:HttpGet(url))
+    return (getcustomasset or getsynasset)(FileName .. ".mp3")
+end
+local function CustomGitSound(soundlink, vol, filename)
+    local sound = Instance.new("Sound")
+    sound.SoundId = GitAud(soundlink, filename)
+    sound.Parent = workspace
+    sound.Name = filename or "Music"
+    sound.Volume = vol
+    sound:Play()
+    return sound
+end
+local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
+local dgmusic = "https://github.com/eoyoustme/rebouna/blob/main/HesBehindYouRUN.mp3?raw=true"
+local entityBehaviors = {}
 
-loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/CUR.lua?raw=true"))()
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local RunService = game:GetService("RunService")
-local isListening = false
-local trackMap = {}
-local syncEnabled = true
+function entityBehaviors.FigureSpawn()
+ local RunService = game:GetService("RunService")
 local figure1 = nil
+local isSetup = false
+local currentAnimation = nil
+local currentTrack = nil
+local currentServerTrack = nil
 local walkSoundLoop = nil
 local lastWalkTime = 0
 local isSoundPlaying = false
 local currentSound = nil
-local lastX = nil
-local lastZ = nil
-local idleTrack = nil
-local movementThreshold = 0.5
-
-local ANIMATION_CONFIG = {
-    ["18540813605"] = { name = "idle", looped = true },
-    ["18542418459"] = { name = "new_animation", looped = false },
-    ["18570699250"] = { name = "walk", looped = true },
-    ["18570706208"] = { name = "run", looped = true },
-    ["18583455040"] = { name = "crucifix", looped = false }
+local lastMoveCheck = 0
+local moveCheckInterval = 0.5
+local lastPosition = nil
+local movementThreshold = 1.0
+local lastSpeedCheck = 0
+local speedCheckInterval = 0.1
+local figureRigConnections = {}
+local ANIMATIONS = {
+    idle = "18540813605",
+    walk = "18570699250", 
+    run = "18570706208",
+    crucifix = "18583455040",
+    new_anim = "18542418459"
 }
-
 local objects = game:GetObjects("rbxassetid://96598945864381")
 if #objects > 0 then
     figure1 = objects[1]:Clone()
@@ -43,18 +59,88 @@ end
 if not figure1 then
     return
 end
+local function setupFigureRigListener(room, figureRig)
+    if not room or not figureRig then return end
+    
+    local connection = room.ChildRemoved:Connect(function(child)
+        if child == figureRig then
+            if figure1 then
+                figure1:Destroy()
+                figure1 = nil
+            end
+        end
+    end)
+    
+    table.insert(figureRigConnections, connection)
+    return connection
+end
 
+local function getAnimator(model)
+    local humanoid = model:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        humanoid = Instance.new("Humanoid")
+        humanoid.Parent = model
+    end
+    
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = humanoid
+    end
+    
+    return animator
+end
+
+local function playAnimation(animId, animName, serverTrack)
+    if not figure1 or not animId then return end
+    
+    local figure1Animator = getAnimator(figure1)
+    if not figure1Animator then return end
+
+    if currentTrack and currentTrack.IsPlaying then
+        currentTrack:Stop()
+        currentTrack = nil
+    end
+
+    if walkSoundLoop and animName ~= "walk" then
+        walkSoundLoop:Disconnect()
+        walkSoundLoop = nil
+        isSoundPlaying = false
+        if currentSound then
+            currentSound:Stop()
+            currentSound = nil
+        end
+    end
+
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://" .. animId
+    anim.Name = animName
+    
+    local track = figure1Animator:LoadAnimation(anim)
+    track:Play()
+
+    if serverTrack then
+        track.TimePosition = serverTrack.TimePosition
+
+        if serverTrack.Speed then
+            track:AdjustSpeed(serverTrack.Speed)
+        end
+
+        track.Looped = serverTrack.Looped
+    end
+    
+    currentTrack = track
+    currentAnimation = animId
+    currentServerTrack = serverTrack
+    return track
+end
 local function playRandomWalkSound()
     if isSoundPlaying then return end
-    
     local head = figure1:FindFirstChild("Head")
     if not head then return end
-    
     local click = head:FindFirstChild("Click")
     local clickLow = head:FindFirstChild("ClickLow")
-    
     if not click or not clickLow then return end
-    
     local sound = math.random(1, 2) == 1 and click or clickLow
     if sound and sound:IsA("Sound") then
         isSoundPlaying = true
@@ -67,140 +153,93 @@ local function playRandomWalkSound()
         end)
     end
 end
-
-local function playIdleAnimation()
-    if not figure1 or idleTrack then return end
-    
-    local figure1Humanoid = figure1:FindFirstChildOfClass("Humanoid")
-    if not figure1Humanoid then return end
-    
-    local figure1Animator = figure1Humanoid:FindFirstChildOfClass("Animator")
-    if not figure1Animator then return end
-    
-    local anim = Instance.new("Animation")
-    anim.AnimationId = "rbxassetid://18540813605"
-    
-    idleTrack = figure1Animator:LoadAnimation(anim)
-    idleTrack:Play()
-    idleTrack.Looped = true
-end
-
-local function stopIdleAnimation()
-    if idleTrack then
-        if idleTrack.IsPlaying then
-            idleTrack:Stop()
+local function checkMovement(figureRig)
+    local now = tick()
+    if now - lastMoveCheck < moveCheckInterval then
+        return false
+    end
+    lastMoveCheck = now
+    local currentPos = figureRig:GetPivot().Position
+    local currentX = math.floor(currentPos.X + 0.5)
+    local currentZ = math.floor(currentPos.Z + 0.5)
+    if lastPosition then
+        local lastX = math.floor(lastPosition.X + 0.5)
+        local lastZ = math.floor(lastPosition.Z + 0.5)
+        
+        local xChanged = math.abs(currentX - lastX) > movementThreshold
+        local zChanged = math.abs(currentZ - lastZ) > movementThreshold
+        
+        lastPosition = currentPos
+        
+        if not xChanged and not zChanged then
+            return false
         end
-        idleTrack = nil
     end
+    lastPosition = currentPos
+    return true
 end
 
-local function setupAnimationSync()
-    if isListening then return end
-    
-    local figure1Humanoid = figure1:FindFirstChildOfClass("Humanoid")
-    if not figure1Humanoid then
-        figure1Humanoid = Instance.new("Humanoid")
-        figure1Humanoid.Parent = figure1
-    end
-    
-    local figure1Animator = figure1Humanoid:FindFirstChildOfClass("Animator")
-    if not figure1Animator then
-        figure1Animator = Instance.new("Animator")
-        figure1Animator.Parent = figure1Humanoid
-    end
+local function setupSystem()
+    if isSetup then return end
     
     local currentRooms = workspace:FindFirstChild("CurrentRooms")
     if not currentRooms then
-        return false
+        return
     end
     
     for _, room in ipairs(currentRooms:GetChildren()) do
         if room:IsA("Model") or room:IsA("Folder") then
             local figureRig = room:FindFirstChild("FigureRig")
             if figureRig then
-                room.ChildRemoved:Connect(function(child)
-                    if child == figureRig then
-                        figure1:Destroy()
-                        return
-                    end
-                end)
-                
-                local figureRigHumanoid = figureRig:FindFirstChild("Figurenoid") or figureRig:FindFirstChildOfClass("Humanoid")
-                if not figureRigHumanoid then
-                    continue
-                end
-                
-                local figureRigAnimator = figureRigHumanoid:FindFirstChildOfClass("Animator")
-                if not figureRigAnimator then
-                    figureRigAnimator = Instance.new("Animator")
-                    figureRigAnimator.Parent = figureRigHumanoid
-                end
-                
-                for _, descendant in ipairs(figureRig:GetDescendants()) do
-                    if descendant:IsA("BasePart") or descendant:IsA("MeshPart") then
-                        descendant.Transparency = 1
+
+                setupFigureRigListener(room, figureRig)
+
+                for _, part in ipairs(figureRig:GetDescendants()) do
+                    if part:IsA("BasePart") or part:IsA("MeshPart") then
+                        part.Transparency = 1
                     end
                 end
-                
-                local figureRigHead = figureRig:FindFirstChild("Head")
-                if figureRigHead then
-                    for _, sound in ipairs(figureRigHead:GetDescendants()) do
+
+                local rigHead = figureRig:FindFirstChild("Head")
+                if rigHead then
+                    for _, sound in ipairs(rigHead:GetDescendants()) do
                         if sound:IsA("Sound") then
                             sound.Volume = 0
                         end
                     end
                 end
+                local rigHumanoid = figureRig:FindFirstChild("Figurenoid") or figureRig:FindFirstChildOfClass("Humanoid")
+                if not rigHumanoid then break end
                 
-                local existingTracks = figureRigAnimator:GetPlayingAnimationTracks()
-                for _, serverTrack in ipairs(existingTracks) do
-                    local animId = serverTrack.Animation.AnimationId
-                    local idNumber = animId:match("%d+")
-                    
-                    if ANIMATION_CONFIG[idNumber] then
-                        local anim = Instance.new("Animation")
-                        anim.AnimationId = animId
-                        
-                        local figure1Track = figure1Animator:LoadAnimation(anim)
-                        figure1Track:Play()
-                        figure1Track.TimePosition = serverTrack.TimePosition
-                        figure1Track.Looped = serverTrack.Looped
-                        
-                        trackMap[serverTrack] = figure1Track
-                    end
+                local rigAnimator = rigHumanoid:FindFirstChildOfClass("Animator")
+                if not rigAnimator then
+                    rigAnimator = Instance.new("Animator")
+                    rigAnimator.Parent = rigHumanoid
                 end
-                
-                figureRigAnimator.AnimationPlayed:Connect(function(serverTrack)
-                    if not syncEnabled then return end
-                    
+                rigAnimator.AnimationPlayed:Connect(function(serverTrack)
                     local animId = serverTrack.Animation.AnimationId
                     local idNumber = animId:match("%d+")
                     
-                    if not ANIMATION_CONFIG[idNumber] then
+                    if not idNumber then return end
+
+                    if currentAnimation == idNumber and currentTrack and currentTrack.IsPlaying then
+                        currentServerTrack = serverTrack
                         return
                     end
-                    
-                    local config = ANIMATION_CONFIG[idNumber]
-                    
-                    for existingTrack, localTrack in pairs(trackMap) do
-                        if existingTrack.Animation.AnimationId == serverTrack.Animation.AnimationId then
-                            if localTrack then
-                                localTrack:Stop()
-                            end
-                            trackMap[existingTrack] = nil
+
+                    local animName
+                    for name, id in pairs(ANIMATIONS) do
+                        if id == idNumber then
+                            animName = name
+                            break
                         end
                     end
                     
-                    local anim = Instance.new("Animation")
-                    anim.AnimationId = animId
-                    
-                    local figure1Track = figure1Animator:LoadAnimation(anim)
-                    figure1Track:Play()
-                    figure1Track.TimePosition = serverTrack.TimePosition
-                    figure1Track.Looped = config.looped
-                    
-                    trackMap[serverTrack] = figure1Track
-                    
-                    if idNumber == "18570699250" then
+                    if not animName then return end
+
+                    playAnimation(idNumber, animName, serverTrack)
+
+                    if animName == "walk" then
                         if walkSoundLoop then
                             walkSoundLoop:Disconnect()
                         end
@@ -212,7 +251,7 @@ local function setupAnimationSync()
                                 playRandomWalkSound()
                             end
                         end)
-                    elseif idNumber == "18570706208" then
+                    elseif animName == "run" then
                         local head = figure1:FindFirstChild("Head")
                         if head then
                             local growl = head:FindFirstChild("Growl")
@@ -222,49 +261,20 @@ local function setupAnimationSync()
                                 growl:Play()
                             end
                         end
-                    elseif idNumber ~= "18570699250" and walkSoundLoop then
-                        walkSoundLoop:Disconnect()
-                        walkSoundLoop = nil
-                        isSoundPlaying = false
-                        if currentSound then
-                            currentSound:Stop()
-                            currentSound = nil
-                        end
                     end
-                    
-                    serverTrack.Stopped:Connect(function()
-                        if figure1Track then
-                            figure1Track:Stop()
-                        end
-                        trackMap[serverTrack] = nil
-                    end)
                 end)
+                
+                isSetup = true
             end
         end
     end
-    
-    isListening = true
-    return true
 end
-
-local attempts = 0
-local maxAttempts = 10
-
-RunService.Heartbeat:Connect(function()
-    if isListening or attempts >= maxAttempts then return end
-    
-    attempts = attempts + 1
-    
-    if not setupAnimationSync() then
-        if attempts < maxAttempts then
-            task.wait(2)
-        end
-    end
-end)
-
+task.wait(2)
+setupSystem()
+local lastIdleCheck = 0
+local idleCheckInterval = 1.0
 RunService.RenderStepped:Connect(function()
-    if not isListening then return end
-    
+    if not figure1 then return end
     local currentRooms = workspace:FindFirstChild("CurrentRooms")
     if not currentRooms then return end
     
@@ -272,39 +282,32 @@ RunService.RenderStepped:Connect(function()
         if room:IsA("Model") or room:IsA("Folder") then
             local figureRig = room:FindFirstChild("FigureRig")
             if figureRig then
-                local currentPosition = figureRig:GetPivot().Position
-                local currentX = math.floor(currentPosition.X + 0.5)
-                local currentZ = math.floor(currentPosition.Z + 0.5)
-                
-                if lastX and lastZ then
-                    local xChanged = math.abs(currentX - lastX) > movementThreshold
-                    local zChanged = math.abs(currentZ - lastZ) > movementThreshold
-                    
-                    if not xChanged and not zChanged then
-                        local hasOtherAnimation = false
-                        for _, track in pairs(trackMap) do
-                            if track and track.IsPlaying then
-                                hasOtherAnimation = true
-                                break
-                            end
-                        end
-                        
-                        if not hasOtherAnimation and not idleTrack then
-                            playIdleAnimation()
-                        end
-                    else
-                        stopIdleAnimation()
-                    end
-                end
-                
-                lastX = currentX
-                lastZ = currentZ
-                
                 figure1:PivotTo(figureRig:GetPivot())
-                
-                for serverTrack, localTrack in pairs(trackMap) do
-                    if serverTrack and localTrack and localTrack.IsPlaying then
-                        localTrack.TimePosition = serverTrack.TimePosition
+                if currentTrack and currentTrack.IsPlaying and currentServerTrack then
+                    if currentServerTrack.IsPlaying then
+                        currentTrack.TimePosition = currentServerTrack.TimePosition
+                    end
+                    local now = tick()
+                    if now - lastSpeedCheck >= speedCheckInterval then
+                        lastSpeedCheck = now
+                        if currentServerTrack.Speed and currentServerTrack.Speed ~= 1 then
+                            currentTrack:AdjustSpeed(currentServerTrack.Speed)
+                        end
+                    end
+                end
+                local isMoving = checkMovement(figureRig)
+                local now = tick()
+                if now - lastIdleCheck >= idleCheckInterval then
+                    lastIdleCheck = now
+                    if not isMoving and not currentAnimation and not currentTrack then
+                        playAnimation(ANIMATIONS.idle, "idle", nil)
+                    elseif isMoving and currentAnimation == ANIMATIONS.idle then
+                        if currentTrack then
+                            currentTrack:Stop()
+                            currentTrack = nil
+                            currentAnimation = nil
+                            currentServerTrack = nil
+                        end
                     end
                 end
             end
@@ -312,59 +315,8 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 end
-
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140338542312593" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
---------------
---------GODOF1
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
+-------
+function entityBehaviors.GodOFOne()
     for _, model in pairs(workspace.CurrentRooms:GetDescendants()) do
     if model.Name == "DropCeiling" and model.Parent and model.Parent.Name == "Parts" then
         model:Destroy()
@@ -390,7 +342,6 @@ Sky.SkyboxFt = "rbxassetid://15983965025"
 Sky.SkyboxLf = "rbxassetid://15983967420"
 Sky.SkyboxRt = "rbxassetid://15983966246"
 Sky.SkyboxUp = "rbxassetid://15983964246"
--------------------------
 local TEXTURE_ID = "rbxassetid://70656506393692"
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BossTextureUI"
@@ -412,53 +363,9 @@ local entity = spawner.Create({
 	Entity = {
 		Name = "dfsa",
 		Asset = "70789280044418",
-		HeightOffset = 10
-	},
-	Lights = {
-		Flicker = {
-			Enabled = true,
-			Duration = 10
-		},
-		Shatter = false,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 1500,
-		Values = {0.5, 20, 0.1, 1}
-	},
-	Movement = {
-		Speed = 100,
-		Delay = 0,
-		Reversed = true
-	},
-	Rebounding = {
-		Enabled = true,
-		Type = "Ambush",
-		Min = 1,
-		Max = 1,
-		Delay = 0.1,
-	},
-	Damage = {
-		Enabled = true,
-		Range = 40,
-		Amount = 1
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 40,
-		Resist = true,
-		Break = true
-	},
-	Death = {
-		Type = "Curious",
-		Hints = {"You died by the The devourer of gods", "???", "Wait, who is this guy?","I’m not clear about his background, but anyway, you must be careful.","See you..."},
-		Cause = ""
-	},
-})
+		HeightOffset = 10},Lights = {Flicker = {Enabled = true,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 20, 0.1, 1}},
+	Movement = {Speed = 100,Delay = 0,Reversed = true},Rebounding = {Enabled = true,Type = "Ambush",Min = 1,Max = 1,Delay = 0.1,},Damage = {Enabled = true,Range = 40,Amount = 1},
+	Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {"You died by the The devourer of gods", "???", "Wait, who is this guy?","I’m not clear about his background, but anyway, you must be careful.","See you..."},Cause = ""},})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
@@ -487,7 +394,6 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 	end
 end)
 entity:Run()
-
 function GetRoom()
     local gruh = workspace.CurrentRooms
     return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
@@ -551,7 +457,6 @@ end
 
 local s = LoadCustomInstance(82138419401558, workspace)
 if not s then
-    warn("Failed to load Frost entity.")
     return
 end
 
@@ -670,67 +575,15 @@ workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.
 end)
 DestroyWithDelay()
 end
-
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140612367685491" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-----GODOF2
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    function GetRoom()
+-----
+function entityBehaviors.GodOfTwo()
+ function GetRoom()
     local gruh = workspace.CurrentRooms
     return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
 end
-
 local plr = game.Players.LocalPlayer
 local chr = plr.Character or plr.CharacterAdded:Wait()
 local tweenservice = game:GetService("TweenService")
-
 function LoadCustomInstance(source, parent)
     local model
 
@@ -740,7 +593,6 @@ function LoadCustomInstance(source, parent)
         end
         return url
     end
-
     while task.wait() and not model do
         if tonumber(source) then
             local success, result = pcall(function()
@@ -761,7 +613,6 @@ function LoadCustomInstance(source, parent)
                     delfile(filename)
                     return obj
                 else
-                    warn("Executor không hỗ trợ file APIs.")
                     return nil
                 end
             end)
@@ -771,7 +622,6 @@ function LoadCustomInstance(source, parent)
         else
             break
         end
-
         if model then
             model.Parent = parent or workspace
             for _, obj in ipairs(model:GetDescendants()) do
@@ -784,71 +634,17 @@ function LoadCustomInstance(source, parent)
             end)
         end
     end
-
     return model
 end
-
 local s = LoadCustomInstance(86700013599003, workspace)
 if not s then
     return
 end
-
 local entity = s:FindFirstChildWhichIsA("BasePart")
 entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(1, 0, 1)
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140537774926087" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
----------GOD3
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
+function entityBehaviors.GodOFThree()
 local function makeEntity(asset)
     local e = spawner.Create({
         Entity = {Name = "The Devourer Of Gods", Asset = asset, HeightOffset = 200},
@@ -877,10 +673,9 @@ Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10
     return e
 end
 
--- 创建17个实体，每个间隔0.08秒
 local assets = {
-    "104227777289979",    -- 第1个
-    "140679368116066",   -- 第2-16个
+    "104227777289979",
+    "140679368116066",
     "140679368116066",
     "140679368116066",
     "140679368116066",
@@ -897,7 +692,6 @@ local assets = {
     "140679368116066",
     "104227777289979" 
 }
-
 for i = 1, 17 do
     spawn(function()
         local entity = makeEntity(assets[i])
@@ -910,65 +704,14 @@ for i = 1, 17 do
 end
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140311790133562" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-------------god4
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
+function entityBehaviors.GodOFFour()
 local entity = spawner.Create({
 	Entity = {
 		Name = "The Devourer Of Gods",
 		Asset = "74255725774689",
 		HeightOffset = 10},Lights = {Flicker = {Enabled = true,Duration = 1},Shatter = true,Repair = false},Earthquake = {Enabled = false},
 	    CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 20, 0.1, 1}},Movement = {Speed = 500,Delay = 0,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},
-	    Damage = {Enabled = true,Range = 40,Amount = 200},Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {"You died by the The devourer of gods", "???", "Wait, who is this guy?","I’m not clear about his background, but anyway, you must be careful.","See you..."},Cause = ""},})
+	    Damage = {Enabled = true,Range = 200,Amount = 200},Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {"You died by the The devourer of gods", "???", "Wait, who is this guy?","I’m not clear about his background, but anyway, you must be careful.","See you..."},Cause = ""},})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
@@ -999,65 +742,14 @@ end)
 entity:Run()
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140083448239444" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
----------------------??
-local checkedEntities = {}
-local listeningSounds = {}
-local function runEvent()
-    local Players = game:GetService("Players")
+function entityBehaviors.Z367Game()
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local player = Players.LocalPlayer
 local gui = player:WaitForChild("PlayerGui")
-
 local gameData = {
     gameActive = false,
     gameDuration = 61,
@@ -1446,8 +1138,9 @@ local function startGame()
     local mouseDown = false
     local isMouseControl = true
     
-    local mouseSensitivity = 0.0006
-    local touchSensitivity = 0.0008
+    local mouseSensitivity = 0.0003
+    local touchSensitivity = 0.0004
+    local minShakeInterval = 0.1
     
     local viewportSize = workspace.CurrentCamera.ViewportSize
     local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
@@ -1497,6 +1190,8 @@ local function startGame()
     end)
     
     local lastUpdate = tick()
+    local lastBorderHit = 0
+    local lastBallPos = ballPos
     local gameLoopConnection
     
     local function cleanupGame()
@@ -1567,13 +1262,46 @@ local function startGame()
             ballVelocity = ballVelocity.Unit * maxSpeed
         end
         
+        lastBallPos = ballPos
+        
         ballPos = ballPos + ballVelocity
-        ballPos = Vector2.new(
-            math.clamp(ballPos.X, 0.05, 0.95),
-            math.clamp(ballPos.Y, 0.05, 0.95)
-        )
+        
+        local hitBorder = false
+        local clampedX = math.clamp(ballPos.X, 0.05, 0.95)
+        local clampedY = math.clamp(ballPos.Y, 0.05, 0.95)
+        
+        if ballPos.X ~= clampedX or ballPos.Y ~= clampedY then
+            hitBorder = true
+        end
+        
+        ballPos = Vector2.new(clampedX, clampedY)
         
         ui.Ball.Position = UDim2.new(ballPos.X, -15, ballPos.Y, -15)
+        
+        if hitBorder and (currentTime - lastBorderHit) >= minShakeInterval then
+            lastBorderHit = currentTime
+            
+            pcall(function()
+                local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+                local camara = game.Workspace.CurrentCamera
+                local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+                    camara.CFrame = camara.CFrame * shakeCf
+                end)
+                camShake:Start()
+                camShake:ShakeOnce(8, 30, 0.1, 0.5, 5, 5)
+            end)
+            
+            if ballPos.X == 0.05 or ballPos.X == 0.95 then
+                ballVelocity = Vector2.new(-ballVelocity.X * 0.7, ballVelocity.Y)
+            end
+            if ballPos.Y == 0.05 or ballPos.Y == 0.95 then
+                ballVelocity = Vector2.new(ballVelocity.X, -ballVelocity.Y * 0.7)
+            end
+            
+            ui.Ball.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+            wait(0.1)
+            ui.Ball.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+        end
         
         local center = Vector2.new(0.5, 0.5)
         local distance = (ballPos - center).Magnitude
@@ -1643,118 +1371,15 @@ local function main()
         loadMusicOnly()
     end
 end
-
 main()
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://111351357978027" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
----------A60
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
+function entityBehaviors.A60Ps1()
 local entity = spawner.Create({
-	Entity = {
-		Name = "A60",
-		Asset = "14169212325",
-		HeightOffset = 0
-	},
-	Lights = {
-		Flicker = {
-			Enabled = false,
-			Duration = 10
-		},
-		Shatter = false,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 200,
-		Values = {1.5, 20, 0.1, 1}
-	},
-	Movement = {
-		Speed = 150,
-		Delay = 3,
-		Reversed = false
-	},
-	Rebounding = {
-		Enabled = true,
-		Type = "ambush",
-		Min = 3,
-		Max = 3,
-		Delay = math.random(10, 30) / 10
-	},
-	Damage = {
-		Enabled = true,
-		Range = 100,
-		Amount = 125
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 100,
-		Resist = false,
-		Break = true
-	},
-	Death = {
-		Type = "Guiding",
-		Hints = {"你死于A60", "...", "你会从Ambush那学会点什么", "他随时可能出现!"},
-		Cause = ""
-	}
-})
-
----====== Debug entity ======---
-
+Entity = {Name = "A60",Asset = "14169212325",HeightOffset = 0},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},
+Movement = {Speed = 150,Delay = 3,Reversed = false},Rebounding = {Enabled = true,Type = "ambush",Min = 3,Max = 3,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 100,Amount = 125},
+Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于A60", "...", "你会从Ambush那学会点什么", "他随时可能出现!"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
-	-- Variables for the entity
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
 	local attachment = main:WaitForChild("Attachment")
@@ -1765,17 +1390,12 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		switch = main:WaitForChild("Switch"),
 		switchBack = main:WaitForChild("SwitchBack")
 	}
-
-	-- Toggle particle emitters and lights within the entityModel
-	-- To switch between green & red state
 	for _, c in attachment:GetChildren() do
 		c.Enabled = (not startOfRebound)
 	end
 	for _, c in AttachmentSwitch:GetChildren() do
 		c.Enabled = startOfRebound
 	end
-
-	-- Play sounds
 	if startOfRebound == true then
 		sounds.footsteps.PlaybackSpeed = 0.35
 		sounds.playSound.PlaybackSpeed = 0.25
@@ -1785,69 +1405,13 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		sounds.playSound.PlaybackSpeed = 0.16
 		sounds.switchBack:Play()
 	end
-	
 end)
-
----====== Run entity ======---
-
 entity:Run()
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://8325526433" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-
---------A60PHASE2-ROOM
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
+function entityBehaviors.A60PS2()
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-
 local waypointFolder = Workspace:FindFirstChild("A60_Waypoints")
 if not waypointFolder then
     waypointFolder = Instance.new("Folder")
@@ -1862,596 +1426,6 @@ end
 local allWaypoints = {}
 local figureNodes = {}
 
--- 查找名为"50"的房间
-local currentRooms = Workspace:FindFirstChild("CurrentRooms")
-if currentRooms then
-    local room50 = currentRooms:FindFirstChild("50")
-    if room50 and room50:IsA("Model") then
-        print("找到房间50")
-        
-        local figureSetup = room50:FindFirstChild("FigureSetup")
-        if figureSetup then
-            print("找到FigureSetup")
-            
-            local figureNodesFolder = figureSetup:FindFirstChild("FigureNodes")
-            if figureNodesFolder then
-                print("找到FigureNodes")
-                
-                local node1 = figureNodesFolder:FindFirstChild("1")
-                if node1 and node1:IsA("BasePart") then
-                    print("找到FigureNodes/1，创建路径点")
-                    
-                    table.insert(figureNodes, {
-                        part = node1,
-                        position = node1.Position
-                    })
-                    
-                    for _ = 1, 2 do
-                        table.insert(allWaypoints, {
-                            part = node1,
-                            position = node1.Position,
-                            isOnePart = true
-                        })
-                    end
-                    
-                    for _ = 1, 3 do
-                        table.insert(allWaypoints, {
-                            part = node1,
-                            position = node1.Position + Vector3.new(
-                                math.random(-3, 3),
-                                math.random(-0.5, 0.5),
-                                math.random(-3, 3)
-                            ),
-                            isOnePart = true,
-                            isOffset = true
-                        })
-                    end
-                    
-                    for _ = 1, math.random(3, 6) do
-                        for i = #allWaypoints, 2, -1 do
-                            local j = math.random(i)
-                            allWaypoints[i], allWaypoints[j] = allWaypoints[j], allWaypoints[i]
-                        end
-                    end
-                else
-                    print("FigureNodes/1 不是BasePart或不存在")
-                end
-            else
-                print("找不到FigureNodes")
-            end
-        else
-            print("找不到FigureSetup")
-        end
-    else
-        print("找不到房间50")
-        
-        -- 没有房间50时，创建普通路径点
-        local waypointCount = 0
-        
-        local function processDoor(doorModel, roomName, doorType)
-            local position
-            
-            if doorModel.PrimaryPart then
-                position = doorModel:GetPivot().Position
-            else
-                local parts = {}
-                for _, part in ipairs(doorModel:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        table.insert(parts, part.Position)
-                    end
-                end
-                
-                if #parts > 0 then
-                    local sum = Vector3.new(0, 0, 0)
-                    for _, pos in ipairs(parts) do
-                        sum = sum + pos
-                    end
-                    position = sum / #parts
-                end
-            end
-            
-            if position then
-                waypointCount = waypointCount + 1
-                
-                local waypoint = Instance.new("Part")
-                waypoint.Name = "A60_WP_" .. waypointCount
-                waypoint.Size = Vector3.new(2, 2, 2)
-                waypoint.Position = position
-                waypoint.Anchored = true
-                waypoint.CanCollide = false
-                waypoint.Transparency = 1
-                waypoint.Parent = waypointFolder
-                
-                for _ = 1, 2 do
-                    table.insert(allWaypoints, {
-                        part = waypoint,
-                        position = waypoint.Position,
-                        room = roomName,
-                        index = waypointCount,
-                        doorType = doorType,
-                        isDoor = true
-                    })
-                end
-                
-                for _ = 1, 4 do
-                    local offsetPos = position + Vector3.new(
-                        math.random(-4, 4),
-                        math.random(0, 2),
-                        math.random(-4, 4)
-                    )
-                    
-                    waypointCount = waypointCount + 1
-                    local offsetWaypoint = Instance.new("Part")
-                    offsetWaypoint.Name = "A60_WP_" .. waypointCount .. "_Offset"
-                    offsetWaypoint.Size = Vector3.new(2, 2, 2)
-                    offsetWaypoint.Position = offsetPos
-                    offsetWaypoint.Anchored = true
-                    offsetWaypoint.CanCollide = false
-                    offsetWaypoint.Transparency = 1
-                    offsetWaypoint.Parent = waypointFolder
-                    
-                    table.insert(allWaypoints, {
-                        part = offsetWaypoint,
-                        position = offsetPos,
-                        room = roomName,
-                        index = waypointCount,
-                        doorType = doorType,
-                        isDoor = true,
-                        isOffset = true
-                    })
-                end
-            end
-        end
-        
-        for _, room in ipairs(currentRooms:GetChildren()) do
-            if room:IsA("Model") then
-                for _, child in ipairs(room:GetDescendants()) do
-                    if child:IsA("Model") and (child.Name == "Door" or child.Name == "DoorNormal" or child.Name == "SideroomDupe") then
-                        processDoor(child, room.Name, child.Name)
-                    end
-                end
-            end
-        end
-        
-        for _ = 1, math.random(3, 6) do
-            for i = #allWaypoints, 2, -1 do
-                local j = math.random(i)
-                allWaypoints[i], allWaypoints[j] = allWaypoints[j], allWaypoints[i]
-            end
-        end
-    end
-else
-    print("找不到CurrentRooms")
-end
-
-if #allWaypoints == 0 then
-    print("没有创建任何路径点")
-    return
-end
-
-local a60Model
-local success, result = pcall(function()
-    return game:GetObjects("rbxassetid://85615143036194")[1]
-end)
-
-if success and result then
-    a60Model = result
-    a60Model.Name = "A60"
-    a60Model.Parent = Workspace
-    
-    if #allWaypoints > 0 then
-        a60Model:PivotTo(CFrame.new(allWaypoints[1].position + Vector3.new(5, 0, 5)))
-    end
-else
-    a60Model = Instance.new("Model")
-    a60Model.Name = "A60"
-    
-    local torso = Instance.new("Part")
-    torso.Name = "Torso"
-    torso.Size = Vector3.new(2, 4, 2)
-    torso.Position = Vector3.new(0, 5, 0)
-    torso.Anchored = false
-    torso.CanCollide = true
-    torso.Color = Color3.fromRGB(139, 69, 19)
-    torso.Material = Enum.Material.Wood
-    torso.Parent = a60Model
-    
-    a60Model.PrimaryPart = torso
-    a60Model.Parent = Workspace
-end
-
-local function addFaceParticleAnimation()
-    -- 查找名为"Face"的ParticleEmitter
-    local faceParticle
-    for _, child in ipairs(a60Model:GetDescendants()) do
-        if child:IsA("ParticleEmitter") and child.Name == "Face" then
-            faceParticle = child
-            break
-        end
-    end
-    
-    if not faceParticle then
-        print("警告：未找到名为'Face'的ParticleEmitter")
-        return
-    end
-    
-    print("找到面部粒子发射器")
-    
-    -- 粒子纹理ID列表
-    local particleTextures = {
-        "rbxassetid://16020415559",
-        "rbxassetid://16020423090", 
-        "rbxassetid://16020425703",
-        "rbxassetid://16020417711",
-        "rbxassetid://16020432826",
-        "rbxassetid://16020430685",
-        "rbxassetid://16020435171"
-    }
-    
-    local currentTextureIndex = 1
-    local animationSpeed = 0.1
-    local isAnimating = true
-    
-    -- 保存原始粒子设置
-    local originalTexture = faceParticle.Texture
-    local originalEnabled = faceParticle.Enabled
-    
-    -- 面部粒子动画循环
-    coroutine.wrap(function()
-        while a60Model and a60Model.Parent and faceParticle and faceParticle.Parent and isAnimating do
-            -- 确保粒子发射器是启用的
-            faceParticle.Enabled = true
-            
-            -- 应用当前纹理
-            faceParticle.Texture = particleTextures[currentTextureIndex]
-            
-            -- 更新到下一个纹理
-            currentTextureIndex = currentTextureIndex + 1
-            if currentTextureIndex > #particleTextures then
-                currentTextureIndex = 1
-            end
-            
-            -- 随机速度变化
-            local currentSpeed = animationSpeed * (0.8 + math.random() * 0.4)
-            wait(currentSpeed)
-        end
-    end)()
-    
-    -- 添加控制功能
-    local function setAnimationSpeed(speed)
-        animationSpeed = math.max(0.05, math.min(0.5, speed))
-    end
-    
-    local function stopAnimation()
-        isAnimating = false
-        -- 恢复原始纹理
-        faceParticle.Texture = originalTexture
-    end
-    
-    local function startAnimation()
-        isAnimating = true
-    end
-    
-    -- 添加到键盘控制
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        
-        if input.KeyCode == Enum.KeyCode.F then
-            isAnimating = not isAnimating
-            if isAnimating then
-                print("面部粒子动画: 开启")
-            else
-                print("面部粒子动画: 关闭")
-            end
-        end
-    end)
-    
-    return {
-        setSpeed = setAnimationSpeed,
-        stop = stopAnimation,
-        start = startAnimation
-    }
-end
-
-local currentWaypointIndex = 1
-local isMoving = true
-local baseSpeed = 60
-local rotationSpeed = 0.6
-local reachedDistance = 8.0
-local smoothFactor = 0.6
-local visitCounts = {}
-local lastVisitTime = {}
-
-for i = 1, #allWaypoints do
-    visitCounts[i] = 0
-    lastVisitTime[i] = 0
-end
-
-local function getWaypoint()
-    if #allWaypoints == 0 then
-        return nil, 1
-    end
-    
-    local currentTime = tick()
-    local validWaypoints = {}
-    
-    for i, wp in ipairs(allWaypoints) do
-        if wp and wp.part and wp.part.Parent then
-            if currentTime - lastVisitTime[i] > 2 then
-                table.insert(validWaypoints, {index = i, waypoint = wp})
-            end
-        end
-    end
-    
-    if #validWaypoints > 0 then
-        local choice = validWaypoints[math.random(1, #validWaypoints)]
-        currentWaypointIndex = choice.index
-        return choice.waypoint, currentWaypointIndex
-    end
-    
-    for i = 1, #allWaypoints do
-        local wp = allWaypoints[i]
-        if wp and wp.part and wp.part.Parent then
-            currentWaypointIndex = i
-            return wp, currentWaypointIndex
-        end
-    end
-    
-    return nil, 1
-end
-
-local function checkReachedWaypoint(waypoint)
-    if not waypoint or not waypoint.part or not waypoint.part.Parent then
-        return false
-    end
-    
-    local monsterPos = a60Model:GetPivot().Position
-    local waypointPos = waypoint.position
-    local distance = (monsterPos - waypointPos).Magnitude
-    
-    return distance <= reachedDistance
-end
-
-local lastUpdate = tick()
-local currentTarget, currentIndex = getWaypoint()
-local velocity = Vector3.new(0, 0, 0)
-local wobbleIntensity = 0.15
-local wobbleSpeed = 3.0
-local wobbleTime = 0
-local targetSwitchTime = 0
-local minTargetTime = 1.0
-local maxTargetTime = 5.0
-local speedMultiplier = 1.0
-local zigzagAmount = 0
-local zigzagSpeed = 2.0
-local zigzagIntensity = 0.3
-
-print("总路径点数量: " .. #allWaypoints)
-if #figureNodes > 0 then
-    print("模式: 房间50模式 (使用FigureNodes/1)")
-else
-    print("模式: 普通门路径点")
-end
-
-coroutine.wrap(function()
-    wait(60)
-    
-    for _, waypoint in ipairs(allWaypoints) do
-        if not waypoint.isOnePart and waypoint.part and waypoint.part.Parent then
-            waypoint.part:Destroy()
-        end
-    end
-    
-    if a60Model and a60Model.Parent then
-        a60Model:Destroy()
-    end
-    
-    if waypointFolder and waypointFolder.Parent then
-        waypointFolder:Destroy()
-    end
-end)()
-
-coroutine.wrap(function()
-    while a60Model and a60Model.Parent do
-        local deltaTime = math.min(tick() - lastUpdate, 0.033)
-        lastUpdate = tick()
-        wobbleTime = wobbleTime + deltaTime * wobbleSpeed
-        zigzagAmount = zigzagAmount + deltaTime * zigzagSpeed
-        
-        if isMoving and currentTarget then
-            local monsterCFrame = a60Model:GetPivot()
-            local monsterPos = monsterCFrame.Position
-            local targetPos = currentTarget.position
-            
-            local direction = (targetPos - monsterPos)
-            local distance = direction.Magnitude
-            
-            if distance > 0.1 then
-                local moveDirection = direction.Unit
-                
-                local targetSpeed = baseSpeed * speedMultiplier
-                
-                if math.random() < 0.4 then
-                    speedMultiplier = 0.7 + math.random() * 1.3
-                end
-                
-                if distance < 20 then
-                    targetSpeed = targetSpeed * 0.8
-                elseif distance > 40 then
-                    targetSpeed = targetSpeed * 1.4
-                end
-                
-                if tick() - targetSwitchTime > minTargetTime + math.random() * (maxTargetTime - minTargetTime) then
-                    if math.random() < 0.6 then
-                        currentTarget, currentIndex = getWaypoint()
-                        targetSwitchTime = tick()
-                    end
-                end
-                
-                local zigzagOffset = Vector3.new(
-                    math.sin(zigzagAmount) * zigzagIntensity,
-                    0,
-                    math.cos(zigzagAmount * 0.7) * zigzagIntensity * 0.5
-                )
-                
-                moveDirection = (moveDirection + zigzagOffset * 0.1).Unit
-                
-                local targetVelocity = moveDirection * targetSpeed
-                velocity = velocity:Lerp(targetVelocity, smoothFactor)
-                
-                local wobbleOffset = Vector3.new(
-                    math.sin(wobbleTime) * wobbleIntensity * 2.0,
-                    math.cos(wobbleTime * 1.3) * wobbleIntensity * 1.0,
-                    math.cos(wobbleTime * 0.9) * wobbleIntensity * 1.5
-                )
-                
-                local newPosition = monsterPos + (velocity * deltaTime) + wobbleOffset
-                
-                if moveDirection.Magnitude > 0.1 then
-                    local yawOffset = math.rad(math.sin(wobbleTime * 0.7) * 8)
-                    local pitchOffset = math.rad(math.cos(wobbleTime * 1.1) * 6)
-                    local rollOffset = math.rad(math.sin(wobbleTime * 1.4) * 4)
-                    
-                    local rotatedDirection = CFrame.Angles(pitchOffset, yawOffset, rollOffset) * moveDirection
-                    
-                    local lookAtCFrame = CFrame.lookAt(newPosition, newPosition + rotatedDirection)
-                    a60Model:PivotTo(lookAtCFrame)
-                end
-                
-                if checkReachedWaypoint(currentTarget) then
-                    if currentIndex then
-                        visitCounts[currentIndex] = (visitCounts[currentIndex] or 0) + 1
-                        lastVisitTime[currentIndex] = tick()
-                    end
-                    
-                    wait(math.random(0.05, 0.2))
-                    
-                    if math.random() < 0.8 then
-                        currentTarget, currentIndex = getWaypoint()
-                        targetSwitchTime = tick()
-                    end
-                    
-                    velocity = velocity * 0.2
-                end
-            else
-                if currentIndex then
-                    visitCounts[currentIndex] = (visitCounts[currentIndex] or 0) + 1
-                    lastVisitTime[currentIndex] = tick()
-                end
-                
-                wait(math.random(0.05, 0.2))
-                currentTarget, currentIndex = getWaypoint()
-                targetSwitchTime = tick()
-                velocity = Vector3.new(0, 0, 0)
-            end
-        end
-        
-        RunService.RenderStepped:Wait()
-    end
-end)()
-
-local UserInputService = game:GetService("UserInputService")
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.R then
-        currentTarget, currentIndex = getWaypoint()
-        isMoving = true
-        velocity = Vector3.new(0, 0, 0)
-        speedMultiplier = 1.0
-        
-        for i = 1, #allWaypoints do
-            visitCounts[i] = 0
-            lastVisitTime[i] = 0
-        end
-        
-        if #allWaypoints > 0 then
-            a60Model:PivotTo(CFrame.new(allWaypoints[1].position + Vector3.new(5, 0, 5)))
-        end
-        
-    elseif input.KeyCode == Enum.KeyCode.T then
-        isMoving = not isMoving
-        if isMoving then
-            velocity = Vector3.new(0, 0, 0)
-        end
-    end
-end)
-local faceController
-if a60Model then
-    faceController = addFaceParticleAnimation()
-end
-end
-
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140305919092081" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-------A60 PHASE2 LIB
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-   local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-
-local waypointFolder = Workspace:FindFirstChild("A60_Waypoints")
-if not waypointFolder then
-    waypointFolder = Instance.new("Folder")
-    waypointFolder.Name = "A60_Waypoints"
-    waypointFolder.Parent = Workspace
-end
-
-for _, wp in ipairs(waypointFolder:GetChildren()) do
-    wp:Destroy()
-end
-
-local allWaypoints = {}
-local figureNodes = {}
-
--- 查找所有名为"1"的Part
 local function findAllOneParts(parent)
     for _, child in ipairs(parent:GetChildren()) do
         if child.Name == "1" and child:IsA("BasePart") then
@@ -2460,29 +1434,23 @@ local function findAllOneParts(parent)
                 position = child.Position
             })
         end
-        -- 递归查找子对象
         if #child:GetChildren() > 0 then
             findAllOneParts(child)
         end
     end
 end
 
--- 从CurrentRooms开始查找
 local currentRooms = Workspace:FindFirstChild("CurrentRooms")
 if currentRooms then
     findAllOneParts(currentRooms)
 end
 
--- 如果没找到，再从Workspace根目录查找
 if #figureNodes == 0 then
     findAllOneParts(Workspace)
 end
 
 if #figureNodes > 0 then
-    print("找到 " .. #figureNodes .. " 个名为'1'的Part")
-    
     for _, node in ipairs(figureNodes) do
-        print("  - 位置: " .. tostring(node.position))
     end
     
     for _, node in ipairs(figureNodes) do
@@ -2517,8 +1485,6 @@ if #figureNodes > 0 then
         end
     end
 else
-    print("没有找到名为'1'的Part，创建普通路径点")
-    
     local currentRooms = Workspace:FindFirstChild("CurrentRooms")
     if currentRooms then
         local waypointCount = 0
@@ -2649,7 +1615,6 @@ else
 end
 
 local function addFaceParticleAnimation()
-    -- 查找名为"Face"的ParticleEmitter
     local faceParticle
     for _, child in ipairs(a60Model:GetDescendants()) do
         if child:IsA("ParticleEmitter") and child.Name == "Face" then
@@ -2659,13 +1624,9 @@ local function addFaceParticleAnimation()
     end
     
     if not faceParticle then
-        print("警告：未找到名为'Face'的ParticleEmitter")
         return
     end
-    
-    print("找到面部粒子发射器")
-    
-    -- 粒子纹理ID列表
+
     local particleTextures = {
         "rbxassetid://16020415559",
         "rbxassetid://16020423090", 
@@ -2679,57 +1640,45 @@ local function addFaceParticleAnimation()
     local currentTextureIndex = 1
     local animationSpeed = 0.1
     local isAnimating = true
-    
-    -- 保存原始粒子设置
+
     local originalTexture = faceParticle.Texture
     local originalEnabled = faceParticle.Enabled
-    
-    -- 面部粒子动画循环
+
     coroutine.wrap(function()
         while a60Model and a60Model.Parent and faceParticle and faceParticle.Parent and isAnimating do
-            -- 确保粒子发射器是启用的
+
             faceParticle.Enabled = true
-            
-            -- 应用当前纹理
+
             faceParticle.Texture = particleTextures[currentTextureIndex]
-            
-            -- 更新到下一个纹理
+
             currentTextureIndex = currentTextureIndex + 1
             if currentTextureIndex > #particleTextures then
                 currentTextureIndex = 1
             end
-            
-            -- 随机速度变化
+
             local currentSpeed = animationSpeed * (0.8 + math.random() * 0.4)
             wait(currentSpeed)
         end
     end)()
-    
-    -- 添加控制功能
     local function setAnimationSpeed(speed)
         animationSpeed = math.max(0.05, math.min(0.5, speed))
     end
     
     local function stopAnimation()
         isAnimating = false
-        -- 恢复原始纹理
         faceParticle.Texture = originalTexture
     end
     
     local function startAnimation()
         isAnimating = true
     end
-    
-    -- 添加到键盘控制
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         
         if input.KeyCode == Enum.KeyCode.F then
             isAnimating = not isAnimating
             if isAnimating then
-                print("面部粒子动画: 开启")
             else
-                print("面部粒子动画: 关闭")
             end
         end
     end)
@@ -2813,12 +1762,8 @@ local speedMultiplier = 1.0
 local zigzagAmount = 0
 local zigzagSpeed = 2.0
 local zigzagIntensity = 0.3
-
-print("总路径点数量: " .. #allWaypoints)
 if #figureNodes > 0 then
-    print("模式: 使用" .. #figureNodes .. "个'1' Part作为路径点")
 else
-    print("模式: 普通路径点")
 end
 
 coroutine.wrap(function()
@@ -2937,9 +1882,7 @@ coroutine.wrap(function()
         RunService.RenderStepped:Wait()
     end
 end)()
-
 local UserInputService = game:GetService("UserInputService")
-
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
@@ -2971,121 +1914,13 @@ if a60Model then
 end
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://139308622787703" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-------A60-50
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("你认为我走了?",true)
-wait(2)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("我不会这么轻易放过你.",true)
-end
-
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140721539239314" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
---------A500
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-     function GitAud(soundgit, filename)
+function entityBehaviors.A500RUN()
+function GitAud(soundgit, filename)
     local url = soundgit
     local FileName = filename
     writefile(FileName .. ".mp3", game:HttpGet(url))
     return (getcustomasset or getsynasset)(FileName .. ".mp3")
 end
-
 function CustomGitSound(soundlink, vol, filename)
     local sound = Instance.new("Sound")
     sound.SoundId = GitAud(soundlink, filename)
@@ -3094,72 +1929,16 @@ function CustomGitSound(soundlink, vol, filename)
     sound.Volume = vol or 1
     return sound
 end
-
 local function main()
-
     local targetAudioUrl = "https://github.com/Zero0Star/RipperMPSound/blob/master/A500Moving.mp3?raw=true"
     local volume = 2
     local localFileName = "A500MUSIC"
-    
     local sound = CustomGitSound(targetAudioUrl, volume, localFileName)
-
     game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-
     sound:Play()
-    
-    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-    local entity = spawner.Create({
-        Entity = {
-            Name = "A500",
-            Asset = "121633960606961",
-            HeightOffset = 0.3
-        },
-        Lights = {
-            Flicker = {
-                Enabled = false,
-                Duration = 10
-            },
-            Shatter = false,
-            Repair = false
-        },
-        Earthquake = {
-            Enabled = false
-        },
-        CameraShake = {
-            Enabled = true,
-            Range = 200,
-            Values = {1.5, 20, 0.1, 1}
-        },
-        Movement = {
-            Speed = 90,
-            Delay = 25,
-            Reversed = false
-        },
-        Rebounding = {
-            Enabled = true,
-            Type = "ambush",
-            Min = 30,
-            Max = 30,
-            Delay = math.random(10, 30) / 10
-        },
-        Damage = {
-            Enabled = true,
-            Range = 20,
-            Amount = 50
-        },
-        Crucifixion = {
-            Enabled = false,
-            Range = 20,
-            Resist = false,
-            Break = true
-        },
-        Death = {
-            Type = "Guiding",
-            Hints = {"你死于A500", "这是很坏的结局", "你需要不停的跑!", "保证自己在两分钟内不被追上"},
-            Cause = ""
-        }
-    })
-    
+local entity = spawner.Create({
+Entity = {Name = "A500", Asset = "129540089908463",HeightOffset = 0.3 },Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false },CameraShake = { Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1} },
+Movement = {Speed = 90,Delay = 25,Reversed = false},Rebounding = {Enabled = true,Type = "ambush",Min = 30,Max = 30,Delay = math.random(2, 2) / 2},Damage = {Enabled = true,Range = 50,Amount = 50},Crucifixion = {Enabled = false,Range = 20,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于A500", "这是很坏的结局", "你需要不停的跑!", "保证自己在两分钟内不被追上"},Cause = ""}})
     entity:SetCallback("OnRebounding", function(startOfRebound)
         local entityModel = entity.Model
         local main = entityModel:WaitForChild("Main")
@@ -3210,131 +1989,24 @@ local function main()
             end
         end)
     end
-    
-    task.wait(15)
-    
-    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
-    
-    Event:FireServer(
-        "Apply Changes",
-        {
-            Players = {
-                QWQ75321 = "QWQ75321",
-                sppvve = "sppvve"
-            },
-            ["Max Health"] = 100,
-            ["Allow Sliding"] = true,
-            ["Star Shield"] = 100,
-            ["Speed Boost"] = 20,
-            Health = 100,
-            ["Allow Jumping"] = true,
-            ["God Mode"] = true
-        }
-    )
-    
-    Event:FireServer(
-        "Give Items",
-        {
-            Players = {
-                sppvve = "sppvve",
-                QWQ75321 = "QWQ75321"
-            },
-            Items = {
-                Multitool = "Multitool"
-            }
-        }
-    )
-    
-    if sound and sound.IsPlaying then
+ if sound and sound.IsPlaying then
         sound.Ended:Wait()
     end
-    
     local a500Model = workspace:FindFirstChild("A500")
     if a500Model then
         a500Model:Destroy()
     end
-    
-    Event:FireServer(
-        "Apply Changes",
-        {
-            Players = {
-                QWQ75321 = "QWQ75321",
-                sppvve = "sppvve"
-            },
-            ["Max Health"] = 100,
-            ["Allow Sliding"] = false,
-            ["Star Shield"] = 0,
-            ["Speed Boost"] = 0,
-            Health = 100,
-            ["Allow Jumping"] = false,
-            ["God Mode"] = false
-        }
-    )
-    
     if sound then
         sound:Destroy()
     end
 end
-
 local success, err = pcall(main)
 if not success then
-
 end
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140731983342235" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-
--------XBRAMBLE
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local targetModel = workspace:WaitForChild("LiveEntityBramble", 5)
+function entityBehaviors.XBramble()
+local targetModel = workspace:WaitForChild("LiveEntityBramble", 5)
 if not targetModel then
     return
 end
@@ -3757,109 +2429,10 @@ if PART and target then
     end)
 end
 end
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://116898205685143" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
 
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-----------A200
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local entity = spawner.Create({
-	Entity = {
-		Name = "A-200",
-		Asset = "103526452499813",
-		HeightOffset = 1
-	},
-	Lights = {
-		Flicker = {
-			Enabled = false,
-			Duration = 10
-		},
-		Shatter = false,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 200,
-		Values = {1.5, 20, 0.1, 1}
-	},
-	Movement = {
-		Speed = 60,
-		Delay = 5,
-		Reversed = true
-	},
-	Rebounding = {
-		Enabled = false,
-		Type = "ambush",
-		Min = 4,
-		Max = 4,
-		Delay = math.random(10, 30) / 10
-	},
-	Damage = {
-		Enabled = true,
-		Range = 100,
-		Amount = 1
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 100,
-		Resist = false,
-		Break = true
-	},
-	Death = {
-		Type = "Guiding",
-		Hints = {"你死于A-200", "竖起耳朵仔细辨别是一个麻烦", "但你不得不这么做", "你或许会在寂静那学到点什么"},
-		Cause = ""
-	}
-})
+function entityBehaviors.A200()
+local entity = spawner.Create({Entity = {Name = "A-200",Asset = "125138842800011",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,
+Values = {1.5, 1, 0.1, 1}},Movement = {Speed = 60,Delay = 5,Reversed = true},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 100,Amount = 1},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于A-200", "竖起耳朵仔细辨别是一个麻烦", "但你不得不这么做", "你或许会在寂静那学到点什么"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
@@ -3888,11 +2461,8 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		sounds.playSound.PlaybackSpeed = 0.16
 		sounds.switchBack:Play()
 	end
-	
 end)
-
 entity:Run()
-
 local sound = Instance.new("Sound")
 sound.Name = "A200"  
 sound.SoundId = "rbxassetid://2306939610"
@@ -3900,121 +2470,48 @@ sound.Volume = 0.1
 sound.Looped = true
 sound.Parent = workspace
 sound:Play()
-
 task.wait(10)
 sound:Stop()
 sound:Destroy()
-
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://7298463798" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-----Amin60
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local entity = spawner.Create({
-	Entity = {
-		Name = "Amin-60",
-		Asset = "134290844453819",
-		HeightOffset = 0.8
-	},
-	Lights = {
-		Flicker = {
-			Enabled = false,
-			Duration = 10
-		},
-		Shatter = true,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 200,
-		Values = {1.5, 20, 0.1, 1}
-	},
-	Movement = {
-		Speed = 400,
-		Delay = 6.5,
-		Reversed = false
-	},
-	Rebounding = {
-		Enabled = true,
-		Type = "ambush",
-		Min = 10,
-		Max = 10,
-		Delay = math.random(10, 30) / 10
-	},
-	Damage = {
-		Enabled = true,
-		Range = 100,
-		Amount = 125
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 100,
-		Resist = false,
-		Break = true
-	},
-	Death = {
-		Type = "Guiding",
-		Hints = {"你死于Amin-60", "极大的嘈杂声会掩盖其他声音", "他比A60更加迅速敏捷", "仔细听取木板碎裂的声音"},
-		Cause = ""
-	}
-})
-
----====== Debug entity ======---
-
+function entityBehaviors.AMIN60()
+local entity = spawner.Create({Entity = {Name = "Amin-60",Asset = "134290844453819",HeightOffset = 0.8},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 400,Delay = 6.5,Reversed = false},Rebounding = {Enabled = true,Type = "ambush",Min = 10,Max = 10,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 100,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于Amin-60", "极大的嘈杂声会掩盖其他声音", "他比A60更加迅速敏捷", "仔细听取木板碎裂的声音"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 
+	local entityModel = entity.Model
+	local main = entityModel:WaitForChild("Main")
+	local attachment = main:WaitForChild("Attachment")
+	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+	local sounds = {
+		footsteps = main:WaitForChild("Footsteps"),
+		playSound = main:WaitForChild("PlaySound"),
+		switch = main:WaitForChild("Switch"),
+		switchBack = main:WaitForChild("SwitchBack")
+	}
+	for _, c in attachment:GetChildren() do
+		c.Enabled = (not startOfRebound)
+	end
+	for _, c in AttachmentSwitch:GetChildren() do
+		c.Enabled = startOfRebound
+	end
+	if startOfRebound == true then
+		sounds.footsteps.PlaybackSpeed = 0.35
+		sounds.playSound.PlaybackSpeed = 0.25
+		sounds.switch:Play()
+	else
+		sounds.footsteps.PlaybackSpeed = 0.25
+		sounds.playSound.PlaybackSpeed = 0.16
+		sounds.switchBack:Play()
+	end
+	
+end)
+entity:Run()
+end
+
+function entityBehaviors.Black60()
+local entity = spawner.Create({Entity = {Name = "Black-A60",Asset = "96102326082560",HeightOffset = 0},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 350,Delay = 6.5,Reversed = false},Rebounding = {Enabled = true,Type = "ambush",Min = 10,Max = 10,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 100,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于BlackA60", "极大的嘈杂声会掩盖其他声音", "在不妥时使用十字架会更方便", "反复进柜子躲避它"},Cause = ""}})
+entity:SetCallback("OnRebounding", function(startOfRebound)
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
 	local attachment = main:WaitForChild("Attachment")
@@ -4042,115 +2539,12 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		sounds.playSound.PlaybackSpeed = 0.16
 		sounds.switchBack:Play()
 	end
-	
 end)
-
 entity:Run()
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://4004052860" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
--------blackA60
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local entity = spawner.Create({
-	Entity = {
-		Name = "Black-A60",
-		Asset = "96102326082560",
-		HeightOffset = 0
-	},
-	Lights = {
-		Flicker = {
-			Enabled = false,
-			Duration = 10
-		},
-		Shatter = true,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 200,
-		Values = {1.5, 20, 0.1, 1}
-	},
-	Movement = {
-		Speed = 350,
-		Delay = 6.5,
-		Reversed = false
-	},
-	Rebounding = {
-		Enabled = true,
-		Type = "ambush",
-		Min = 10,
-		Max = 10,
-		Delay = math.random(10, 30) / 10
-	},
-	Damage = {
-		Enabled = true,
-		Range = 100,
-		Amount = 125
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 100,
-		Resist = false,
-		Break = true
-	},
-	Death = {
-		Type = "Guiding",
-		Hints = {"你死于BlackA60", "极大的嘈杂声会掩盖其他声音", "在不妥时使用十字架会更方便", "反复进柜子躲避它"},
-		Cause = ""
-	}
-})
+function entityBehaviors.Silence()
+local entity = spawner.Create({Entity = {Name = "Silence",Asset = "106570553068298",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 25,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 200,Amount = 125},Crucifixion = {Enabled = true,Range = 200,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Silence 吞噬了...", "你该学会不在寂静中消亡", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 
 	local entityModel = entity.Model
@@ -4185,196 +2579,8 @@ end)
 entity:Run()
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://4903742660" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-------silence
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-     local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local entity = spawner.Create({
-	Entity = {
-		Name = "Silence",
-		Asset = "106570553068298",
-		HeightOffset = 1
-	},
-	Lights = {
-		Flicker = {
-			Enabled = false,
-			Duration = 0.1
-		},
-		Shatter = true,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 20,
-		Values = {1.5, 20, 0.1, 1}
-	},
-	Movement = {
-		Speed = 25,
-		Delay = 2,
-		Reversed = false
-	},
-	Rebounding = {
-		Enabled = false,
-		Type = "Blitz",
-		Min = 1,
-		Max = math.random(1, 2),
-		Delay = math.random(10, 30) / 10
-	},
-	Damage = {
-		Enabled = true,
-		Range = 200,
-		Amount = 125
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 200,
-		Resist = false,
-		Break = true
-	},
-	Death = {
-		Type = "Guiding",
-		Hints = {"你被 Silence 吞噬了...", "你该学会不在寂静中消亡", "请仔细辨别环境中的声音", "他随时都可能出现"},
-		Cause = ""
-	}
-})
-
-entity:SetCallback("OnRebounding", function(startOfRebound)
-
-	local entityModel = entity.Model
-	local main = entityModel:WaitForChild("Main")
-	local attachment = main:WaitForChild("Attachment")
-	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
-	local sounds = {
-		footsteps = main:WaitForChild("Footsteps"),
-		playSound = main:WaitForChild("PlaySound"),
-		switch = main:WaitForChild("Switch"),
-		switchBack = main:WaitForChild("SwitchBack")
-	}
-
-	for _, c in attachment:GetChildren() do
-		c.Enabled = (not startOfRebound)
-	end
-	for _, c in AttachmentSwitch:GetChildren() do
-		c.Enabled = startOfRebound
-	end
-
-	if startOfRebound == true then
-		sounds.footsteps.PlaybackSpeed = 0.35
-		sounds.playSound.PlaybackSpeed = 0.25
-		sounds.switch:Play()
-	else
-		sounds.footsteps.PlaybackSpeed = 0.25
-		sounds.playSound.PlaybackSpeed = 0.16
-		sounds.switchBack:Play()
-	end
-	
-end)
-entity:Run()
-end
-
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://135376180128296" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-----------firstbite
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    function GetRoom()
+function entityBehaviors.ForstBite()
+function GetRoom()
     local gruh = workspace.CurrentRooms
     return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
 end
@@ -4413,7 +2619,6 @@ function LoadCustomInstance(source, parent)
                     delfile(filename)
                     return obj
                 else
-                    warn("Executor không hỗ trợ file APIs.")
                     return nil
                 end
             end)
@@ -4442,7 +2647,6 @@ end
 
 local s = LoadCustomInstance("98436457371270", workspace)
 if not s then
-    warn("Frost entity.")
     return
 end
 
@@ -4502,21 +2706,57 @@ for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
         entity.Attachment[v].Enabled = false
     end
 end
-
 wait(8)
-
+local roomChanged = false
+local roomChangedConnection
+roomChangedConnection = game.ReplicatedStorage.GameData.LatestRoom.Changed:Connect(function()
+    roomChanged = true
+    if roomChangedConnection then
+        roomChangedConnection:Disconnect()
+    end
+end)
 for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
     if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
         entity.Attachment[v].Enabled = true
     end
 end
+wait(2)
 
+if roomChanged then
+    for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
+        if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
+            entity.Attachment[v].Enabled = false
+        end
+    end
+    
+    pcall(function() entity.Ambience:Stop() end)
+    pcall(function() entity.AmbienceFar:Stop() end)
+    
+    local des = Instance.new("Sound")
+    des.SoundId = "rbxassetid://111715441853991"
+    des.Looped = false
+    des.Volume = 2.5
+    des.Parent = s
+    des:Play()
+    
+    wait(5)
+    s:Destroy()
+    
+    tweenservice:Create(frost, TweenInfo.new(5), {
+        TintColor = Color3.fromRGB(255, 255, 255),
+        Saturation = 0,
+        Contrast = 0
+    }):Play()
+    wait(5)
+    frost:Destroy()
+    return
+end
 pcall(function() entity.Ambience:Play() end)
 pcall(function() entity.AmbienceFar:Play() end)
 
 local dmg = true
 task.spawn(function()
-    while dmg do
+    while dmg and not roomChanged do
         wait(1)
         local lighter = chr:FindFirstChild("Lighter")
         local safe = false
@@ -4535,7 +2775,7 @@ task.spawn(function()
                 end
             end
         end
-        if not safe then
+        if not safe and not roomChanged then
             pcall(function()
                 chr.Humanoid.Health -= 5
                 game.ReplicatedStorage.GameStats["Player_" .. plr.Name].Total.DeathCause.Value = "Frostbite"
@@ -4549,14 +2789,19 @@ task.spawn(function()
                         "You should try again.",
                         "By the way, the name of the thing that killed you is Frostbite."
                     }, "Yellow")
-                
             end)
         end
     end
+    dmg = false
 end)
 
 game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 dmg = false
+roomChanged = true
+
+if roomChangedConnection then
+    roomChangedConnection:Disconnect()
+end
 
 for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
     if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
@@ -4584,115 +2829,10 @@ tweenservice:Create(frost, TweenInfo.new(5), {
 }):Play()
 wait(5)
 frost:Destroy()
-
 end
-
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://3308152153" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
------------INGOD1
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local entity = spawner.Create({
-	Entity = {
-		Name = "@&%^#*$Indescribable God!@$*&^!Q(* ",
-		Asset = "115187708721417",
-		HeightOffset = 1
-	},
-	Lights = {
-		Flicker = {
-			Enabled = false,
-			Duration = 50
-		},
-		Shatter = true,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 1500,
-		Values = {0.5, 20, 0.1, 1}
-	},
-	Movement = {
-		Speed = 20,
-		Delay = 2,
-		Reversed = false
-	},
-	Rebounding = {
-		Enabled = true,
-		Type = "Ambush",
-		Min = 3,
-		Max = 5,
-		Delay = math.random(10, 30) / 10
-	},
-	Damage = {
-		Enabled = true,
-		Range = 40,
-		Amount = 200
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 40,
-		Resist = true,
-		Break = true
-	},
-	Death = {
-		Type = "Curious",
-		Hints = {"It seems you are so unfortunate...", "You died by the ??? God", "That powerful force will drag you into the abyss.","The cross cannot guarantee your safety.","See you next time."},
-		Cause = ""
-	},
-})
----====== Debug entity ======---
+function entityBehaviors.INGODONE()
+local entity = spawner.Create({Entity = {Name = "@&%^#*$Indescribable God!@$*&^!Q(* ",Asset = "115187708721417",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 50},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 20, 0.1, 1}},Movement = {Speed = 20,Delay = 2,Reversed = false},Rebounding = {Enabled = true,Type = "Ambush",Min = 3,Max = 5,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 40,Amount = 200},Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {"It seems you are so unfortunate...", "You died by the ??? God", "That powerful force will drag you into the abyss.","The cross cannot guarantee your safety.","See you next time."},Cause = ""},})
 entity:SetCallback("OnRebounding", function(startOfRebound)
-	-- Variables for the entity
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
 	local attachment = main:WaitForChild("Attachment")
@@ -4703,17 +2843,12 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		switch = main:WaitForChild("Switch"),
 		switchBack = main:WaitForChild("SwitchBack")
 	}
-
-	-- Toggle particle emitters and lights within the entityModel
-	-- To switch between green & red state
 	for _, c in attachment:GetChildren() do
 		c.Enabled = (not startOfRebound)
 	end
 	for _, c in AttachmentSwitch:GetChildren() do
 		c.Enabled = startOfRebound
 	end
-
-	-- Play sounds
 	if startOfRebound == true then
 		sounds.footsteps.PlaybackSpeed = 0.35
 		sounds.playSound.PlaybackSpeed = 0.25
@@ -4728,57 +2863,7 @@ end)
 entity:Run()
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://138586264525744" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
--------SUBSPACE
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
+function entityBehaviors.Subspace()
 local sound = Instance.new("Sound")
 sound.Name = "Subspace"
 sound.SoundId = "rbxassetid://108345344203629"
@@ -4842,32 +2927,25 @@ local Workspace = game:GetService("Workspace")
 local function RandomUnanchor(count)
     count = count or 1800
     local parts = {}
-
       for _, part in pairs(workspace:GetDescendants()) do
         if part:IsA("BasePart") and part.Anchored and not string.find(part.Name:lower(), "floor") then
             table.insert(parts, part)
         end
     end
-
     if #parts == 0 then
-
         return
     end
-    
     local targetCount = math.min(count, #parts)
     local indices = {}
 
     for i = 1, #parts do
         indices[i] = i
     end
-
     for i = #indices, 2, -1 do
         local j = math.random(1, i)
         indices[i], indices[j] = indices[j], indices[i]
     end
-    
     local unanchored = 0
-
     for i = 1, targetCount do
         local part = parts[indices[i]]
         if part and part.Anchored then
@@ -4879,67 +2957,13 @@ local function RandomUnanchor(count)
             end
         end
     end
-
     return unanchored
 end
-
 RandomUnanchor(1800)
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://124942412759969" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
----------YINGOD2
-
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-        local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-    local entity = spawner.Create({
+function entityBehaviors.INGODTWO()
+ local entity = spawner.Create({
         Entity = {Name = "@&%^#*$Indescribable God!@$*&^!Q(*", Asset = "85650922684960", HeightOffset = -0.8},
         Lights = {Flicker = {Enabled = true, Duration = 50}, Shatter = true, Repair = true},
         Earthquake = {Enabled = false},
@@ -4955,12 +2979,7 @@ local function runEvent()
                 "你死于 %@&*$^%@&*!^$%(*&!^@$((!@&*$%", 
                 "或许有时旁观并不会带给你友好的收益。", 
                 "急速奔跑是你本能的求生欲。", 
-                "下次见。"
-            }, 
-            Cause = ""
-        }
-    })
-    
+                "下次见。"}, Cause = ""}})
     entity:SetCallback("OnRebounding", function(startOfRebound)
         local entityModel = entity.Model
         local main = entityModel:WaitForChild("Main")
@@ -4991,65 +3010,11 @@ local function runEvent()
             sounds.switchBack:Play()
         end
     end)
-    
     entity:Run()
-    
-    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
-    Event:FireServer("LightRoom", {["Light Color"] = Color3.new(1, 0.00060111284255981, 0)})
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://118662411300943" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-----DEL ALL
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-     local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+function entityBehaviors.DELALL()
+ local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
 Event:FireServer(
     "DELETE ALL",
     {}
@@ -5061,7 +3026,6 @@ Event:FireServer(
         "Frostbite", "@&%^#*$Indescribable God!@$*&^!Q(* ", "LightSpeed",
         "Rebound", "Ripper", "Following_ENEMY", "Silence", "smiler", "Chainsmoker"
     }
-    
     for _, name in ipairs(modelNames) do
         local model = workspace:FindFirstChild(name)
         if model and model:IsA("Model") then
@@ -5069,118 +3033,12 @@ Event:FireServer(
         end
     end
 end
-
 deleteDirectChildModels()
-
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140736591220630" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
------smiler
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-     local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-
-local entity = spawner.Create({
-	Entity = {
-		Name = "smiler",
-		Asset = "108450814500304",
-		HeightOffset = 0
-	},
-	Lights = {
-		Flicker = {
-			Enabled = true,
-			Duration = 10
-		},
-		Shatter = false,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 200,
-		Values = {1.5, 20, 0.1, 1}
-	},
-	Movement = {
-		Speed = 450,
-		Delay = 11,
-		Reversed = false
-	},
-	Rebounding = {
-		Enabled = true,
-		Type = "ambush",
-		Min = 8,
-		Max = 8,
-		Delay = math.random(10, 30) / 10
-	},
-	Damage = {
-		Enabled = true,
-		Range = 200,
-		Amount = 125
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 200,
-		Resist = false,
-		Break = true
-	},
-	Death = {
-		Type = "Guiding",
-		Hints = {"你死于Smiler", "或许你需要在Ambush那学会点东西", "在闪灯数秒后他会出现", "加油,我相信你可以做到"},
-		Cause = ""
-	}
-})
-
+function entityBehaviors.Smiler()
+local entity = spawner.Create({Entity = {Name = "smiler",Asset = "108450814500304",HeightOffset = 0},Lights = {Flicker = {Enabled = true,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 450,Delay = 11,Reversed = false},Rebounding = {Enabled = true,Type = "ambush",Min = 8,Max = 8,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 200,Amount = 125},Crucifixion = {Enabled = true,Range = 200,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于Smiler", "或许你需要在Ambush那学会点东西", "在闪灯数秒后他会出现", "加油,我相信你可以做到"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
-	-- Variables for the entity
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
 	local attachment = main:WaitForChild("Attachment")
@@ -5192,8 +3050,6 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		switchBack = main:WaitForChild("SwitchBack")
 	}
 
-	-- Toggle particle emitters and lights within the entityModel
-	-- To switch between green & red state
 	for _, c in attachment:GetChildren() do
 		c.Enabled = (not startOfRebound)
 	end
@@ -5201,7 +3057,6 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		c.Enabled = startOfRebound
 	end
 
-	-- Play sounds
 	if startOfRebound == true then
 		sounds.footsteps.PlaybackSpeed = 0.35
 		sounds.playSound.PlaybackSpeed = 0.25
@@ -5215,65 +3070,13 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 end)
 entity:Run()
 end
-
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140721035016341" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
--------------SHOOP DA
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-   local RunService = game:GetService("RunService")
+function entityBehaviors.WhoopDaShoop()
+local RunService = game:GetService("RunService")
 local modelId = 86112457302745
 local loadedModel
 local success, result = pcall(function()
     return game:GetObjects("rbxassetid://" .. modelId)[1]
 end)
-
 if success and result and result:IsA("Model") then
     loadedModel = result
     loadedModel.Parent = workspace
@@ -5473,61 +3276,10 @@ return function()
         loadedModel:Destroy()
     end
 end
-
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140719303781203" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
---------WHOOPDA
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local RunService = game:GetService("RunService")
+function entityBehaviors.WhoopDaShoopTwo()
+ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local sound = Instance.new("Sound")
@@ -5699,123 +3451,17 @@ soundConnection = sound.Ended:Connect(function()
     if soundConnection then soundConnection:Disconnect() end
 end)
 while not soundFinished do task.wait(0.1) end
-
 if targetModel then restoreModelExceptRootPart(targetModel) end
-
 if laser1FollowConnection then laser1FollowConnection:Disconnect() end
 if laser2FollowConnection then laser2FollowConnection:Disconnect() end
-
 if laser1Model and laser1Model.Parent then laser1Model:Destroy() end
 if laser2Model and laser2Model.Parent then laser2Model:Destroy() end
 if sound and sound.Parent then sound:Destroy() end
-
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://9044461391" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-----CHAINSMKER
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-     local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local entity = spawner.Create({
-	Entity = {
-		Name = "Chainsmoker",
-		Asset = "91743718986054",
-		HeightOffset = 1
-	},
-	Lights = {
-		Flicker = {
-			Enabled = true,
-			Duration = 1
-		},
-		Shatter = true,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 10,
-		Values = {1.5, 20, 0.1, 1}
-	},
-	Movement = {
-		Speed = 30,
-		Delay = 1,
-		Reversed = false
-	},
-	Rebounding = {
-		Enabled = false,
-		Type = "ambush",
-		Min = 4,
-		Max = 4,
-		Delay = math.random(10, 30) / 10
-	},
-	Damage = {
-		Enabled = true,
-		Range = 5,
-		Amount = 125
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 20,
-		Resist = false,
-		Break = true
-	},
-	Death = {
-		Type = "Guiding",
-		Hints = {"你死于Chainsmoker", "......", "或许我不能告诉你他的信息", "总而言之，当心闪灯"},
-		Cause = ""
-	}
-})
+function entityBehaviors.ChainSmoker()
+local entity = spawner.Create({Entity = {Name = "Chainsmoker",Asset = "91743718986054",HeightOffset = 1},Lights = {Flicker = {Enabled = true,Duration = 1},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 10,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 30,Delay = 1,Reversed = false},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 5,Amount = 125},Crucifixion = {Enabled = true,Range = 20,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于Chainsmoker", "......", "或许我不能告诉你他的信息", "总而言之，当心闪灯"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
-
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
 	local attachment = main:WaitForChild("Attachment")
@@ -5832,7 +3478,6 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 	for _, c in AttachmentSwitch:GetChildren() do
 		c.Enabled = startOfRebound
 	end
-
 	if startOfRebound == true then
 		sounds.footsteps.PlaybackSpeed = 0.35
 		sounds.playSound.PlaybackSpeed = 0.25
@@ -5842,135 +3487,27 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		sounds.playSound.PlaybackSpeed = 0.16
 		sounds.switchBack:Play()
 	end
-	
-end)
 
+end)
 entity:Run()
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://18926010713" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
---------deergod
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-     local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-    
+function entityBehaviors.Deergod()
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
-    
     local LocalPlayer = Players.LocalPlayer
     local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-    
     local entityModel
     local chaseConnection = nil
     local customSpeed = 20
     local activationRange = 75
-    
-    local entity = spawner.Create({
-        Entity = {
-            Name = "Deer god",
-            Asset = "94961532857273",
-            HeightOffset = -0.8
-        },
-        Lights = {
-            Flicker = {
-                Enabled = true,
-                Duration = 50
-            },
-            Shatter = true,
-            Repair = false
-        },
-        Earthquake = {
-            Enabled = false
-        },
-        CameraShake = {
-            Enabled = true,
-            Range = 1500,
-            Values = {0.5, 5, 0.1, 1}
-        },
-        Movement = {
-            Speed = 20,
-            Delay = 2,
-            Reversed = false
-        },
-        Rebounding = {
-            Enabled = false,
-            Type = "Blitz",
-            Min = 1,
-            Max = math.random(1, 2),
-            Delay = math.random(10, 30) / 10
-        },
-        Damage = {
-            Enabled = true,
-            Range = 10,
-            Amount = 200
-        },
-        Crucifixion = {
-            Enabled = true,
-            Range = 40,
-            Resist = true,
-            Break = true
-        },
-        Death = {
-            Type = "Curious",
-            Hints = {
+    local entity = spawner.Create({Entity = {Name = "Deer god",Asset = "94961532857273",HeightOffset = -0.8},Lights = {Flicker = {Enabled = true,Duration = 50},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 5, 0.1, 1}},Movement = {Speed = 20,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 10,Amount = 200 },Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {
                 "It seems you are so unfortunate...", 
                 "You died by the Deer God", 
                 "That powerful force will drag you into the abyss.",
                 "The cross cannot guarantee your safety.",
-                "See you next time."
-            },
-            Cause = ""
-        }
-    })
-
+                "See you next time."},Cause = ""}})
     local function startChaseSystem()
         if not entityModel or not entityModel.PrimaryPart then
             return
@@ -5990,7 +3527,6 @@ local function runEvent()
             then 
                 return 
             end
-            
             local pos = entityModel.PrimaryPart.Position
             local target = HumanoidRootPart.Position
             local distance = (target - pos).Magnitude
@@ -6008,7 +3544,6 @@ local function runEvent()
 
     entity:SetCallback("OnSpawned", function()
         entityModel = entity.Model
-
         if entityModel then
             if not entityModel.PrimaryPart then
                 local primaryPart = entityModel:FindFirstChild("Main") or entityModel:FindFirstChildWhichIsA("BasePart")
@@ -6098,129 +3633,13 @@ local function runEvent()
         sound.Volume = vol or 1
         sound:Play()
     end
-    
-    local targetAudioUrl = "https://github.com/eoyoustme/rebouna/blob/main/HesBehindYouRUN.mp3?raw=true"
     local volume = 4
     local localFileName = "DeerGod"
-    CustomGitSound(targetAudioUrl, volume, localFileName)
+    CustomGitSound(dgmusic, volume, localFileName)
 end
-
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://110532875373161" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
--------light
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
-Event:FireServer(
-    "LightRoom",
-    {
-        ["Light Color"] = Color3.new(1, 0.90844488143921, 0)
-    }
-)
-wait(1)
-local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local entity = spawner.Create({
-	Entity = {
-		Name = "LightSpeed",
-		Asset = "87015961601567",
-		HeightOffset = 1
-	},
-	Lights = {
-		Flicker = {
-			Enabled = false,
-			Duration = 0.1
-		},
-		Shatter = false,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 20,
-		Values = {90, 50, 20, 20}
-	},
-	Movement = {
-		Speed = 1400,
-		Delay = 20,
-		Reversed = false
-	},
-	Rebounding = {
-		Enabled = false,
-		Type = "Blitz",
-		Min = 1,
-		Max = math.random(1, 2),
-		Delay = math.random(10, 30) / 10
-	},
-	Damage = {
-		Enabled = true,
-		Range = 50,
-		Amount = 40
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 50,
-		Resist = false,
-		Break = true
-	},
-	Death = {
-		Type = "Guiding",
-		Hints = {"你死于光速", "在他来临时保证自己以最快的速度作出反应", "伴随着灯光变黄与巨大的雷电轰鸣声", "或许并不致命但总是一个威胁"},
-		Cause = ""
-	}
-})
-
----====== Debug entity ======---
-
+function entityBehaviors.LightSpeed()
+local entity = spawner.Create({Entity = {Name = "LightSpeed",Asset = "87015961601567",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {90, 50, 20, 20}},Movement = {Speed = 1400,Delay = 20,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 50,Amount = 40},Crucifixion = {Enabled = true,Range = 50,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于光速", "在他来临时保证自己以最快的速度作出反应", "伴随着灯光变黄与巨大的雷电轰鸣声", "或许并不致命但总是一个威胁"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
-	-- Variables for the entity
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
 	local attachment = main:WaitForChild("Attachment")
@@ -6231,14 +3650,12 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		switch = main:WaitForChild("Switch"),
 		switchBack = main:WaitForChild("SwitchBack")
 	}
-
 	for _, c in attachment:GetChildren() do
 		c.Enabled = (not startOfRebound)
 	end
 	for _, c in AttachmentSwitch:GetChildren() do
 		c.Enabled = startOfRebound
 	end
-
 	if startOfRebound == true then
 		sounds.footsteps.PlaybackSpeed = 0.35
 		sounds.playSound.PlaybackSpeed = 0.25
@@ -6253,58 +3670,8 @@ end)
 entity:Run()
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://1079408535" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
----------------A200JUMPFACE
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    function GitAud(soundgit, filename)
+function entityBehaviors.A200Jump()
+ function GitAud(soundgit, filename)
     local url = soundgit
     local FileName = filename
     writefile(FileName .. ".mp3", game:HttpGet(url))
@@ -6394,58 +3761,8 @@ end
 ExecuteJumpScare()
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://93679208285508" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
--------Rebound JumpFace
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local Players = game:GetService("Players")
+function entityBehaviors.ReboundJump()
+ local Players = game:GetService("Players")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local function playSoundEffect()
@@ -6528,225 +3845,23 @@ coroutine.wrap(playStickerAnimation)()
 replicatesignal(game.Players.LocalPlayer.Kill)
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://96703287490096" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
+function entityBehaviors.EndRooms()
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("End Room Task",true)
 end
 
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
------ENDROOM
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("End Room Task",true)
+function entityBehaviors.Blast()
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("这把枪支看起来生锈..我小心使用..",true)
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140723850841863" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
------Blast
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("这把枪支看起来生锈..我小心使用..",true)
-end
-
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140722528152072" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
--------CEASE
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+function entityBehaviors.Cease()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
 Event:FireServer(
     "LightRoom",
     {
         ["Light Color"] = Color3.new(0, 0.098297834396362, 1)
     }
 )
-local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local entity = spawner.Create({
-	Entity = {
-		Name = "Cease",
-		Asset = "96059843141781",
-		HeightOffset = 1
-	},
-	Lights = {
-		Flicker = {
-			Enabled = false,
-			Duration = 10
-		},
-		Shatter = false,
-		Repair = false
-	},
-	Earthquake = {
-		Enabled = false
-	},
-	CameraShake = {
-		Enabled = true,
-		Range = 200,
-		Values = {1.5, 20, 0.1, 1}
-	},
-	Movement = {
-		Speed = 100,
-		Delay = 5,
-		Reversed = false
-	},
-	Rebounding = {
-		Enabled = false,
-		Type = "ambush",
-		Min = 4,
-		Max = 4,
-		Delay = math.random(10, 30) / 10
-	},
-	Damage = {
-		Enabled = false,
-		Range = 100,
-		Amount = 125
-	},
-	Crucifixion = {
-		Enabled = true,
-		Range = 100,
-		Resist = false,
-		Break = true
-	},
-	Death = {
-		Type = "Guiding",
-		Hints = {"CEASE", "你该学会辨别", "听取周围的声音", "反复进柜子躲避它"},
-		Cause = ""
-	}
-})
-
+local entity = spawner.Create({Entity = {Name = "Cease",Asset = "96059843141781",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 100,Delay = 5,Reversed = false},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 100,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"CEASE", "你该学会辨别", "听取周围的声音", "反复进柜子躲避它"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 
 	local entityModel = entity.Model
@@ -6778,7 +3893,6 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 	end
 	
 end)
-
 entity:Run()
 wait(7)
 local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
@@ -6788,61 +3902,10 @@ Event:FireServer(
         ["Light Color"] = Color3.new(0, 0, 0)
     }
 )
-
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://103515031866941" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
----------Ripper Jump
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local Players = game:GetService("Players")
+function entityBehaviors.RipperJump()
+local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
@@ -7128,71 +4191,18 @@ local function startRipperCheck()
         end
     end)
 end
-
 startRipperCheck()
-
 player.CharacterAdded:Connect(function(newChar)
     character = newChar
     wait(1)
     startRipperCheck()
 end)
-
 wait(6)
 replicatesignal(game.Players.LocalPlayer.Kill)
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://109318460496354" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-----deergodjump
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+function entityBehaviors.DeerGodJump()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
 Event:FireServer(
     "Break Lights",
     {
@@ -7317,9 +4327,9 @@ local function createJumpScareAtPlayer()
         
         wait(5)
 
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("你似乎不明白",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("我们又见面了",true)
 wait(2)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("躲藏永远躲避不了我",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("这次还是一样，你依赖你那可笑的躲藏点与衣柜",true)
 wait(2)
         local TweenService = game:GetService("TweenService")
 
@@ -7377,7 +4387,6 @@ showFullscreenImage()
     
     jumpModel:Destroy()
 end
-
 local function triggerJumpScare()
     if not character or not character.Parent then
         return
@@ -7385,13 +4394,11 @@ local function triggerJumpScare()
     
     createJumpScareAtPlayer()
 end
-
 local ripperCheckConnection
 local function startRipperCheck()
     if ripperCheckConnection then
         ripperCheckConnection:Disconnect()
     end
-    
     ripperCheckConnection = game:GetService("RunService").Heartbeat:Connect(function()
         if not character or not character.Parent then
             if ripperCheckConnection then
@@ -7399,7 +4406,6 @@ local function startRipperCheck()
             end
             return
         end
-        
         local ripperModel = workspace:FindFirstChild("Ripper")
         
         if not ripperModel then
@@ -7410,15 +4416,12 @@ local function startRipperCheck()
         end
     end)
 end
-
 for _, obj in pairs(workspace:GetChildren()) do
     if obj.Name == "DGJF" then
         obj:Destroy()
     end
 end
-
 startRipperCheck()
-
 player.CharacterAdded:Connect(function(newChar)
     character = newChar
     wait(1)
@@ -7426,58 +4429,8 @@ player.CharacterAdded:Connect(function(newChar)
 end)
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://140690368868329" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-----curilight
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+function entityBehaviors.CL()
+ local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
     Event:FireServer("Break Lights", {["Lights Affected"] = 100, ["Affect All Rooms"] = true})
     task.wait(1)
     Event:FireServer("LightRoom", {["Light Color"] = Color3.new(0.80784314870834, 0.63644915819168, 0)})
@@ -7650,14 +4603,10 @@ local function runEvent()
         
         return CuriLight, connection
     end
-    
     local curiModel, curiConnection = setupCuriLightFeatures()
     task.wait(5)
-    
     local sound = CustomGitSound(targetAudioUrl, volume, localFileName)
-    
     task.wait(1)
-    
     require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Dead Again",true)
     task.wait(3)
     require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("You know better than I how to save yourself.",true)
@@ -7677,65 +4626,13 @@ local function runEvent()
     require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Okey..",true)
     task.wait(2)
     require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("See U Again",true)
-    
     sound.Ended:Wait()
-    
     if curiConnection then curiConnection:Disconnect() end
     if curiModel then curiModel:Destroy() end
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://100192030036066" then
-        local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
-            local grandParent = parent.Parent
-            if grandParent and grandParent.Name == "CustomEntity" then
-                if not checkedEntities[grandParent] then
-                    checkedEntities[grandParent] = true
-                    runEvent()
-                end
-            end
-        end
-    end
-end
-
-workspace.DescendantAdded:Connect(function(obj)
-    wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
-end)
-
-for _, entity in pairs(workspace:GetChildren()) do
-    if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
-        if scary then
-            for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end
-----shoker
-local checkedEntities = {}
-local listeningSounds = {}
-
-local function runEvent()
-    local Players = game:GetService("Players")
+function entityBehaviors.Shok()
+local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7786,7 +4683,6 @@ local function spawnShocker()
         local dot = directionToShocker:Dot(playerLookVector)
 
         if dot > 0.85 then
-            -- Đang nhìn
             if not lookStart then
                 lookStart = tick()
             elseif tick() - lookStart >= lookDuration then
@@ -7796,19 +4692,15 @@ local function spawnShocker()
                 horrorScream:Play()
                 if boneSound then boneSound:Play() end
                 humanoid:TakeDamage(30)
-
-                -- Tween lao tới player
                 local targetPos = character.HumanoidRootPart.Position + Vector3.new(0, 2, 0)
                 local tweenInfo = TweenInfo.new(1.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
                 local tween = TweenService:Create(oogaBoogaaPart, tweenInfo, {Position = targetPos})
                 tween:Play()
 
                 tween.Completed:Connect(function()
-                    -- Sau khi lao tới thì rơi xuống đất
                     fallToGround()
                 end)
 
-                -- Death message
                 ReplicatedStorage.GameStats["Player_".. player.Name].Total.DeathCause.Value = "Shocker"
                 firesignal(ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
                     "You died to who you call Shocker...",
@@ -7816,7 +4708,6 @@ local function spawnShocker()
                 }, "Blue")
             end
         else
-            -- Không nhìn → ngã luôn
             connection:Disconnect()
             fallToGround()
         end
@@ -7828,19 +4719,979 @@ local function spawnShocker()
         end
     end)
 end
-
 spawnShocker()
 end
 
-local function checkSound(sound)
-    if sound:IsA("Sound") and sound.SoundId == "rbxassetid://9113115842" then
+function entityBehaviors.MLcur()
+local modelID = 90889178594108
+local targetName = "Repentance_Skinned"
+local loadedModel = nil
+local targetModel = nil
+local anchorPart = nil
+local connections = {}
+local isFollowing = false
+local fadeStartTime = nil
+local isFading = false
+local isProcessing = false
+local processedModels = {}
+
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local cachedModel
+local function preloadModel()
+    if cachedModel and cachedModel.Parent then
+        cachedModel:Destroy()
+        cachedModel = nil
+    end
+    
+    local success, result = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(modelID))
+    end)
+    
+    if not success or not result or not result[1] then
+        return nil
+    end
+    
+    cachedModel = result[1]
+    cachedModel.Name = "Preloaded_VFX_Model"
+    cachedModel.Parent = ReplicatedStorage
+    
+    for _, part in ipairs(cachedModel:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.Massless = true
+        end
+    end
+    
+    return cachedModel
+end
+
+local function getModelFromCache()
+    if not cachedModel or not cachedModel.Parent then
+        return nil
+    end
+    
+    local modelClone = cachedModel:Clone()
+    modelClone.Parent = workspace
+    modelClone.Name = "Follow_Model"
+    
+    return modelClone
+end
+
+local function createAnchorAtEntity()
+    if not targetModel or not targetModel.Parent then 
+        return nil 
+    end
+    
+    local entity = targetModel:FindFirstChild("Entity")
+    if not entity then
+        return nil
+    end
+    
+    local anchor = Instance.new("Part")
+    anchor.Name = "Entity_Anchor"
+    anchor.Size = Vector3.new(0.01, 0.01, 0.01)
+    anchor.Transparency = 1
+    anchor.Anchored = true
+    anchor.CanCollide = false
+    anchor.CanTouch = false
+    anchor.CanQuery = false
+    anchor.Massless = true
+    anchor.CFrame = entity.CFrame + Vector3.new(0, 6.5, 0)
+    anchor.Parent = workspace
+    
+    return anchor
+end
+
+local function deleteTargetParts()
+    if not targetModel or not targetModel.Parent then return end
+    
+    local crucifix = targetModel:FindFirstChild("Crucifix")
+    if crucifix then
+        crucifix:Destroy()
+    end
+end
+
+local function playAudioOnce()
+    if not cachedModel or not cachedModel.Parent then
+        return
+    end
+    
+    local reversalRed = cachedModel:FindFirstChild("Reversal Red")
+    if not reversalRed then
+        for _, descendant in ipairs(cachedModel:GetDescendants()) do
+            if descendant.Name:lower() == "reversal red" then
+                reversalRed = descendant
+                break
+            end
+        end
+    end
+    
+    if reversalRed then
+        local doorsCrucifix = reversalRed:FindFirstChild("doors crucifix")
+        if not doorsCrucifix then
+            for _, descendant in ipairs(reversalRed:GetDescendants()) do
+                if descendant:IsA("Sound") and descendant.Name:lower() == "doors crucifix" then
+                    doorsCrucifix = descendant
+                    break
+                end
+            end
+        end
+        
+        if doorsCrucifix and doorsCrucifix:IsA("Sound") then
+            local sound = doorsCrucifix:Clone()
+            sound.Parent = workspace
+            sound:Play()
+            
+            sound.Ended:Connect(function()
+                if sound and sound.Parent then
+                    sound:Destroy()
+                end
+            end)
+        end
+    end
+end
+
+local function loadModel()
+    if loadedModel and loadedModel.Parent then
+        loadedModel:Destroy()
+        loadedModel = nil
+    end
+    
+    local model = getModelFromCache()
+    
+    if model then
+        playAudioOnce()
+    end
+    
+    return model
+end
+
+local function fadeOutModel()
+    if not loadedModel or not loadedModel.Parent then return end
+    
+    isFading = true
+    local fadeDuration = 2
+    local startTime = tick()
+    
+    while loadedModel and loadedModel.Parent and tick() - startTime < fadeDuration do
+        local progress = (tick() - startTime) / fadeDuration
+        
+        for _, part in ipairs(loadedModel:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = progress
+            elseif part:IsA("ParticleEmitter") then
+                part.Rate = part.Rate * (1 - progress)
+            end
+        end
+        
+        RunService.Heartbeat:Wait()
+    end
+    
+    if loadedModel and loadedModel.Parent then
+        loadedModel:Destroy()
+        loadedModel = nil
+    end
+    
+    isFading = false
+    isProcessing = false
+    
+    if anchorPart and anchorPart.Parent then
+        anchorPart:Destroy()
+        anchorPart = nil
+    end
+    
+    for _, conn in pairs(connections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    connections = {}
+    
+    delay(0.5, function()
+        if cachedModel and cachedModel.Parent then
+            cachedModel:Destroy()
+            cachedModel = nil
+        end
+    end)
+end
+
+local function followTarget()
+    if not anchorPart or not anchorPart.Parent or not loadedModel or not loadedModel.Parent then
+        isFollowing = false
+        return
+    end
+    
+    isFollowing = true
+    loadedModel:PivotTo(anchorPart.CFrame)
+    fadeStartTime = tick()
+    
+    while isFollowing and anchorPart and anchorPart.Parent and loadedModel and loadedModel.Parent do
+        RunService.Heartbeat:Wait()
+        
+        loadedModel:PivotTo(anchorPart.CFrame)
+        
+        if not isFading and tick() - fadeStartTime >= 8 then
+            fadeOutModel()
+        end
+    end
+end
+
+local function processTarget()
+    if isProcessing or processedModels[targetModel] then
+        return
+    end
+    
+    local entity = targetModel:FindFirstChild("Entity")
+    if not entity then
+        return
+    end
+    
+    processedModels[targetModel] = true
+    isProcessing = true
+    isFollowing = false
+    isFading = false
+    fadeStartTime = nil
+    
+    for _, conn in pairs(connections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    connections = {}
+    
+    if loadedModel and loadedModel.Parent then
+        loadedModel:Destroy()
+        loadedModel = nil
+    end
+    
+    if anchorPart and anchorPart.Parent then
+        anchorPart:Destroy()
+        anchorPart = nil
+    end
+    
+    if not targetModel or not targetModel.Parent or not targetModel:IsA("Model") then
+        processedModels[targetModel] = nil
+        isProcessing = false
+        return
+    end
+    deleteTargetParts()
+    anchorPart = createAnchorAtEntity()
+    if not anchorPart then
+        processedModels[targetModel] = nil
+        isProcessing = false
+        return
+    end
+    loadedModel = loadModel()
+    if not loadedModel then
+        anchorPart:Destroy()
+        anchorPart = nil
+        processedModels[targetModel] = nil
+        isProcessing = false
+        return
+    end
+    local conn1 = targetModel.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            isFollowing = false
+            if loadedModel and loadedModel.Parent then
+                loadedModel:Destroy()
+                loadedModel = nil
+            end
+            if anchorPart and anchorPart.Parent then
+                anchorPart:Destroy()
+                anchorPart = nil
+            end
+        end
+    end)
+    local conn2 = loadedModel.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            isFollowing = false
+            loadedModel = nil
+        end
+    end)
+    local conn3 = anchorPart.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            isFollowing = false
+            anchorPart = nil
+        end
+    end)
+    table.insert(connections, conn1)
+    table.insert(connections, conn2)
+    table.insert(connections, conn3)
+    coroutine.wrap(followTarget)()
+end
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant.Name == "Entity" then
+        local model = descendant.Parent
+        if model and model.Name == targetName and model:IsA("Model") and not processedModels[model] and not isProcessing then
+            wait(0.1)
+            targetModel = model
+            processTarget()
+        end
+    end
+    if descendant.Name == targetName and descendant:IsA("Model") and not processedModels[descendant] and not isProcessing then
+        wait(0.2)
+        local entity = descendant:FindFirstChild("Entity")
+        if entity then
+            targetModel = descendant
+            processTarget()
+        end
+    end
+end)
+local preloadSuccess = pcall(preloadModel)
+if not preloadSuccess or not cachedModel then
+    return
+end
+wait(2)
+end
+
+function entityBehaviors.Bombie()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local REPLACEMENT_CONFIG = {
+    ["compass"] = {assetId = 111123143736711}
+}
+local CHECK_INTERVAL = 0.3
+local trackedTargets = {}
+
+local OFFSET_LEFT = Vector3.new(-10, 0, 0)
+local OFFSET_UP = Vector3.new(0, 5, 0)
+local TOTAL_OFFSET = OFFSET_LEFT + OFFSET_UP
+
+local function loadAssetLocally(assetId)
+    local success, result = pcall(function()
+        return game:GetObjects("rbxassetid://" .. assetId)[1]
+    end)
+    if success and result then
+        return result:Clone()
+    end
+    return nil
+end
+
+local function disableModelCollision(model)
+    for _, part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("MeshPart") then
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+        end
+    end
+end
+
+local function hideCompassParts(compass)
+    if not compass or not compass.Parent then return end
+    
+    local function hideRecursive(obj)
+        if obj:IsA("MeshPart") or obj:IsA("BasePart") then
+            if not trackedTargets[compass] then
+                trackedTargets[compass] = {originalParts = {}}
+            end
+            trackedTargets[compass].originalParts[obj] = {transparency = obj.Transparency}
+            obj.Transparency = 1
+        end
+        
+        if obj:IsA("ParticleEmitter") or obj:IsA("Beam") or obj:IsA("Trail") then
+            if not trackedTargets[compass] then
+                trackedTargets[compass] = {originalParts = {}}
+            end
+            trackedTargets[compass].originalParts[obj] = {enabled = obj.Enabled}
+            obj.Enabled = false
+        end
+        
+        if obj:IsA("Texture") or obj:IsA("Decal") or obj:IsA("SurfaceAppearance") then
+            if not trackedTargets[compass] then
+                trackedTargets[compass] = {originalParts = {}}
+            end
+            trackedTargets[compass].originalParts[obj] = {transparency = obj.Transparency}
+            obj.Transparency = 1
+        end
+        
+        for _, child in ipairs(obj:GetChildren()) do
+            hideRecursive(child)
+        end
+    end
+    
+    hideRecursive(compass)
+end
+local function restoreCompass(compass)
+    local data = trackedTargets[compass]
+    if not data or not data.originalParts then return end
+    
+    for part, partData in pairs(data.originalParts) do
+        if part and part.Parent then
+            if (part:IsA("MeshPart") or part:IsA("BasePart")) and partData.transparency then
+                part.Transparency = partData.transparency
+            elseif (part:IsA("ParticleEmitter") or part:IsA("Beam") or part:IsA("Trail")) and partData.enabled ~= nil then
+                part.Enabled = partData.enabled
+            elseif (part:IsA("Texture") or part:IsA("Decal") or part:IsA("SurfaceAppearance")) and partData.transparency then
+                part.Transparency = partData.transparency
+            end
+        end
+    end
+end
+
+local function getItemConfig(itemName)
+    local nameLower = itemName:lower()
+    return REPLACEMENT_CONFIG[nameLower]
+end
+local function getTargetCFrame(target)
+    if target:IsA("BasePart") or target:IsA("MeshPart") then
+        return target.CFrame
+    elseif target:IsA("Tool") and target:FindFirstChild("Handle") then
+        return target.Handle.CFrame
+    elseif target:IsA("Model") then
+        if target.PrimaryPart then
+            return target:GetPivot()
+        elseif target:FindFirstChildWhichIsA("BasePart") then
+            return target:FindFirstChildWhichIsA("BasePart").CFrame
+        end
+    end
+    return nil
+end
+
+local function createFollowEffect(target, assetId)
+    local effectModel = loadAssetLocally(assetId)
+    if not effectModel then 
+        return nil 
+    end
+    
+    effectModel.Name = "Compass_Follower"
+    effectModel.Parent = workspace
+    disableModelCollision(effectModel)
+    
+    if not effectModel.PrimaryPart then
+        if effectModel:FindFirstChildWhichIsA("BasePart") then
+            effectModel.PrimaryPart = effectModel:FindFirstChildWhichIsA("BasePart")
+        else
+            effectModel:Destroy()
+            return nil
+        end
+    end
+    
+    local targetCFrame = getTargetCFrame(target)
+    if targetCFrame then
+        local offsetCFrame = targetCFrame + TOTAL_OFFSET
+        effectModel:PivotTo(offsetCFrame)
+    end
+    
+    return effectModel
+end
+
+local function updateEffectPosition(data, target)
+    if not data.effect or not data.effect.Parent or not target or not target.Parent then
+        return false
+    end
+    
+    local targetCFrame = getTargetCFrame(target)
+    if not targetCFrame then
+        return false
+    end
+
+    local offsetCFrame = targetCFrame + TOTAL_OFFSET
+    data.effect:PivotTo(offsetCFrame)
+    return true
+end
+
+local function startTrackingTarget(target, config)
+    if trackedTargets[target] then 
+        return trackedTargets[target] 
+    end
+    
+    local effectModel = createFollowEffect(target, config.assetId)
+    if not effectModel then 
+        return nil 
+    end
+    
+    hideCompassParts(target)
+    
+    trackedTargets[target] = {
+        effect = effectModel, 
+        target = target,
+        config = config
+    }
+    
+    local data = trackedTargets[target]
+    
+    data.connection = RunService.RenderStepped:Connect(function()
+        if not updateEffectPosition(data, target) then
+            if data.connection then
+                data.connection:Disconnect()
+            end
+            if data.effect and data.effect.Parent then
+                data.effect:Destroy()
+            end
+            trackedTargets[target] = nil
+        end
+    end)
+    
+    return trackedTargets[target]
+end
+
+local function stopTrackingTarget(target, restoreVisibility)
+    local data = trackedTargets[target]
+    if not data then return end
+    
+    if restoreVisibility then
+        restoreCompass(target)
+    end
+    
+    if data.effect and data.effect.Parent then
+        data.effect:Destroy()
+    end
+    
+    if data.connection then
+        data.connection:Disconnect()
+    end
+    
+    trackedTargets[target] = nil
+end
+
+local function cleanupDestroyedTargets()
+    for target, data in pairs(trackedTargets) do
+        if not target or not target.Parent then
+            if data.effect and data.effect.Parent then
+                data.effect:Destroy()
+            end
+            if data.connection then
+                data.connection:Disconnect()
+            end
+            trackedTargets[target] = nil
+        end
+    end
+end
+
+local function findAllCompasses()
+    local targets = {}
+    
+    local function findCompassesRecursive(parent)
+        for _, child in ipairs(parent:GetChildren()) do
+            if child.Name:lower() == "compass" then
+                local config = getItemConfig(child.Name)
+                if config then
+                    table.insert(targets, {target = child, config = config})
+                end
+            end
+            findCompassesRecursive(child)
+        end
+    end
+    
+    findCompassesRecursive(workspace)
+    return targets
+end
+
+local function startDetection()
+    local lastCheckTime = 0
+    
+    while true do
+        local currentTime = tick()
+        
+        if currentTime - lastCheckTime >= CHECK_INTERVAL then
+            lastCheckTime = currentTime
+            
+            cleanupDestroyedTargets()
+            
+            local allCompasses = findAllCompasses()
+            
+            for _, targetData in ipairs(allCompasses) do
+                if not trackedTargets[targetData.target] then
+                    startTrackingTarget(targetData.target, targetData.config)
+                end
+            end
+            
+            for target, data in pairs(trackedTargets) do
+                if target and target.Parent then
+                    local isValid = false
+                    local parent = target.Parent
+                    
+                    while parent do
+                        if parent == workspace then
+                            isValid = true
+                            break
+                        end
+                        parent = parent.Parent
+                    end
+                    
+                    if not isValid then
+                        stopTrackingTarget(target, true)
+                    end
+                end
+            end
+        end
+        
+        RunService.Heartbeat:Wait()
+    end
+end
+local function initialize()
+    task.spawn(startDetection)
+end
+local function cleanup()
+    for target, _ in pairs(trackedTargets) do
+        stopTrackingTarget(target, true)
+    end
+    trackedTargets = {}
+end
+local function setupPlayerEvents()
+    local player = Players.LocalPlayer
+    if player then
+        player:GetPropertyChangedSignal("Character"):Connect(function()
+            cleanupDestroyedTargets()
+        end)
+        
+        player.AncestryChanged:Connect(function(_, parent)
+            if not parent then
+                cleanup()
+            end
+        end)
+    end
+end
+initialize()
+setupPlayerEvents()
+end
+
+function entityBehaviors.Booom()
+local soundService = game:GetService("SoundService")
+local workspace = game.Workspace
+local players = game:GetService("Players")
+local tweenService = game:GetService("TweenService")
+local runService = game:GetService("RunService")
+
+local firstSound = Instance.new("Sound")
+firstSound.SoundId = "rbxassetid://139207403536718"
+firstSound.Volume = 3
+firstSound.Parent = workspace
+
+local playCount = 0
+local screenGuis = {}
+
+local function createWhiteScreenEffect(player)
+    if not player then return nil, nil end
+    
+    local playerGui = player:FindFirstChild("PlayerGui")
+    if not playerGui then
+        player.CharacterAdded:Wait()
+        playerGui = player:WaitForChild("PlayerGui")
+    end
+    
+    local oldGui = playerGui:FindFirstChild("WhiteScreenEffect")
+    if oldGui then
+        oldGui:Destroy()
+    end
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "WhiteScreenEffect"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.IgnoreGuiInset = true
+    
+    local whiteFrame = Instance.new("Frame")
+    whiteFrame.Name = "WhiteOverlay"
+    whiteFrame.Size = UDim2.new(1, 0, 1, 0)
+    whiteFrame.Position = UDim2.new(0, 0, 0, 0)
+    whiteFrame.BackgroundColor3 = Color3.new(1, 1, 1)
+    whiteFrame.BackgroundTransparency = 1
+    whiteFrame.BorderSizePixel = 0
+    whiteFrame.ZIndex = 999
+    
+    whiteFrame.Parent = screenGui
+    screenGui.Parent = playerGui
+    
+    screenGuis[player] = {screenGui = screenGui, whiteFrame = whiteFrame}
+    
+    return screenGui, whiteFrame
+end
+
+local function playWhiteScreenEffect()
+    for _, player in ipairs(players:GetPlayers()) do
+        coroutine.wrap(function()
+            local screenGui, whiteFrame = createWhiteScreenEffect(player)
+            if not screenGui or not whiteFrame then return end
+            
+            local fadeInInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+            local fadeInGoal = {BackgroundTransparency = 0}
+            local fadeInTween = tweenService:Create(whiteFrame, fadeInInfo, fadeInGoal)
+            
+            local fadeOutInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+            local fadeOutGoal = {BackgroundTransparency = 1}
+            local fadeOutTween = tweenService:Create(whiteFrame, fadeOutInfo, fadeOutGoal)
+            
+            fadeInTween:Play()
+            fadeInTween.Completed:Wait()
+            
+            wait(4)
+            
+            fadeOutTween:Play()
+            fadeOutTween.Completed:Wait()
+            
+            if screenGui and screenGui.Parent then
+                screenGui:Destroy()
+            end
+            screenGuis[player] = nil
+        end)()
+    end
+end
+
+local function changeAllPartsToBlack()
+    for _, item in ipairs(workspace:GetDescendants()) do
+        if item:IsA("BasePart") and item.Name ~= "Floor" then
+            item.Anchored = false
+            item.BrickColor = BrickColor.new("Really black")
+            item.Color = Color3.new(0, 0, 0)
+            
+            local surfaceAppearance = item:FindFirstChildOfClass("SurfaceAppearance")
+            if surfaceAppearance then
+                surfaceAppearance:Destroy()
+            end
+        end
+        
+        if item:IsA("Model") then
+            for _, part in ipairs(item:GetDescendants()) do
+                if part:IsA("BasePart") and part.Name ~= "Floor" then
+                    part.Anchored = false
+                    part.BrickColor = BrickColor.new("Really black")
+                    part.Color = Color3.new(0, 0, 0)
+                    
+                    local surfaceAppearance = part:FindFirstChildOfClass("SurfaceAppearance")
+                    if surfaceAppearance then
+                        surfaceAppearance:Destroy()
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function startCameraShake()
+    local SHAKE_INTENSITY = 50
+    local SHAKE_DURATION = 10
+    local SHAKE_SPEED = 70
+    
+    for _, player in ipairs(players:GetPlayers()) do
+        coroutine.wrap(function()
+            if not player then return end
+            
+            local camera = workspace.CurrentCamera
+            local startTime = tick()
+            local originalPosition = camera.CFrame.Position
+            local connection
+            
+            connection = runService.RenderStepped:Connect(function()
+                local elapsed = tick() - startTime
+                
+                if elapsed < SHAKE_DURATION then
+                    local decay = 1 - (elapsed / SHAKE_DURATION)
+                    local intensity = SHAKE_INTENSITY * decay
+                    
+                    local time = elapsed * SHAKE_SPEED
+                    local offset = Vector3.new(
+                        math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+                        math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+                        math.sin(time * 1.0) * intensity * 0.3
+                    )
+                    
+                    local lookVector = camera.CFrame.LookVector
+                    local currentPos = camera.CFrame.Position
+                    local newPos = currentPos + offset
+                    
+                    camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
+                else
+                    if connection then
+                        connection:Disconnect()
+                    end
+                end
+            end)
+        end)()
+    end
+end
+
+firstSound.Ended:Connect(function()
+    playCount = playCount + 1
+    
+    if playCount >= 3 then
+        local secondSound = Instance.new("Sound")
+        secondSound.SoundId = "rbxassetid://132158324987663"
+        secondSound.Volume = 10
+        secondSound.Parent = workspace
+        
+        playWhiteScreenEffect()
+        startCameraShake()
+        
+        wait(0.05)
+        secondSound:Play()
+        
+        secondSound.Ended:Connect(function()
+            changeAllPartsToBlack()
+            secondSound:Destroy()
+        end)
+        
+        firstSound:Destroy()
+    else
+        wait(0.1)
+        firstSound:Play()
+    end
+end)
+
+firstSound:Play()
+
+players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        if firstSound and firstSound.Parent then
+            firstSound:Destroy()
+        end
+    end)
+    
+    if screenGuis[player] then
+        screenGuis[player].screenGui:Destroy()
+        screenGuis[player] = nil
+    end
+end)
+
+players.PlayerRemoving:Connect(function(player)
+    if screenGuis[player] then
+        screenGuis[player].screenGui:Destroy()
+        screenGuis[player] = nil
+    end
+end)
+
+for _, player in ipairs(players:GetPlayers()) do
+    if not screenGuis[player] then
+        screenGuis[player] = nil
+    end
+end
+end
+
+function entityBehaviors.LightOSs()
+    function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    warn("Executor không hỗ trợ file APIs.")
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(106818719931200, workspace)
+if not s then
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 7, -15)
+entity.Part.CFrame = entity.CFrame
+end
+
+local entityConfig = {
+    ["rbxassetid://140338542312593"] = entityBehaviors.FigureSpawn,
+    ["rbxassetid://140612367685491"] = entityBehaviors.GodOFOne,
+    ["rbxassetid://140537774926087"] = entityBehaviors.GodOfTwo, 
+    ["rbxassetid://140311790133562"] = entityBehaviors.GodOFThree,  
+    ["rbxassetid://140083448239444"] = entityBehaviors.GodOFFour,     
+    ["rbxassetid://111351357978027"] = entityBehaviors.Z367Game,     
+    ["rbxassetid://8325526433"] = entityBehaviors.A60Ps1,    
+    ["rbxassetid://139308622787703"] = entityBehaviors.A60PS2,       
+    ["rbxassetid://140731983342235"] = entityBehaviors.A500RUN,     
+    ["rbxassetid://116898205685143"] = entityBehaviors.XBramble,    
+    ["rbxassetid://7298463798"] = entityBehaviors.A200,      
+    ["rbxassetid://4004052860"] = entityBehaviors.AMIN60,    
+    ["rbxassetid://4903742660"] = entityBehaviors.Black60,
+    ["rbxassetid://3308152153"] = entityBehaviors.ForstBite,
+    ["rbxassetid://138586264525744"] = entityBehaviors.INGODONE,
+    ["rbxassetid://124942412759969"] = entityBehaviors.Subspace,
+    ["rbxassetid://118662411300943"] = entityBehaviors.INGODTWO,
+    ["rbxassetid://140736591220630"] = entityBehaviors.DELALL,
+    ["rbxassetid://140721035016341"] = entityBehaviors.Smiler, 
+    ["rbxassetid://140719303781203"] = entityBehaviors.WhoopDaShoop,
+    ["rbxassetid://9044461391"] = entityBehaviors.WhoopDaShoopTwo,
+    ["rbxassetid://18926010713"] = entityBehaviors.ChainSmoker,
+    ["rbxassetid://110532875373161"] = entityBehaviors.Deergod,
+    ["rbxassetid://1079408535"] = entityBehaviors.LightSpeed,
+    ["rbxassetid://93679208285508"] = entityBehaviors.A200Jump,
+    ["rbxassetid://96703287490096"] = entityBehaviors.ReboundJump, 
+    ["rbxassetid://140723850841863"] = entityBehaviors.EndRoom, 
+    ["rbxassetid://140722528152072"] = entityBehaviors.Blast,
+    ["rbxassetid://103515031866941"] = entityBehaviors.Cease, 
+    ["rbxassetid://109318460496354"] = entityBehaviors.RipperJump, 
+    ["rbxassetid://140690368868329"] = entityBehaviors.DeerGodJump, 
+    ["rbxassetid://100192030036066"] = entityBehaviors.CL, 
+    ["rbxassetid://9113115842"] = entityBehaviors.Shok,
+    ["rbxassetid://92260310162120"] = entityBehaviors.MLcur,
+    ["rbxassetid://83742851388096"] = entityBehaviors.Bombie,
+    ["rbxassetid://8307248039"] = entityBehaviors.Booom,
+    ["rbxassetid://109690961059477"] = entityBehaviors.LightOss,         
+    ["rbxassetid://135376180128296"] = entityBehaviors.Silence
+}
+local checkedEntities = {}
+
+local function universalCheckSound(sound)
+    if not sound:IsA("Sound") then return end
+
+    local soundId = sound.SoundId
+    local targetBehavior = entityConfig[soundId]
+
+    if targetBehavior then
         local parent = sound.Parent
         if parent and parent.Name == "Scary Entity" then
             local grandParent = parent.Parent
             if grandParent and grandParent.Name == "CustomEntity" then
                 if not checkedEntities[grandParent] then
                     checkedEntities[grandParent] = true
-                    runEvent()
+                    targetBehavior()
                 end
             end
         end
@@ -7849,15 +5700,7 @@ end
 
 workspace.DescendantAdded:Connect(function(obj)
     wait(0.1)
-    if obj:IsA("Sound") then
-        checkSound(obj)
-        if not listeningSounds[obj] then
-            listeningSounds[obj] = true
-            obj:GetPropertyChangedSignal("SoundId"):Connect(function()
-                checkSound(obj)
-            end)
-        end
-    end
+    universalCheckSound(obj)
 end)
 
 for _, entity in pairs(workspace:GetChildren()) do
@@ -7865,31 +5708,20 @@ for _, entity in pairs(workspace:GetChildren()) do
         local scary = entity:FindFirstChild("Scary Entity")
         if scary then
             for _, child in pairs(scary:GetChildren()) do
-                if child:IsA("Sound") then
-                    checkSound(child)
-                    if not listeningSounds[child] then
-                        listeningSounds[child] = true
-                        child:GetPropertyChangedSignal("SoundId"):Connect(function()
-                            checkSound(child)
-                        end)
-                    end
-                end
+                universalCheckSound(child)
             end
         end
     end
 end
--------seek2
+--------
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-
-local targetAudioUrl = "https://github.com/Sosnen/Ping-s-Dumbass-projects-/raw/main/Here%20i%20come%20but%20WHAT%20THE%20FUCK.mp3"
+local SeekNewMusic = "https://github.com/Sosnen/Ping-s-Dumbass-projects-/raw/main/Here%20i%20come%20but%20WHAT%20THE%20FUCK.mp3"
 local newFileName = "SeekMusicNew"
 local volume = 5
-
 local CUSTOM_SEEK_MODEL_ID = "rbxassetid://91573224733706"
-
 if Workspace:FindFirstChild("hardcoreInit") then
     return
 else
@@ -7907,7 +5739,7 @@ local seekMusicAsset = nil
 local function loadAudioFromGitHub()
     spawn(function()
         pcall(function()
-            local audioData = game:HttpGet(targetAudioUrl)
+            local audioData = game:HttpGet(SeekNewMusic)
             writefile(newFileName .. ".mp3", audioData)
             local customAsset = (getcustomasset or getsynasset)(newFileName .. ".mp3")
             seekMusicAsset = customAsset
@@ -7926,7 +5758,7 @@ local function replaceSeekMusic()
                     descendant.SoundId = seekMusicAsset
                 else
                     pcall(function()
-                        local audioData = game:HttpGet(targetAudioUrl)
+                        local audioData = game:HttpGet(SeekNewMusic)
                         writefile(newFileName .. ".mp3", audioData)
                         local customAsset = (getcustomasset or getsynasset)(newFileName .. ".mp3")
                         descendant.SoundId = customAsset
@@ -8108,11 +5940,9 @@ local function replaceSeekModel()
         end)
     end
 end
-
 loadAudioFromGitHub()
 replaceSeekMusic()
 replaceSeekModel()
-
 local hint = Instance.new("Hint", Workspace)
 hint.Text = "Loading... Doors HardCore V9.9 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)

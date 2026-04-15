@@ -282,7 +282,7 @@ local Players = game:GetService("Players")
 
 -- goat_qiu 部分
 local Q1 = 14806821870
-local Q2 = 128645451710401
+local Q2 = 1
 local Q3 = "goat_qiu"
 local Q4 = Players.LocalPlayer
 

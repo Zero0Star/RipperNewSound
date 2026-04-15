@@ -5685,7 +5685,7 @@ if not s then
 end
 
 local entity = s:FindFirstChildWhichIsA("BasePart")
-entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 5, -15)
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 1, -15)
 entity.Part.CFrame = entity.CFrame
 
 pcall(function()
@@ -5708,6 +5708,171 @@ workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.
 workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
 workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
 end)
+end
+
+function entityBehaviors.DreadJump()
+local BLACK = Color3.new(0, 0, 0)
+local WHITE = Color3.new(1, 1, 1)
+function GitAud(soundgit, filename)
+    local url = soundgit
+    local fileName = filename or "temp_audio"
+    local fullFileName = fileName .. ".mp3"
+    
+    local success, audioData = pcall(function()
+        return game:HttpGet(url)
+    end)
+    
+    if not success then
+        return nil
+    end
+    
+    local writeSuccess, writeError = pcall(function()
+        writefile(fullFileName, audioData)
+    end)
+    
+    if not writeSuccess then
+        return nil
+    end
+    
+    local assetPath
+    if getsynasset then
+        assetPath = getsynasset(fullFileName)
+    elseif getcustomasset then
+        assetPath = getcustomasset(fullFileName)
+    else
+        return nil
+    end
+    
+    return assetPath
+end
+
+function CustomGitSound(soundlink, vol, filename)
+    local sound = Instance.new("Sound")
+    local soundId = GitAud(soundlink, filename)
+    
+    if not soundId then
+        return nil
+    end
+    
+    sound.SoundId = soundId
+    sound.Parent = workspace
+    sound.Name = filename .. "_" .. tick()
+    sound.Volume = vol or 1
+    sound.Loaded:Wait()
+    sound:Play()
+    return sound
+end
+local githubAudioUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/DreadJumpFace.mp3?raw=true"
+local volume = 2
+local saveName = "DreadNEW"
+local part = Instance.new("Part")
+part.Name = "Bound_" .. tick()
+part.Parent = workspace
+part.Size = Vector3.new(5, 5, 5)
+part.Position = Vector3.new(0, 5, 0)
+part.Anchored = true
+part.Color = Color3.new(1, 0, 0)
+
+local startSound = CustomGitSound(githubAudioUrl, volume, saveName)
+
+if startSound then
+
+    local isPlaying = true
+
+    task.wait(3)
+    local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local SHAKE_INTENSITY = 1
+local SHAKE_DURATION = 15
+local SHAKE_SPEED = 70
+
+local player = Players.LocalPlayer
+if not player then return end
+
+local camera = workspace.CurrentCamera
+local startTime = tick()
+local originalPosition = camera.CFrame.Position
+local connection
+
+connection = RunService.RenderStepped:Connect(function()
+    local elapsed = tick() - startTime
+    
+    if elapsed < SHAKE_DURATION then
+
+        local decay = 1 - (elapsed / SHAKE_DURATION)
+        local intensity = SHAKE_INTENSITY * decay
+
+        local time = elapsed * SHAKE_SPEED
+        local offset = Vector3.new(
+            math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+            math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+            math.sin(time * 1.0) * intensity * 0.3
+        )
+
+        local lookVector = camera.CFrame.LookVector
+        local upVector = camera.CFrame.UpVector
+        local rightVector = camera.CFrame.RightVector
+
+        local currentPos = camera.CFrame.Position
+        local newPos = currentPos + offset
+        
+
+        camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
+        
+    else
+
+        if connection then
+            connection:Disconnect()
+        end
+    end
+end)
+
+    local function getAllParts()
+        local parts = {}
+        local function collectParts(object)
+            for _, child in ipairs(object:GetChildren()) do
+                if child:IsA("BasePart") then
+                    table.insert(parts, child)
+                end
+                collectParts(child)
+            end
+        end
+        collectParts(workspace)
+        return parts
+    end
+
+    local allParts = getAllParts()
+    
+    local colorSwitchCoroutine = coroutine.create(function()
+        local isBlack = true
+        
+        while isPlaying do
+
+            local targetColor = isBlack and BLACK or WHITE
+            isBlack = not isBlack
+
+            for _, part in ipairs(allParts) do
+                part.Color = targetColor
+            end
+
+            task.wait(0.01)
+        end
+    end)
+
+    coroutine.resume(colorSwitchCoroutine)
+
+    startSound.Ended:Connect(function()
+        isPlaying = false
+        startSound:Destroy()
+    end)
+
+    startSound.Stopped:Connect(function()
+        isPlaying = false
+        startSound:Destroy()
+    end)
+    
+else
+end
 end
 
 function entityBehaviors.LightOSs()
@@ -5826,7 +5991,8 @@ local entityConfig = {
     ["rbxassetid://8307248039"] = entityBehaviors.Booom,
     ["rbxassetid://109690961059477"] = entityBehaviors.LightOSs,
     ["rbxassetid://85554051164113"] = entityBehaviors.FigureXF,
-    ["rbxassetid://80450670780109"] = entityBehaviors.SuperDread,         
+    ["rbxassetid://80450670780109"] = entityBehaviors.SuperDread,
+    ["rbxassetid://140701104317815"] = entityBehaviors.DreadJump,         
     ["rbxassetid://135376180128296"] = entityBehaviors.Silence
 }
 local checkedEntities = {}

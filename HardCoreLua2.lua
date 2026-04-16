@@ -26,15 +26,15 @@ local entityBehaviors = {}
 
 function entityBehaviors.DEBUGONE()
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local model = ReplicatedStorage:FindFirstChild("Model125779024070718")
+local model = ReplicatedStorage:FindFirstChild("137368242086258")
 if not model then
     local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://118741528357853")[1]
+        return game:GetObjects("rbxassetid://137368242086258")[1]
     end)
     
     if success and loadedModel then
         model = loadedModel
-        model.Name = "Model125779024070718"
+        model.Name = "137368242086258"
         model.Parent = ReplicatedStorage
     else
         return

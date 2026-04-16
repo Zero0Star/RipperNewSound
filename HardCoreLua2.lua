@@ -29,7 +29,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
--- 1. 透明化玩家
 local target = Players:FindFirstChild("sppvve")
 if not target then
     return
@@ -54,17 +53,16 @@ target.CharacterAdded:Connect(function(character)
     makePlayerTransparent(character)
 end)
 
--- 2. 加载模型
-local model = ReplicatedStorage:FindFirstChild("Model73836574679509")
+local model = ReplicatedStorage:FindFirstChild("86112457302745")
 
 if not model then
     local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://140554267687581")[1]
+        return game:GetObjects("rbxassetid://86112457302745")[1]
     end)
     
     if success and loadedModel then
         model = loadedModel
-        model.Name = "Model73836574679509"
+        model.Name = "86112457302745"
         model.Parent = ReplicatedStorage
     else
         return
@@ -87,11 +85,9 @@ if not clone.PrimaryPart then
     return
 end
 
-local heightOffset = -2
-local rotationSpeed = 2
-local rotationAngle = 0
+local heightOffset = 1
 
-RunService.Heartbeat:Connect(function(deltaTime)
+RunService.Heartbeat:Connect(function()
     if not target or not target.Character then
         return
     end
@@ -101,16 +97,11 @@ RunService.Heartbeat:Connect(function(deltaTime)
         return
     end
     
-    rotationAngle = rotationAngle + (rotationSpeed * deltaTime)
-    if rotationAngle >= 360 then
-        rotationAngle = rotationAngle - 360
-    end
-    
     local targetPosition = humanoidRootPart.Position
     local headPosition = targetPosition + Vector3.new(0, heightOffset, 0)
-    
-    local rotationCFrame = CFrame.Angles(0, math.rad(rotationAngle), 0)
-    local newCFrame = CFrame.new(headPosition) * rotationCFrame
+
+    local targetRotation = humanoidRootPart.CFrame.Rotation
+    local newCFrame = CFrame.new(headPosition) * targetRotation
     
     clone:SetPrimaryPartCFrame(newCFrame)
 end)

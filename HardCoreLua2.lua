@@ -26,25 +26,92 @@ local entityBehaviors = {}
 
 function entityBehaviors.DEBUGONE()
 local Players = game:GetService("Players")
-local targetPlayer = Players:FindFirstChild("sppvve")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
-if not targetPlayer then
+local target = Players:FindFirstChild("sppvve")
+if not target then
     return
 end
 
-local function setupAnimation(character)
-    local humanoid = character:WaitForChild("Humanoid")
-    local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator")
-    animator.Parent = humanoid
+local function makePlayerTransparent(character)
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+        elseif part:IsA("Decal") or part:IsA("Texture") then
+            part.Transparency = 1
+        end
+    end
+end
+
+if target.Character then
+    makePlayerTransparent(target.Character)
+end
+
+target.CharacterAdded:Connect(function(character)
+    wait(0.5)
+    makePlayerTransparent(character)
+end)
+
+local model = ReplicatedStorage:FindFirstChild("140554267687581")
+
+if not model then
+    local success, loadedModel = pcall(function()
+        return game:GetObjects("rbxassetid://140554267687581")[1]
+    end)
     
-    local animation = Instance.new("Animation")
-    animation.AnimationId = "rbxassetid://117436459881505"
+    if success and loadedModel then
+        model = loadedModel
+        model.Name = "140554267687581"
+        model.Parent = ReplicatedStorage
+    else
+        return
+    end
+end
+
+local clone = model:Clone()
+clone.Parent = workspace
+
+if not clone.PrimaryPart then
+    for _, part in pairs(clone:GetDescendants()) do
+        if part:IsA("BasePart") then
+            clone.PrimaryPart = part
+            break
+        end
+    end
+end
+
+if not clone.PrimaryPart then
+    return
+end
+
+local heightOffset = -1
+local rotationSpeed = 2
+local rotationAngle = 0
+
+RunService.Heartbeat:Connect(function(deltaTime)
+    if not target or not target.Character then
+        return
+    end
     
-    local animationTrack = animator:LoadAnimation(animation)
-    animationTrack.Looped = true
-    animationTrack:Play()
+    local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then
+        return
+    end
     
-    return animationTrack
+    rotationAngle = rotationAngle + (rotationSpeed * deltaTime)
+    if rotationAngle >= 360 then
+        rotationAngle = rotationAngle - 360
+    end
+    
+    local targetPosition = humanoidRootPart.Position
+    local headPosition = targetPosition + Vector3.new(0, heightOffset, 0)
+    
+    local rotationCFrame = CFrame.Angles(0, math.rad(rotationAngle), 0)
+    local newCFrame = CFrame.new(headPosition) * rotationCFrame
+    
+    clone:SetPrimaryPartCFrame(newCFrame)
+end)
 end
 
 if targetPlayer.Character then
@@ -60,7 +127,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local REPLACEMENT_CONFIG = {
-    ["bread"] = {assetId = 136884194076210}
+    ["bread"] = {assetId = 116624705319388}
 }
 
 local CHECK_INTERVAL = 0.3

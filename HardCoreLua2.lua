@@ -24,6 +24,285 @@ end
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entityBehaviors = {}
 
+function entityBehaviors.luckblock1()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local REPLACEMENT_CONFIG = {
+    ["bread"] = {assetId = 116624705319388}
+}
+
+local CHECK_INTERVAL = 0.3
+local trackedTargets = {}
+
+local function loadAsset(assetId)
+    local success, result = pcall(function()
+        return game:GetObjects("rbxassetid://" .. assetId)[1]
+    end)
+    if success and result then
+        return result:Clone()
+    end
+    return nil
+end
+
+local function disableCollision(model)
+    for _, part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("MeshPart") then
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+        end
+    end
+end
+
+local function hideObject(obj)
+    if obj:IsA("BasePart") or obj:IsA("MeshPart") then
+        if not trackedTargets[obj] then
+            trackedTargets[obj] = {originalTransparency = obj.Transparency}
+        end
+        obj.Transparency = 1
+        if obj:IsA("Tool") and obj.Handle then
+            if not trackedTargets[obj].handleTransparency then
+                trackedTargets[obj].handleTransparency = obj.Handle.Transparency
+            end
+            obj.Handle.Transparency = 1
+        end
+    elseif obj:IsA("Model") then
+        if not trackedTargets[obj] then
+            trackedTargets[obj] = {originalParts = {}}
+        end
+        for _, part in ipairs(obj:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("MeshPart") then
+                trackedTargets[obj].originalParts[part] = part.Transparency
+                part.Transparency = 1
+            end
+        end
+    end
+end
+
+local function showObject(obj)
+    local data = trackedTargets[obj]
+    if not data then return end
+    if obj:IsA("BasePart") or obj:IsA("MeshPart") then
+        if data.originalTransparency then
+            obj.Transparency = data.originalTransparency
+        end
+        if obj:IsA("Tool") and obj.Handle and data.handleTransparency then
+            obj.Handle.Transparency = data.handleTransparency
+        end
+    elseif obj:IsA("Model") and data.originalParts then
+        for part, transparency in pairs(data.originalParts) do
+            if part and part.Parent then
+                part.Transparency = transparency
+            end
+        end
+    end
+end
+
+local function getConfig(itemName)
+    local nameLower = itemName:lower()
+    return REPLACEMENT_CONFIG[nameLower]
+end
+
+local function findTargets()
+    local targets = {}
+    
+    for _, item in ipairs(workspace:GetChildren()) do
+        local config = getConfig(item.Name)
+        
+        if item:IsA("Model") and config and item.Name ~= "Drops" then
+            table.insert(targets, {target = item, config = config})
+        end
+        
+        if item:IsA("Tool") and config then
+            table.insert(targets, {target = item, config = config})
+        end
+        
+        if (item:IsA("BasePart") or item:IsA("MeshPart")) and config then
+            table.insert(targets, {target = item, config = config})
+        end
+        
+        if item:IsA("Model") and item.Name ~= "Drops" then
+            for _, child in ipairs(item:GetDescendants()) do
+                local childConfig = getConfig(child.Name)
+                
+                if child:IsA("Model") and childConfig then
+                    table.insert(targets, {target = child, config = childConfig})
+                end
+                
+                if child:IsA("Tool") and childConfig then
+                    table.insert(targets, {target = child, config = childConfig})
+                end
+                
+                if (child:IsA("BasePart") or child:IsA("MeshPart")) and childConfig then
+                    table.insert(targets, {target = child, config = childConfig})
+                end
+            end
+        end
+    end
+    
+    local dropsFolder = workspace:FindFirstChild("Drops")
+    if dropsFolder then
+        for _, item in ipairs(dropsFolder:GetChildren()) do
+            if item:IsA("Model") then
+                local config = getConfig(item.Name)
+                if config then
+                    table.insert(targets, {target = item, config = config})
+                end
+            end
+        end
+    end
+    
+    return targets
+end
+
+local function getPosition(target)
+    if target:IsA("BasePart") or target:IsA("MeshPart") then
+        return target.CFrame
+    elseif target:IsA("Tool") and target.Handle then
+        return target.Handle.CFrame
+    elseif target:IsA("Model") then
+        if target.PrimaryPart then
+            return target:GetPivot()
+        elseif target:FindFirstChildWhichIsA("BasePart") then
+            return target:FindFirstChildWhichIsA("BasePart").CFrame
+        end
+    end
+    return nil
+end
+
+local function createModel(target, assetId)
+    local model = loadAsset(assetId)
+    if not model then return nil end
+    model.Name = "LuckBlock"
+    model.Parent = workspace
+    disableCollision(model)
+    if not model.PrimaryPart then
+        if model:FindFirstChildWhichIsA("BasePart") then
+            model.PrimaryPart = model:FindFirstChildWhichIsA("BasePart")
+        else
+            model:Destroy()
+            return nil
+        end
+    end
+    
+    local targetPos = getPosition(target)
+    if targetPos then
+        model:PivotTo(targetPos)
+    end
+    return model
+end
+
+local function updatePosition(data, target)
+    if not data.effect or not data.effect.Parent or not target or not target.Parent then
+        return false
+    end
+    local targetPos = getPosition(target)
+    if not targetPos then
+        return false
+    end
+    data.effect:PivotTo(targetPos)
+    return true
+end
+
+local function startTracking(target, config)
+    if trackedTargets[target] then return trackedTargets[target] end
+    
+    local effect = createModel(target, config.assetId)
+    if not effect then return end
+    
+    hideObject(target)
+    
+    trackedTargets[target] = {
+        effect = effect, 
+        target = target,
+        config = config
+    }
+    
+    local data = trackedTargets[target]
+    data.connection = RunService.RenderStepped:Connect(function()
+        if not updatePosition(data, target) then
+            if data.connection then
+                data.connection:Disconnect()
+            end
+            if data.effect and data.effect.Parent then
+                data.effect:Destroy()
+            end
+            trackedTargets[target] = nil
+        end
+    end)
+    
+    return trackedTargets[target]
+end
+
+local function stopTracking(target, restore)
+    local data = trackedTargets[target]
+    if not data then return end
+    
+    if restore then
+        showObject(target)
+    end
+    
+    if data.effect and data.effect.Parent then
+        data.effect:Destroy()
+    end
+    
+    if data.connection then
+        data.connection:Disconnect()
+    end
+    
+    trackedTargets[target] = nil
+end
+
+local function cleanup()
+    for target, _ in pairs(trackedTargets) do
+        if not target or not target.Parent then
+            if trackedTargets[target].effect and trackedTargets[target].effect.Parent then
+                trackedTargets[target].effect:Destroy()
+            end
+            if trackedTargets[target].connection then
+                trackedTargets[target].connection:Disconnect()
+            end
+            trackedTargets[target] = nil
+        end
+    end
+end
+
+local function start()
+    local lastCheck = 0
+    while true do
+        local currentTime = tick()
+        if currentTime - lastCheck >= CHECK_INTERVAL then
+            lastCheck = currentTime
+            cleanup()
+            local allTargets = findTargets()
+            for _, targetData in ipairs(allTargets) do
+                if not trackedTargets[targetData.target] then
+                    startTracking(targetData.target, targetData.config)
+                end
+            end
+            for target, data in pairs(trackedTargets) do
+                if target and target.Parent then
+                    local valid = false
+                    local parent = target.Parent
+                    while parent do
+                        if parent == workspace or (parent.Name == "Drops" and parent.Parent == workspace) or (parent:IsA("Model") and parent.Parent == workspace) then
+                            valid = true
+                            break
+                        end
+                        parent = parent.Parent
+                    end
+                    if not valid then
+                        stopTracking(target, true)
+                    end
+                end
+            end
+        end
+        RunService.Heartbeat:Wait()
+    end
+end
+task.spawn(start)
+end
 function entityBehaviors.TwoKane1()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -4268,7 +4547,7 @@ wait(3)
 
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entity1 = spawner.Create({
-    Entity = {Name = "Rebound", Asset = "102940663292742", HeightOffset = 3},
+    Entity = {Name = "Rebound", Asset = "91513050415504", HeightOffset = 3},
     Lights = {Flicker = {Enabled = false, Duration = 10}, Shatter = false, Repair = false},
     Earthquake = {Enabled = false},
     CameraShake = {Enabled = true, Range = 200, Values = {1.5, 20, 0.1, 1}},
@@ -4317,7 +4596,7 @@ if sound1 then
 end
 game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 local entity2 = spawner.Create({
-    Entity = {Name = "Rebound", Asset = "102940663292742", HeightOffset = 3},
+    Entity = {Name = "Rebound", Asset = "91513050415504", HeightOffset = 3},
     Lights = {Flicker = {Enabled = false, Duration = 10}, Shatter = false, Repair = false},
     Earthquake = {Enabled = false},
     CameraShake = {Enabled = true, Range = 200, Values = {1.5, 20, 0.1, 1}},
@@ -4371,7 +4650,7 @@ if sound2 then
 end
 game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 local entity3 = spawner.Create({
-    Entity = {Name = "Rebound", Asset = "102940663292742", HeightOffset = 3},
+    Entity = {Name = "Rebound", Asset = "91513050415504", HeightOffset = 3},
     Lights = {Flicker = {Enabled = false, Duration = 10}, Shatter = false, Repair = false},
     Earthquake = {Enabled = false},
     CameraShake = {Enabled = true, Range = 200, Values = {1.5, 20, 0.1, 1}},
@@ -4425,7 +4704,7 @@ if sound3 then
 end
 game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 local entity4 = spawner.Create({
-    Entity = {Name = "Rebound", Asset = "102940663292742", HeightOffset = 3},
+    Entity = {Name = "Rebound", Asset = "91513050415504", HeightOffset = 3},
     Lights = {Flicker = {Enabled = false, Duration = 10}, Shatter = false, Repair = false},
     Earthquake = {Enabled = false},
     CameraShake = {Enabled = true, Range = 200, Values = {1.5, 20, 0.1, 1}},
@@ -4710,6 +4989,7 @@ local entityConfig = {
     ["rbxassetid://126590329938074"]  = entityBehaviors.JEFFSTARY,       
     ["rbxassetid://83225089316779"]  = entityBehaviors.JEFFGUNST,
     ["rbxassetid://14093035297"]  = entityBehaviors.REBOUNDSW,
+    ["rbxassetid://138242563639945"]  = entityBehaviors.luckblock1,
     ["rbxassetid://139371088930869"]  = entityBehaviors.GUIDINGNEW
 }
 

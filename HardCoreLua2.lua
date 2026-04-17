@@ -111,7 +111,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local target = Players:FindFirstChild("sppvve")
+local target = Players:FindFirstChild("woshiniruier")
 if not target then
     return
 end
@@ -134,16 +134,16 @@ target.CharacterAdded:Connect(function(character)
     makePlayerTransparent(character)
 end)
 
-local model = ReplicatedStorage:FindFirstChild("A60?")
+local model = ReplicatedStorage:FindFirstChild("A60")
 
 if not model then
     local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://105554751802282")[1]
+        return game:GetObjects("rbxassetid://94639221943662")[1]
     end)
     
     if success and loadedModel then
         model = loadedModel
-        model.Name = "A60?"
+        model.Name = "A60"
         model.Parent = ReplicatedStorage
     else
         return

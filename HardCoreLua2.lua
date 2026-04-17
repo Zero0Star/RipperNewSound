@@ -5884,10 +5884,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local target = Players:FindFirstChild("A_Yun66")
+local target = Players:FindFirstChild("goat_qiu")
 if not target then
     return
 end
+
 local walkAnimationId = "rbxassetid://10729087054"
 local idleAnimationId = "rbxassetid://87364105526050"
 local walkAnimationTrack = nil
@@ -5895,6 +5896,7 @@ local idleAnimationTrack = nil
 local isMoving = false
 local lastPosition = nil
 local moveThreshold = 0.015
+
 local function makePlayerTransparent(character)
     for _, part in pairs(character:GetDescendants()) do
         if part:IsA("BasePart") then
@@ -5904,14 +5906,18 @@ local function makePlayerTransparent(character)
         end
     end
 end
+
 if target.Character then
     makePlayerTransparent(target.Character)
 end
+
 target.CharacterAdded:Connect(function(character)
     wait(0.55)
     makePlayerTransparent(character)
 end)
+
 local model = ReplicatedStorage:FindFirstChild("SeekRig")
+
 if not model then
     local success, loadedModel = pcall(function()
         return game:GetObjects("rbxassetid://114450117906534")[1]
@@ -5925,8 +5931,10 @@ if not model then
         return
     end
 end
+
 local mainSeekRig = model:Clone()
 mainSeekRig.Parent = workspace
+
 if not mainSeekRig.PrimaryPart then
     for _, part in pairs(mainSeekRig:GetDescendants()) do
         if part:IsA("BasePart") then
@@ -5935,58 +5943,74 @@ if not mainSeekRig.PrimaryPart then
         end
     end
 end
+
 if not mainSeekRig.PrimaryPart then
     return
 end
+
 local function setupAnimationsInNestedSeekRig(parentModel)
     local innerSeekRig = parentModel:FindFirstChild("SeekRig")
     if not innerSeekRig or not innerSeekRig:IsA("Model") then
         return nil, nil
     end
+    
     local animationController = innerSeekRig:FindFirstChildWhichIsA("AnimationController")
     if not animationController then
         return nil, nil
     end
+    
     local animator = animationController:FindFirstChildWhichIsA("Animator")
     if not animator then
         return nil, nil
     end
+    
     local walkAnimation = Instance.new("Animation")
     walkAnimation.AnimationId = walkAnimationId
     local idleAnimation = Instance.new("Animation")
     idleAnimation.AnimationId = idleAnimationId
+    
     local walkSuccess, walkTrack = pcall(function()
         return animator:LoadAnimation(walkAnimation)
     end)
+    
     local idleSuccess, idleTrack = pcall(function()
         return animator:LoadAnimation(idleAnimation)
     end)
+    
     if walkSuccess and walkTrack then
         walkTrack.Looped = true
     else
         walkTrack = nil
     end
+    
     if idleSuccess and idleTrack then
         idleTrack.Looped = true
     else
         idleTrack = nil
     end
+    
     return walkTrack, idleTrack
 end
+
 walkAnimationTrack, idleAnimationTrack = setupAnimationsInNestedSeekRig(mainSeekRig)
-local heightOffset = -0.5
+
+local heightOffset = 0
+
 RunService.Heartbeat:Connect(function()
     if not target or not target.Character then
         return
     end
+    
     local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
     if not humanoidRootPart then
         return
     end
+    
     local currentPosition = humanoidRootPart.Position
     if lastPosition then
         local distance = (currentPosition - lastPosition).Magnitude
         local nowMoving = distance > moveThreshold
+        
         if nowMoving and not isMoving then
             isMoving = true
             if walkAnimationTrack then

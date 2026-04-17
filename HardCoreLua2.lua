@@ -438,7 +438,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local target = Players:FindFirstChild("sppvve")
+local target = Players:FindFirstChild("Yxi_na")
 if not target then
     return
 end

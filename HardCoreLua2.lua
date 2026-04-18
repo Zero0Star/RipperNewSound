@@ -352,86 +352,13 @@ end)
 end
 
 function entityBehaviors.bsripper()
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local target = Players:FindFirstChild("QWQ75321")
-if not target then
-    return
-end
-
-local function makePlayerTransparent(character)
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 1
-        elseif part:IsA("Decal") or part:IsA("Texture") then
-            part.Transparency = 1
-        end
-    end
-end
-
-if target.Character then
-    makePlayerTransparent(target.Character)
-end
-
-target.CharacterAdded:Connect(function(character)
-    wait(0.5)
-    makePlayerTransparent(character)
-end)
-
-local model = ReplicatedStorage:FindFirstChild("ripperrr")
-
-if not model then
-    local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://116016464044607")[1]
-    end)
-    
-    if success and loadedModel then
-        model = loadedModel
-        model.Name = "ripperrr"
-        model.Parent = ReplicatedStorage
-    else
-        return
-    end
-end
-
-local clone = model:Clone()
-clone.Parent = workspace
-
-if not clone.PrimaryPart then
-    for _, part in pairs(clone:GetDescendants()) do
-        if part:IsA("BasePart") then
-            clone.PrimaryPart = part
-            break
-        end
-    end
-end
-
-if not clone.PrimaryPart then
-    return
-end
-
-local heightOffset = 0
-
-RunService.Heartbeat:Connect(function()
-    if not target or not target.Character then
-        return
-    end
-    
-    local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then
-        return
-    end
-    
-    local targetPosition = humanoidRootPart.Position
-    local headPosition = targetPosition + Vector3.new(0, heightOffset, 0)
-
-    local targetRotation = humanoidRootPart.CFrame.Rotation
-    local newCFrame = CFrame.new(headPosition) * targetRotation
-    
-    clone:SetPrimaryPartCFrame(newCFrame)
-end)
-end
+local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+achievementGiver({
+Title = "Eternal of Land",
+Desc = "Escape the HardCore Hotel.",
+Reason = "Wait? This is too much like a nightmare.",
+Image = "rbxassetid://17412983060"
+})end
 
 function entityBehaviors.bswhoop()
 local Players = game:GetService("Players")

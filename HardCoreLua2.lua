@@ -5713,7 +5713,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local target = Players:FindFirstChild("sppvve")
+local target = Players:FindFirstChild("woshiniruier")
 if not target then
     return
 end
@@ -5741,7 +5741,7 @@ local model = ReplicatedStorage:FindFirstChild("AAAAAAAAAAAAA")
 
 if not model then
     local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://131063590962624")[1]
+        return game:GetObjects("rbxassetid://126372489354809")[1]
     end)
     
     if success and loadedModel then

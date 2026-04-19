@@ -5230,7 +5230,7 @@ function CustomGitSound(soundlink, vol, filename)
     return sound
 end
 
-local testModelId = 91513050415504
+local testModelId = 109454100989014
 
 local function GetMaxExistingRoom()
     local rooms = workspace.CurrentRooms:GetChildren()
@@ -5278,7 +5278,6 @@ function SpawnReboundEntity(startRoomType)
         if startRoomType == "start" then
             targetRoom = workspace.CurrentRooms:FindFirstChild("0")
         else
-
             local maxRoom = GetMaxExistingRoom()
             targetRoom = workspace.CurrentRooms:FindFirstChild(tostring(maxRoom))
         end
@@ -5308,7 +5307,7 @@ function StartEntityLogic(primaryPart, startRoomType)
 
     local v305 = 2
     local v306 = 2
-    local v307 = Vector3.new(0, 3.5, 0)
+    local v307 = Vector3.new(0, 2, 0)
     local v310 = workspace.CurrentRooms
 
     local detectedPlayer = false
@@ -5471,7 +5470,6 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
     end)
 
     if startRoomType == "start" then
-
         local currentRoom = 0
         local maxRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
 
@@ -5500,9 +5498,8 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
             currentRoom = currentRoom + 1
         end
     else
-
         local currentRoom = GetMaxExistingRoom()
-        local minRoom = math.max(0, currentRoom - 3)
+        local minRoom = math.max(0, currentRoom - 7)
 
         while currentRoom >= minRoom do
             if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
@@ -5525,7 +5522,6 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
                 wait(v306)
             end
 
-            minRoom = math.max(0, game.ReplicatedStorage.GameData.LatestRoom.Value - 7)
             currentRoom = currentRoom - 1
         end
     end
@@ -5567,7 +5563,7 @@ camShake:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
 
 wait(3)
 
-local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
+local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/DOORS-Entity-Spawner-V2/main/init.luau"))()
 
 SpawnReboundEntity("latest")
 

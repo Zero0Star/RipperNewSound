@@ -562,42 +562,70 @@ end)
 
 local CurrentRooms = Workspace:FindFirstChild("CurrentRooms")
 local newSoundId = "rbxassetid://139882610901041"
+local normalSoundId = "rbxassetid://127290678441848"
+local drawerOpenSoundId = "rbxassetid://77821440186535"
+local drawerCloseSoundId = "rbxassetid://91806874450319"
 
-local function replaceDoorSound(doorModel)
-    local doorPart = doorModel:FindFirstChild("Door")
-    if doorPart and (doorPart:IsA("MeshPart") or doorPart:IsA("BasePart")) then
-        local openSound = doorPart:FindFirstChild("Open")
-        if openSound and openSound:IsA("Sound") then
-            openSound.SoundId = newSoundId
+local function fixDoorSound(doorModel)
+    local part = doorModel:FindFirstChild("Door") or doorModel:FindFirstChild("DoorNormal")
+    if not part then return end
+    local sound = part:FindFirstChild("Open")
+    if sound and sound:IsA("Sound") then
+        sound.SoundId = (doorModel.Name == "DoorNormal") and normalSoundId or newSoundId
+    end
+end
+
+local function fixDrawerSounds(mainPart)
+    if not mainPart then return end
+    local openSound = mainPart:FindFirstChild("Open")
+    local closeSound = mainPart:FindFirstChild("Close")
+    if openSound and openSound:IsA("Sound") then
+        openSound.SoundId = drawerOpenSoundId
+        openSound.Volume = 2
+    end
+    if closeSound and closeSound:IsA("Sound") then
+        closeSound.SoundId = drawerCloseSoundId
+        closeSound.Volume = 2
+    end
+end
+
+local function scanAssets(assets)
+    if not assets then return end
+    for _, thing in ipairs(assets:GetChildren()) do
+        if thing.Name == "Dresser" and thing:IsA("Model") then
+            for _, container in ipairs(thing:GetChildren()) do
+                if container.Name == "DrawerContainer" and container:IsA("Model") then
+                    local main = container:FindFirstChild("Main")
+                    if main and (main:IsA("MeshPart") or main:IsA("BasePart")) then
+                        fixDrawerSounds(main)
+                    end
+                end
+            end
         end
     end
 end
 
-local function processRoom(room)
-    for _, child in ipairs(room:GetChildren()) do
-        if child.Name == "Door" and child:IsA("Model") then
-            replaceDoorSound(child)
+local function checkRoom(room)
+    for _, item in ipairs(room:GetChildren()) do
+        if item:IsA("Model") then
+            if item.Name == "Door" or item.Name == "DoorNormal" then
+                fixDoorSound(item)
+            end
+
+            local assetsFolder = item:FindFirstChild("Assets")
+            if assetsFolder then
+                scanAssets(assetsFolder)
+            end
         end
     end
-    
-    room.ChildAdded:Connect(function(child)
-        if child.Name == "Door" and child:IsA("Model") then
-            replaceDoorSound(child)
-        end
-    end)
 end
 
 if CurrentRooms then
-    for _, room in ipairs(CurrentRooms:GetChildren()) do
-        if room:IsA("Model") then
-            processRoom(room)
-        end
+    for _, rm in ipairs(CurrentRooms:GetChildren()) do
+        if rm:IsA("Model") then checkRoom(rm) end
     end
-    
-    CurrentRooms.ChildAdded:Connect(function(room)
-        if room:IsA("Model") then
-            processRoom(room)
-        end
+    CurrentRooms.ChildAdded:Connect(function(newRoom)
+        if newRoom:IsA("Model") then checkRoom(newRoom) end
     end)
 end
 Players.PlayerAdded:Connect(UpdateUI)

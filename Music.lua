@@ -557,6 +557,8 @@ Players.PlayerAdded:Connect(function(player)
     end)
 end)
 
+local Players = game:GetService("Players")
+
 Players.PlayerRemoving:Connect(function(player)
 end)
 
@@ -566,67 +568,134 @@ local normalSoundId = "rbxassetid://127290678441848"
 local drawerOpenSoundId = "rbxassetid://77821440186535"
 local drawerCloseSoundId = "rbxassetid://91806874450319"
 
-local function fixDoorSound(doorModel)
-    local part = doorModel:FindFirstChild("Door") or doorModel:FindFirstChild("DoorNormal")
-    if not part then return end
-    local sound = part:FindFirstChild("Open")
-    if sound and sound:IsA("Sound") then
-        sound.SoundId = (doorModel.Name == "DoorNormal") and normalSoundId or newSoundId
-    end
+local processedInstances = {}
+
+local function markProcessed(instance)
+    processedInstances[instance] = true
 end
 
-local function fixDrawerSounds(mainPart)
-    if not mainPart then return end
-    local openSound = mainPart:FindFirstChild("Open")
-    local closeSound = mainPart:FindFirstChild("Close")
-    if openSound and openSound:IsA("Sound") then
-        openSound.SoundId = drawerOpenSoundId
-        openSound.Volume = 2
-    end
-    if closeSound and closeSound:IsA("Sound") then
-        closeSound.SoundId = drawerCloseSoundId
-        closeSound.Volume = 2
-    end
+local function isProcessed(instance)
+    return processedInstances[instance] ~= nil
 end
 
-local function scanAssets(assets)
-    if not assets then return end
-    for _, thing in ipairs(assets:GetChildren()) do
-        if thing.Name == "Dresser" and thing:IsA("Model") then
-            for _, container in ipairs(thing:GetChildren()) do
-                if container.Name == "DrawerContainer" and container:IsA("Model") then
-                    local main = container:FindFirstChild("Main")
-                    if main and (main:IsA("MeshPart") or main:IsA("BasePart")) then
-                        fixDrawerSounds(main)
+local function deepScanAndFix(parent)
+    for _, child in ipairs(parent:GetChildren()) do
+
+        if child:IsA("Model") and (child.Name == "Door" or child.Name == "DoorNormal") then
+            local part = child:FindFirstChild("Door") or child:FindFirstChild("DoorNormal")
+            if part and not isProcessed(part) then
+                local sound = part:FindFirstChild("Open")
+                if sound and sound:IsA("Sound") then
+                    sound.SoundId = (child.Name == "DoorNormal") and normalSoundId or newSoundId
+                    markProcessed(part)
+                end
+            end
+        end
+
+        if child.Name == "Assets" and child:IsA("Folder") then
+            for _, dresser in ipairs(child:GetChildren()) do
+                if dresser.Name == "Dresser" and dresser:IsA("Model") then
+                    for _, container in ipairs(dresser:GetChildren()) do
+                        if container.Name == "DrawerContainer" and container:IsA("Model") then
+                            local main = container:FindFirstChild("Main")
+                            if main and (main:IsA("MeshPart") or main:IsA("BasePart")) and not isProcessed(main) then
+                                local openSound = main:FindFirstChild("Open")
+                                local closeSound = main:FindFirstChild("Close")
+                                
+                                if openSound and openSound:IsA("Sound") then
+                                    openSound.SoundId = drawerOpenSoundId
+                                    openSound.Volume = 2
+                                end
+                                
+                                if closeSound and closeSound:IsA("Sound") then
+                                    closeSound.SoundId = drawerCloseSoundId
+                                    closeSound.Volume = 2
+                                end
+                                
+                                markProcessed(main)
+                            end
+                        end
                     end
                 end
             end
         end
+
+        deepScanAndFix(child)
     end
 end
 
-local function checkRoom(room)
-    for _, item in ipairs(room:GetChildren()) do
-        if item:IsA("Model") then
-            if item.Name == "Door" or item.Name == "DoorNormal" then
-                fixDoorSound(item)
-            end
+local function setupRealtimeMonitoring(parent)
+    deepScanAndFix(parent)
 
-            local assetsFolder = item:FindFirstChild("Assets")
-            if assetsFolder then
-                scanAssets(assetsFolder)
+    parent.DescendantAdded:Connect(function(descendant)
+        task.wait(0.1)
+
+        if descendant:IsA("Model") and (descendant.Name == "Door" or descendant.Name == "DoorNormal") then
+            local part = descendant:FindFirstChild("Door") or descendant:FindFirstChild("DoorNormal")
+            if part and not isProcessed(part) then
+                local sound = part:FindFirstChild("Open")
+                if sound and sound:IsA("Sound") then
+                    sound.SoundId = (descendant.Name == "DoorNormal") and normalSoundId or newSoundId
+                    markProcessed(part)
+                end
             end
         end
-    end
+
+        if (descendant.Name == "Main" and (descendant:IsA("MeshPart") or descendant:IsA("BasePart"))) and not isProcessed(descendant) then
+            local container = descendant.Parent
+            if container and container.Name == "DrawerContainer" and container:IsA("Model") then
+                local dresser = container.Parent
+                if dresser and dresser.Name == "Dresser" and dresser:IsA("Model") then
+                    local assets = dresser.Parent
+                    if assets and assets.Name == "Assets" and assets:IsA("Folder") then
+                        local openSound = descendant:FindFirstChild("Open")
+                        local closeSound = descendant:FindFirstChild("Close")
+                        
+                        if openSound and openSound:IsA("Sound") then
+                            openSound.SoundId = drawerOpenSoundId
+                            openSound.Volume = 2
+                        end
+                        
+                        if closeSound and closeSound:IsA("Sound") then
+                            closeSound.SoundId = drawerCloseSoundId
+                            closeSound.Volume = 2
+                        end
+                        
+                        markProcessed(descendant)
+                    end
+                end
+            end
+        end
+
+        if descendant.Name == "Assets" and descendant:IsA("Folder") then
+            setupRealtimeMonitoring(descendant)
+        end
+    end)
 end
 
 if CurrentRooms then
-    for _, rm in ipairs(CurrentRooms:GetChildren()) do
-        if rm:IsA("Model") then checkRoom(rm) end
+
+    for _, room in ipairs(CurrentRooms:GetChildren()) do
+        if room:IsA("Model") then
+            setupRealtimeMonitoring(room)
+        end
     end
+
     CurrentRooms.ChildAdded:Connect(function(newRoom)
-        if newRoom:IsA("Model") then checkRoom(newRoom) end
+        if newRoom:IsA("Model") then
+            setupRealtimeMonitoring(newRoom)
+        end
     end)
+end
+
+while true do
+    task.wait(60)    local newTable = {}
+    for instance, time in pairs(processedInstances) do
+        if instance and instance.Parent then
+            newTable[instance] = true
+        end
+    end
+    processedInstances = newTable
 end
 Players.PlayerAdded:Connect(UpdateUI)
 local hint = Instance.new("Hint", Workspace)

@@ -56,7 +56,7 @@ local model = ReplicatedStorage:FindFirstChild("REBOUND?")
 
 if not model then
     local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://138034181680223")[1]
+        return game:GetObjects("rbxassetid://95957947977182")[1]
     end)
     
     if success and loadedModel then

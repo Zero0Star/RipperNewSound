@@ -1,0 +1,2765 @@
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local HardcorePanel = Instance.new("ScreenGui")
+HardcorePanel.Name = "HardcorePanel"
+HardcorePanel.ResetOnSpawn = false
+HardcorePanel.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+HardcorePanel.Parent = PlayerGui
+local COLORS = {
+    PRIMARY = Color3.fromRGB(255, 50, 50),
+    SECONDARY = Color3.fromRGB(255, 100, 100),
+    BACKGROUND = Color3.fromRGB(20, 5, 5),
+    BUTTON_BG = Color3.fromRGB(40, 10, 10),
+    BUTTON_HOVER = Color3.fromRGB(60, 15, 15),
+    CLOSE_BG = Color3.fromRGB(255, 50, 50),
+    TEXT_WHITE = Color3.fromRGB(255, 255, 255),
+    TEXT_INSTRUCT = Color3.fromRGB(100, 200, 255)
+}
+local MobileIcon = Instance.new("ImageButton")
+MobileIcon.Name = "MobileIcon"
+MobileIcon.Size = UDim2.new(0, 60, 0, 60)
+MobileIcon.Position = UDim2.new(0.95, 0, 0.05, 0)
+MobileIcon.Image = "rbxassetid://11656483170"
+MobileIcon.BackgroundTransparency = 1
+MobileIcon.AnchorPoint = Vector2.new(1, 0)
+MobileIcon.Parent = HardcorePanel
+local IconGlow = Instance.new("ImageLabel")
+IconGlow.Name = "IconGlow"
+IconGlow.Size = UDim2.new(1.2, 0, 1.2, 0)
+IconGlow.Position = UDim2.new(-0.1, 0, -0.1, 0)
+IconGlow.Image = "rbxassetid://11656483170"
+IconGlow.ImageColor3 = Color3.new(1, 0.3, 0.3)
+IconGlow.BackgroundTransparency = 1
+IconGlow.ZIndex = -1
+IconGlow.ImageTransparency = 0.7
+IconGlow.AnchorPoint = Vector2.new(1, 0)
+IconGlow.Parent = MobileIcon
+RunService.Heartbeat:Connect(function()
+    local scale = 1 + 0.1 * math.sin(tick() * 2)
+    IconGlow.Size = UDim2.new(scale, 0, scale, 0)
+    IconGlow.Position = UDim2.new((scale-1)/-2, 0, (scale-1)/-2, 0)
+    IconGlow.ImageTransparency = 0.7 + 0.2 * math.sin(tick() * 2)
+end)
+
+MobileIcon.MouseEnter:Connect(function()
+    TweenService:Create(MobileIcon, TweenInfo.new(0.2), {Size = UDim2.new(0, 65, 0, 65)}):Play()
+    TweenService:Create(IconGlow, TweenInfo.new(0.2), {ImageTransparency = 0.5}):Play()
+end)
+
+MobileIcon.MouseLeave:Connect(function()
+    TweenService:Create(MobileIcon, TweenInfo.new(0.2), {Size = UDim2.new(0, 60, 0, 60)}):Play()
+    TweenService:Create(IconGlow, TweenInfo.new(0.2), {ImageTransparency = 0.7}):Play()
+end)
+
+MobileIcon.MouseButton1Down:Connect(function()
+    TweenService:Create(MobileIcon, TweenInfo.new(0.1), {Size = UDim2.new(0, 55, 0, 55)}):Play()
+end)
+
+MobileIcon.MouseButton1Up:Connect(function()
+    TweenService:Create(MobileIcon, TweenInfo.new(0.1), {Size = UDim2.new(0, 60, 0, 60)}):Play()
+end)
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0.3, 0, 0.5, 0)
+MainFrame.Position = UDim2.new(0.35, 0, 0.25, 0)
+MainFrame.BackgroundColor3 = COLORS.BACKGROUND
+MainFrame.BackgroundTransparency = 0.2
+MainFrame.BorderColor3 = COLORS.PRIMARY
+MainFrame.BorderSizePixel = 2
+MainFrame.Visible = false
+MainFrame.Parent = HardcorePanel
+
+local UIGlow = Instance.new("UIGradient")
+UIGlow.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 0, 0)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 0, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 0, 0))
+})
+UIGlow.Rotation = 45
+UIGlow.Enabled = true
+UIGlow.Parent = MainFrame
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = COLORS.PRIMARY
+UIStroke.Thickness = 3
+UIStroke.Transparency = 0.3
+UIStroke.Parent = MainFrame
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0.08, 0)
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 0, 0)
+TitleBar.BackgroundTransparency = 0.3
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleUICorner = Instance.new("UICorner")
+TitleUICorner.CornerRadius = UDim.new(0, 8)
+TitleUICorner.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
+TitleLabel.Position = UDim2.new(0.1, 0, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "HardCore PANEL"
+TitleLabel.TextColor3 = COLORS.PRIMARY
+TitleLabel.TextScaled = true
+TitleLabel.Font = Enum.Font.SciFi
+TitleLabel.Parent = TitleBar
+
+local function addPulseEffect(label)
+    local pulseInfo = TweenInfo.new(
+        1.5,
+        Enum.EasingStyle.Quint,
+        Enum.EasingDirection.InOut,
+        -1,
+        true
+    )
+    
+    local pulseTween = TweenService:Create(
+        label,
+        pulseInfo,
+        {TextTransparency = 0.3}
+    )
+    pulseTween:Play()
+end
+
+addPulseEffect(TitleLabel)
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0.1, 0, 0.8, 0)
+CloseButton.Position = UDim2.new(0.89, 0, 0.1, 0)
+CloseButton.BackgroundColor3 = COLORS.CLOSE_BG
+CloseButton.BackgroundTransparency = 0.2
+CloseButton.Text = "X"
+CloseButton.TextColor3 = COLORS.TEXT_WHITE
+CloseButton.TextScaled = true
+CloseButton.Font = Enum.Font.SciFi
+CloseButton.Parent = TitleBar
+
+local CloseUICorner = Instance.new("UICorner")
+CloseUICorner.CornerRadius = UDim.new(0, 4)
+CloseUICorner.Parent = CloseButton
+
+local ButtonContainer = Instance.new("Frame")
+ButtonContainer.Name = "ButtonContainer"
+ButtonContainer.Size = UDim2.new(0.9, 0, 0.72, 0)
+ButtonContainer.Position = UDim2.new(0.05, 0, 0.1, 0)
+ButtonContainer.BackgroundTransparency = 1
+ButtonContainer.Parent = MainFrame
+
+local FloorsScrollingFrame = Instance.new("ScrollingFrame")
+FloorsScrollingFrame.Name = "FloorsScrollingFrame"
+FloorsScrollingFrame.Size = UDim2.new(1, 0, 1, 0)
+FloorsScrollingFrame.BackgroundTransparency = 1
+FloorsScrollingFrame.BorderSizePixel = 0
+FloorsScrollingFrame.ScrollBarThickness = 6
+FloorsScrollingFrame.ScrollBarImageColor3 = COLORS.PRIMARY
+FloorsScrollingFrame.Visible = true
+FloorsScrollingFrame.Parent = ButtonContainer
+
+local DexScrollingFrame = Instance.new("ScrollingFrame")
+DexScrollingFrame.Name = "DexScrollingFrame"
+DexScrollingFrame.Size = UDim2.new(1, 0, 1, 0)
+DexScrollingFrame.BackgroundTransparency = 1
+DexScrollingFrame.BorderSizePixel = 0
+DexScrollingFrame.ScrollBarThickness = 6
+DexScrollingFrame.ScrollBarImageColor3 = COLORS.PRIMARY
+DexScrollingFrame.Visible = false
+DexScrollingFrame.Parent = ButtonContainer
+
+local MonsterScrollingFrame = Instance.new("ScrollingFrame")
+MonsterScrollingFrame.Name = "MonsterScrollingFrame"
+MonsterScrollingFrame.Size = UDim2.new(1, 0, 1, 0)
+MonsterScrollingFrame.BackgroundTransparency = 1
+MonsterScrollingFrame.BorderSizePixel = 0
+MonsterScrollingFrame.ScrollBarThickness = 6
+MonsterScrollingFrame.ScrollBarImageColor3 = COLORS.PRIMARY
+MonsterScrollingFrame.Visible = false
+MonsterScrollingFrame.Parent = ButtonContainer
+
+local ItemScrollingFrame = Instance.new("ScrollingFrame")
+ItemScrollingFrame.Name = "ItemScrollingFrame"
+ItemScrollingFrame.Size = UDim2.new(1, 0, 1, 0)
+ItemScrollingFrame.BackgroundTransparency = 1
+ItemScrollingFrame.BorderSizePixel = 0
+ItemScrollingFrame.ScrollBarThickness = 6
+ItemScrollingFrame.ScrollBarImageColor3 = COLORS.PRIMARY
+ItemScrollingFrame.Visible = false
+ItemScrollingFrame.Parent = ButtonContainer
+
+local FloorsListLayout = Instance.new("UIListLayout")
+FloorsListLayout.Padding = UDim.new(0, 6)
+FloorsListLayout.Parent = FloorsScrollingFrame
+
+local DexListLayout = Instance.new("UIListLayout")
+DexListLayout.Padding = UDim.new(0, 6)
+DexListLayout.Parent = DexScrollingFrame
+
+local MonsterListLayout = Instance.new("UIListLayout")
+MonsterListLayout.Padding = UDim.new(0, 6)
+MonsterListLayout.Parent = MonsterScrollingFrame
+
+local ItemListLayout = Instance.new("UIListLayout")
+ItemListLayout.Padding = UDim.new(0, 6)
+ItemListLayout.Parent = ItemScrollingFrame
+
+local function addFloorButton(name, text, onClick)
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.new(0.9, 0, 0, 40)
+    button.BackgroundColor3 = COLORS.BUTTON_BG
+    button.BackgroundTransparency = 0.1
+    button.Text = text
+    button.TextColor3 = COLORS.PRIMARY
+    button.TextScaled = true
+    button.Font = Enum.Font.SciFi
+    button.TextSize = 20
+    button.Parent = FloorsScrollingFrame
+    
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 6)
+    uiCorner.Parent = button
+    
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Color = COLORS.PRIMARY
+    uiStroke.Thickness = 2
+    uiStroke.Parent = button
+    
+    button.MouseEnter:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = COLORS.BUTTON_HOVER,
+                TextColor3 = COLORS.SECONDARY
+            }
+        ):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = COLORS.BUTTON_BG,
+                TextColor3 = COLORS.PRIMARY
+            }
+        ):Play()
+    end)
+    
+    button.MouseButton1Down:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1),
+            {BackgroundTransparency = 0.4}
+        ):Play()
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1),
+            {BackgroundTransparency = 0.1}
+        ):Play()
+    end)
+    
+    button.Activated:Connect(function()
+        print("[Hardcore Panel] " .. text .. " button clicked!")
+        if onClick then
+            local success, err = pcall(onClick)
+            if not success then
+            end
+        end
+    end)
+    
+    return button
+end
+
+addFloorButton("Hotel", "Hotel", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.CreateElevator
+    Event:FireServer({
+        Mods = {
+            "NoGuidingLight", "EntitiesMore", "ItemSpawnMore", "AmbushMore", "ScreechFast", "EyesLevel2", "AmbushFaster",
+            "DupeMost", "BackdoorVacuum", "SnareMoster", "NoKeySound", "BackdoorRush", "Rooms", "GoldSpawnLess",
+            "FigureFaster", "RushLevel2", "RushMore", "LockMore", "AdminPanel"
+        },
+        Settings = {},
+        Destination = "Hotel",
+        FriendsOnly = true,
+        MaxPlayers = "20"
+    })
+end)
+
+addFloorButton("Mines", "Mines", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.CreateElevator
+    Event:FireServer({
+        Mods = {
+            "NoGuidingLight", "EntitiesMore", "AmbushMore", "ScreechFast", "AmbushFaster", "DupeMost", "BackdoorVacuum",
+            "BackdoorLookman", "NoKeySound", "BackdoorRush", "Rooms", "GiggleSunglasses", "Fog", "GoldSpawnLess",
+            "PlayerLessSlots", "FigureFaster", "RushMore", "AdminPanel"
+        },
+        Settings = {},
+        Destination = "Mines",
+        FriendsOnly = true,
+        MaxPlayers = "20"
+    })
+end)
+
+addFloorButton("OutDoors", "OutDoors", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.CreateElevator
+    Event:FireServer({
+        Mods = {
+            "AmbushMore", "EntitiesMost", "ScreechFast", "AmbushFaster", "DupeMost", "RushFaster", "BackdoorLookman",
+            "BackdoorRush", "Rooms", "GiggleSunglasses", "GoldSpawnLess", "PlayerLessSlots", "FigureFaster", "RushMore", "AdminPanel"
+        },
+        Settings = {},
+        Destination = "Garden",
+        FriendsOnly = true,
+        MaxPlayers = "20"
+    })
+end)
+
+addFloorButton("Rooms", "Rooms", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.CreateElevator
+    Event:FireServer({
+        Mods = {
+            "NoGuidingLight", "AmbushMore", "EntitiesMost", "ScreechFast", "AmbushFaster", "RushFaster", "BackdoorLookman",
+            "NoKeySound", "BackdoorRush", "Rooms", "GoldSpawnLess", "PlayerLessSlots", "FigureFaster", "AdminPanel"
+        },
+        Settings = {},
+        Destination = "Rooms",
+        FriendsOnly = true,
+        MaxPlayers = "20"
+    })
+end)
+
+addFloorButton("BackDoors", "BackDoors", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.CreateElevator
+    Event:FireServer({
+        Mods = {
+            "AmbushMore", "EntitiesMost", "ScreechFast", "AmbushFaster", "DupeMost", "RushFaster", "BackdoorVacuum",
+            "BackdoorLookman", "BackdoorRush", "Rooms", "GoldSpawnLess", "PlayerLessSlots", "FigureFaster", "AdminPanel"
+        },
+        Settings = {},
+        Destination = "Backdoor",
+        FriendsOnly = true,
+        MaxPlayers = "20"
+    })
+end)
+
+addFloorButton("RushMode", "Rush Mode", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.CreateElevator
+    Event:FireServer({
+        Mods = {
+            "NoGuidingLight", "ItemSpawnMore", "AmbushMore", "EntitiesMost", "ScreechFast", "AmbushFaster", "DupeMost",
+            "BackdoorVacuum", "NoKeySound", "BackdoorRush", "Rooms", "GoldSpawnLess", "FigureFaster", "RushMore", "AdminPanel"
+        },
+        Settings = {},
+        Destination = "Fools26",
+        FriendsOnly = true,
+        MaxPlayers = "20"
+    })
+end)
+
+addFloorButton("Halloween", "Halloween2025", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.CreateElevator
+    Event:FireServer({
+        Mods = {"AdminPanel"},
+        Settings = {},
+        Destination = "Halloween25",
+        FriendsOnly = true,
+        MaxPlayers = "20"
+    })
+end)
+
+local function addDexButton(name, text, onClick)
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.new(0.9, 0, 0, 40)
+    button.BackgroundColor3 = COLORS.BUTTON_BG
+    button.BackgroundTransparency = 0.1
+    button.Text = text
+    button.TextColor3 = COLORS.PRIMARY
+    button.TextScaled = true
+    button.Font = Enum.Font.SciFi
+    button.TextSize = 20
+    button.Parent = DexScrollingFrame
+    
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 6)
+    uiCorner.Parent = button
+    
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Color = COLORS.PRIMARY
+    uiStroke.Thickness = 2
+    uiStroke.Parent = button
+    
+    button.MouseEnter:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = COLORS.BUTTON_HOVER,
+                TextColor3 = COLORS.SECONDARY
+            }
+        ):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = COLORS.BUTTON_BG,
+                TextColor3 = COLORS.PRIMARY
+            }
+        ):Play()
+    end)
+    
+    button.MouseButton1Down:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1),
+            {BackgroundTransparency = 0.4}
+        ):Play()
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1),
+            {BackgroundTransparency = 0.1}
+        ):Play()
+    end)
+    
+    button.Activated:Connect(function()
+        print("[Hardcore Panel] " .. text .. " button clicked!")
+        if onClick then
+            local success, err = pcall(onClick)
+            if not success then
+                warn("[Hardcore Panel] 执行失败: " .. tostring(err))
+            end
+        end
+    end)
+    
+    return button
+end
+
+addDexButton("HardcoreDex", "Hardcore DEX", function()
+    HardcoreDex = loadstring(game:HttpGet("https://github.com/AZYsGithub/DexPlusPlus/releases/latest/download/out.lua"))()
+end)
+
+addDexButton("Cobalt", "Cobalt", function()
+    local url = "https://raw.githubusercontent.com/Zero0Star/RipperMPSound/master/CobaltSpy.lua"
+    loadstring(game:HttpGet(url))()
+end)
+
+addDexButton("Spwna", "Spwna BackRooms1", function()
+function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    warn("Executor không hỗ trợ file APIs.")
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(14961029770, workspace)
+if not s then
+    warn("Failed to load Frost entity.")
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 5, -15)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
+        end
+    end
+end
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
+end)
+
+end)
+
+addDexButton("Spwna2", "Spwna BackRooms2", function()
+   function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    warn("Executor không hỗ trợ file APIs.")
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(81636416579715, workspace)
+if not s then
+    warn("Failed to load Frost entity.")
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 5, -15)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
+        end
+    end
+end
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
+end)
+
+end)
+
+addDexButton("GOD", "???", function()
+     function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    warn("Executor không hỗ trợ file APIs.")
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(115317486253045, workspace)
+if not s then
+    warn("Failed to load Frost entity.")
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 100, -15)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
+        end
+    end
+end
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
+end)
+
+end)
+
+addDexButton("Deleteall", "Delete all", function()
+   local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "140736591220630",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "140736591220630",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+
+addDexButton("JeffTheKillerHighlight", "JeffKiller Light", function()
+    local Workspace = game:GetService("Workspace")
+
+    if not _G.JeffHighlightState then
+        _G.JeffHighlightState = {
+            isEnabled = false,
+            highlights = {},
+            connections = {}
+        }
+    end
+    
+    local state = _G.JeffHighlightState
+
+    local function findAllJeffModels()
+        local jeffModels = {}
+
+        local function searchInModel(model)
+            if model.Name == "JeffTheKiller" and model:IsA("Model") then
+                table.insert(jeffModels, model)
+            end
+
+            for _, child in pairs(model:GetChildren()) do
+                searchInModel(child)
+            end
+        end
+
+        for _, item in pairs(Workspace:GetChildren()) do
+            searchInModel(item)
+        end
+        
+        return jeffModels
+    end
+
+    local function findAllBaseParts(model)
+        local parts = {}
+        
+        if not model or not model:IsA("Model") then
+            return parts
+        end
+        
+        for _, child in pairs(model:GetDescendants()) do
+            if child:IsA("BasePart") and child.Transparency < 1 then
+                table.insert(parts, child)
+            end
+        end
+        
+        return parts
+    end
+
+    local function createHighlight(part, jeffIndex, partIndex)
+        if not part or not part:IsA("BasePart") then
+            return nil
+        end
+        
+        local highlightName = "JeffHighlight" .. jeffIndex .. "_" .. partIndex
+        if part:FindFirstChild(highlightName) then
+            return part:FindFirstChild(highlightName)
+        end
+        
+        local highlight = Instance.new("Highlight")
+        highlight.Name = highlightName
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)  
+        highlight.OutlineColor = Color3.fromRGB(200, 0, 0)
+        highlight.FillTransparency = 0.7
+        highlight.OutlineTransparency = 0.3
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Adornee = part
+        highlight.Parent = part
+        
+        state.highlights[highlight] = true
+        return highlight
+    end
+
+    local function startMonitoring()
+        local function setupModelListener(model)
+            local connection = model.DescendantAdded:Connect(function(descendant)
+                if state.isEnabled and descendant:IsA("BasePart") and descendant.Transparency < 1 then
+
+                    local jeffModels = findAllJeffModels()
+                    for jeffIndex, jeffModel in ipairs(jeffModels) do
+                        if descendant:IsDescendantOf(jeffModel) then
+                            local parts = findAllBaseParts(jeffModel)
+                            for partIndex, part in ipairs(parts) do
+                                if part == descendant then
+                                    createHighlight(part, jeffIndex, partIndex)
+                                    break
+                                end
+                            end
+                            break
+                        end
+                    end
+                end
+            end)
+            
+            table.insert(state.connections, connection)
+        end
+
+        local jeffModels = findAllJeffModels()
+        for _, jeffModel in ipairs(jeffModels) do
+            setupModelListener(jeffModel)
+        end
+
+        local workspaceConnection = Workspace.DescendantAdded:Connect(function(descendant)
+            if state.isEnabled and descendant.Name == "JeffTheKiller" and descendant:IsA("Model") then
+                setupModelListener(descendant)
+                task.wait(0.1)
+
+                local parts = findAllBaseParts(descendant)
+                for partIndex, part in ipairs(parts) do
+                    local jeffModels = findAllJeffModels()
+                    for jeffIndex, jeffModel in ipairs(jeffModels) do
+                        if part:IsDescendantOf(jeffModel) then
+                            createHighlight(part, jeffIndex, partIndex)
+                            break
+                        end
+                    end
+                end
+            end
+        end)
+        
+        table.insert(state.connections, workspaceConnection)
+    end
+
+    local function scanAndHighlightAll()
+        local jeffModels = findAllJeffModels()
+        
+        for jeffIndex, jeffModel in ipairs(jeffModels) do
+            local parts = findAllBaseParts(jeffModel)
+            
+            for partIndex, part in ipairs(parts) do
+                createHighlight(part, jeffIndex, partIndex)
+            end
+        end
+    end
+
+    local function cleanupAll()
+
+        for highlight, _ in pairs(state.highlights) do
+            if highlight and highlight.Parent then
+                highlight:Destroy()
+            end
+        end
+        state.highlights = {}
+
+        for _, connection in ipairs(state.connections) do
+            if connection and typeof(connection) == "RBXScriptConnection" then
+                connection:Disconnect()
+            end
+        end
+        state.connections = {}
+        
+        state.isEnabled = false
+    end
+
+    if state.isEnabled then
+        cleanupAll()
+    else
+        state.isEnabled = true
+        scanAndHighlightAll()
+        startMonitoring()
+    end
+end)
+
+addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
+    local Workspace = game:GetService("Workspace")
+    local CurrentRooms = Workspace:WaitForChild("CurrentRooms")
+
+    if not _G.KeyDoorHighlightState then
+        _G.KeyDoorHighlightState = {
+            isEnabled = false,
+            highlights = {},
+            connections = {},
+            currentRoomCount = 0
+        }
+    end
+    
+    local state = _G.KeyDoorHighlightState
+
+    local function findKeyParts(model)
+        if not model or not model:IsA("Model") then
+            return {}
+        end
+        
+        local keyParts = {}
+        
+        for _, child in pairs(model:GetDescendants()) do
+            if child:IsA("BasePart") and child.Transparency < 1 then
+                table.insert(keyParts, child)
+            end
+        end
+        
+        return keyParts
+    end
+    
+    -- 为门查找可高亮的部件
+    local function findDoorPart(door)
+        if not door then return nil end
+        
+        if door:IsA("BasePart") then
+            return door
+        end
+        
+        if door:IsA("Model") then
+            if door.PrimaryPart and door.PrimaryPart:IsA("BasePart") then
+                return door.PrimaryPart
+            end
+            
+            for _, child in pairs(door:GetDescendants()) do
+                if child:IsA("BasePart") and child.Transparency < 1 then
+                    return child
+                end
+            end
+        end
+        
+        return nil
+    end
+    
+    -- 创建高亮效果
+    local function createHighlight(target, name)
+        if not target or not target:IsA("BasePart") then
+            return nil
+        end
+        
+        -- 检查是否已有高亮
+        if target:FindFirstChild(name .. "Highlight") then
+            return target:FindFirstChild(name .. "Highlight")
+        end
+        
+        local highlight = Instance.new("Highlight")
+        highlight.Name = name .. "Highlight"
+        highlight.FillColor = Color3.fromRGB(0, 255, 0)
+        highlight.OutlineColor = Color3.fromRGB(0, 200, 0)
+        highlight.FillTransparency = 0.7
+        highlight.OutlineTransparency = 0.3
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Adornee = target
+        highlight.Parent = target
+        
+        state.highlights[highlight] = true
+        return highlight
+    end
+    
+    -- 扫描并高亮当前所有钥匙和门
+    local function scanAndHighlightAll()
+        for _, room in pairs(CurrentRooms:GetChildren()) do
+            if room:IsA("Model") then
+                -- 查找并高亮钥匙的所有部件
+                local assets = room:FindFirstChild("Assets")
+                if assets then
+                    local keyObtain = assets:FindFirstChild("KeyObtain")
+                    if keyObtain then
+                        local keyParts = findKeyParts(keyObtain)
+                        for _, part in ipairs(keyParts) do
+                            createHighlight(part, "Key")
+                        end
+                    end
+                end
+                
+                -- 查找并高亮门
+                local door = room:FindFirstChild("Door")
+                if door then
+                    local doorPart = findDoorPart(door)
+                    if doorPart then
+                        createHighlight(doorPart, "Door")
+                    end
+                end
+            end
+        end
+    end
+    
+    -- 监听新房间添加
+    local function startMonitoring()
+        -- 监听新房间添加
+        local roomAddedConnection = CurrentRooms.ChildAdded:Connect(function(room)
+            if state.isEnabled and room:IsA("Model") then
+                task.wait(0.3)
+                
+                -- 扫描钥匙
+                local assets = room:FindFirstChild("Assets")
+                if assets then
+                    local keyObtain = assets:FindFirstChild("KeyObtain")
+                    if keyObtain then
+                        local keyParts = findKeyParts(keyObtain)
+                        for _, part in ipairs(keyParts) do
+                            createHighlight(part, "Key")
+                        end
+                    end
+                end
+                
+                -- 扫描门
+                local door = room:FindFirstChild("Door")
+                if door then
+                    local doorPart = findDoorPart(door)
+                    if doorPart then
+                        createHighlight(doorPart, "Door")
+                    end
+                end
+            end
+        end)
+        
+        table.insert(state.connections, roomAddedConnection)
+        
+        -- 监听现有房间变化
+        for _, room in pairs(CurrentRooms:GetChildren()) do
+            if room:IsA("Model") then
+                -- 监听Assets变化
+                local assetsConnection
+                assetsConnection = room:GetPropertyChangedSignal("Assets"):Connect(function()
+                    if state.isEnabled and room:FindFirstChild("Assets") then
+                        local assets = room.Assets
+                        task.wait(0.1)
+                        
+                        local keyObtain = assets:FindFirstChild("KeyObtain")
+                        if keyObtain then
+                            task.wait(0.1)
+                            local keyParts = findKeyParts(keyObtain)
+                            for _, part in ipairs(keyParts) do
+                                createHighlight(part, "Key")
+                            end
+                        end
+                    end
+                end)
+                
+                table.insert(state.connections, assetsConnection)
+                
+                -- 监听Door变化
+                local doorConnection
+                doorConnection = room:GetPropertyChangedSignal("Door"):Connect(function()
+                    if state.isEnabled and room:FindFirstChild("Door") then
+                        local door = room.Door
+                        local doorPart = findDoorPart(door)
+                        if doorPart then
+                            createHighlight(doorPart, "Door")
+                        end
+                    end
+                end)
+                
+                table.insert(state.connections, doorConnection)
+            end
+        end
+    end
+    
+    -- 清理所有高亮和连接
+    local function cleanupAll()
+        -- 清理高亮效果
+        for highlight, _ in pairs(state.highlights) do
+            if highlight and highlight.Parent then
+                highlight:Destroy()
+            end
+        end
+        state.highlights = {}
+        
+        -- 清理连接
+        for _, connection in ipairs(state.connections) do
+            if connection and typeof(connection) == "RBXScriptConnection" then
+                connection:Disconnect()
+            end
+        end
+        state.connections = {}
+        
+        state.isEnabled = false
+        state.currentRoomCount = 0
+    end
+
+    if state.isEnabled then
+        cleanupAll()
+    else
+        state.isEnabled = true
+        scanAndHighlightAll()
+        startMonitoring()
+    end
+end)
+
+addDexButton("Mischief", "Mischief Light", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "123091058956674",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "123091058956674",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+
+end)
+
+addDexButton("Place2", "End", function()
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("这不是个有效按键..",true)
+end)
+
+addDexButton("CuriousLight", "Curious Light", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "100192030036066",
+            Speed = 0.06
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "100192030036066",
+            Speed = 0.06
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+local function addMonsterButton(name, text, onClick)
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.new(0.9, 0, 0, 40)
+    button.BackgroundColor3 = COLORS.BUTTON_BG
+    button.BackgroundTransparency = 0.1
+    button.Text = text
+    button.TextColor3 = COLORS.PRIMARY
+    button.TextScaled = true
+    button.Font = Enum.Font.SciFi
+    button.TextSize = 20
+    button.Parent = MonsterScrollingFrame
+    
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 6)
+    uiCorner.Parent = button
+    
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Color = COLORS.PRIMARY
+    uiStroke.Thickness = 2
+    uiStroke.Parent = button
+    
+    button.MouseEnter:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = COLORS.BUTTON_HOVER,
+                TextColor3 = COLORS.SECONDARY
+            }
+        ):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = COLORS.BUTTON_BG,
+                TextColor3 = COLORS.PRIMARY
+            }
+        ):Play()
+    end)
+    
+    button.MouseButton1Down:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1),
+            {BackgroundTransparency = 0.4}
+        ):Play()
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1),
+            {BackgroundTransparency = 0.1}
+        ):Play()
+    end)
+    
+    button.Activated:Connect(function()
+        print("[Hardcore Panel] " .. text .. " button clicked!")
+        if onClick then
+            local success, err = pcall(onClick)
+            if not success then
+                warn("[Hardcore Panel] 执行失败: " .. tostring(err))
+            end
+        end
+    end)
+    
+    return button
+end
+
+addMonsterButton("Groundskeeper", "Groundskeeper", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+    Event:FireServer(
+        "Groundskeeper",
+        {}
+    )
+end)
+
+addMonsterButton("Surge", "Surge", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+    Event:FireServer(
+        "Surge",
+        {}
+    )
+end)
+
+addMonsterButton("Bramble", "Bramble", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+    Event:FireServer(
+        "Bramble",
+        {}
+    )
+end)
+addMonsterButton("Shocker", "Shocker", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0.72322928905487, 0.0004347424255684, 0),
+        Rebounds = 3,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "9113115842",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "9113115842",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+addMonsterButton("Ripper", "Ripper", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "101665501585468",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 50,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "101665501585468",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+addMonsterButton("Rebound", "Rebound", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "14093035297",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 50,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "14093035297",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+addMonsterButton("INGOA1", "Indescribable GodOne", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "138586264525744",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "138586264525744",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+addMonsterButton("Cease", "Cease", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "103515031866941",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "103515031866941",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("DeerGod", "Deer God", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "110532875373161",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "110532875373161",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    })
+end)
+
+    addMonsterButton("HatRed", "HatRed", function()
+     local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "86930884029006",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "86930884029006",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("A333", "A-333", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "136073454817575",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "136073454817575",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("z367", "Z-367", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "1845474773",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "1845474773",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("Quiet", "SilQuiet", function()
+  local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "109690961059477",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "109690961059477",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+
+addMonsterButton("ANGLE", "Angler", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "119672184905651",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "119672184905651",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("A500", "A-500", function()
+       local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "140731983342235",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "140731983342235",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+ end)
+
+addMonsterButton("A60", "A-60", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0.72322928905487, 0.0004347424255684, 0),
+        Rebounds = 3,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "8325526433",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 1000,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "8325526433",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("IndescribableGod", "INDESCRIBABLE GOD", function()
+      local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "118662411300943",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "118662411300943",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("Seek", "Seek", function()
+
+    function GitAud(soundgit, filename)
+        local url = soundgit
+        local FileName = filename
+        writefile(FileName .. ".mp3", game:HttpGet(url))
+        return (getcustomasset or getsynasset)(FileName .. ".mp3")
+    end
+
+    function ReplaceSeekMusicInWorkspace(targetAudioUrl, newFileName, volume)
+        local targetParent = game:GetService("Workspace")
+        local folderName = "SeekMovingNewClone"
+        local targetSoundName = "SeekMusic"
+        
+        local targetFolder = targetParent:FindFirstChild(folderName)
+        if not targetFolder then 
+            return nil 
+        end
+        
+        local targetSound = targetFolder:FindFirstChild(targetSoundName)
+        if not targetSound then 
+            return nil 
+        end
+        
+        if not targetSound:IsA("Sound") then 
+            return nil 
+        end
+        
+        local localAssetPath = GitAud(targetAudioUrl, newFileName)
+        targetSound.SoundId = localAssetPath
+        targetSound.Volume = volume or targetSound.Volume
+
+        return targetSound
+    end
+
+    local targetAudioUrl = "https://github.com/Sosnen/Ping-s-Dumbass-projects-/raw/main/Here%20i%20come%20but%20WHAT%20THE%20FUCK.mp3"
+    local newFileName = "SeekMusicNew"
+    local volume = 5
+    
+    local replacedSound = ReplaceSeekMusicInWorkspace(targetAudioUrl, newFileName, volume)
+    if replacedSound then
+
+    else
+
+    end
+
+    local Workspace = game:GetService("Workspace")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local RunService = game:GetService("RunService")
+
+    local newModel
+    local success, result = pcall(function()
+        return game:GetObjects("rbxassetid://91573224733706")[1]
+    end)
+    
+    if success and result then
+        newModel = result
+        newModel.Parent = Workspace
+        newModel.Name = "SeekMoving"
+
+    else
+        return
+    end
+
+    local function stopAllAnimations()
+        local seekModel = Workspace:FindFirstChild("SeekMoving")
+        if not seekModel then return end
+        
+        local seekRig = seekModel:FindFirstChild("SeekRig")
+        if not seekRig then return end
+        
+        local humanoid = seekRig:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            local animator = humanoid:FindFirstChildOfClass("Animator")
+            if animator then
+                for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                    track:Stop()
+                end
+            end
+        end
+        
+        local animController = seekRig:FindFirstChild("AnimationController")
+        if animController then
+            for _, track in pairs(animController:GetPlayingAnimationTracks()) do
+                track:Stop()
+            end
+        end
+    end
+
+    local function playAnimation(animationId, looped)
+        local seekModel = Workspace:FindFirstChild("SeekMoving")
+        if not seekModel then return end
+        
+        local seekRig = seekModel:FindFirstChild("SeekRig")
+        if not seekRig then return end
+        
+        local humanoid = seekRig:FindFirstChildOfClass("Humanoid")
+        if not humanoid then
+            local animController = seekRig:FindFirstChild("AnimationController")
+            if not animController then
+                animController = Instance.new("AnimationController")
+                animController.Parent = seekRig
+            end
+            
+            local animation = Instance.new("Animation")
+            animation.AnimationId = "rbxassetid://" .. animationId
+            animation.Name = "CustomAnim"
+            
+            local track = animController:LoadAnimation(animation)
+            track.Looped = looped or true
+            track:Play()
+            return track
+        end
+        return nil
+    end
+
+    local function muteFigureSounds()
+        local seekMoving = Workspace:FindFirstChild("SeekMoving")
+        if not seekMoving then return {} end
+        
+        local figure = seekMoving:FindFirstChild("Figure")
+        if not figure then return {} end
+        
+        local originalSoundStates = {}
+        for _, sound in pairs(figure:GetDescendants()) do
+            if sound:IsA("Sound") then
+                originalSoundStates[sound] = sound.Playing
+                sound.Playing = false
+            end
+        end
+        return originalSoundStates
+    end
+
+    local function restoreFigureSounds(originalStates)
+        for sound, wasPlaying in pairs(originalStates) do
+            if sound and sound:IsA("Sound") and sound.Parent then
+                sound.Playing = wasPlaying
+            end
+        end
+    end
+
+    local function hideModelParts(model)
+        for _, child in pairs(model:GetDescendants()) do
+            if child:IsA("BasePart") or child:IsA("MeshPart") or child:IsA("UnionOperation") then
+                child.Transparency = 1
+            elseif child:IsA("ParticleEmitter") or child:IsA("Beam") or child:IsA("Trail") then
+                child.Enabled = false
+            elseif child:IsA("Sound") then
+                child.Playing = false
+            elseif child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+                child.Enabled = false
+            elseif child:IsA("Light") or child:IsA("SurfaceLight") or child:IsA("SpotLight") then
+                child.Enabled = false
+            elseif child:IsA("Decal") or child:IsA("Texture") then
+                child.Transparency = 1
+            end
+        end
+    end
+
+    local function deleteAllStringCheese()
+        local targetModel = Workspace:FindFirstChild("SeekMovingNewClone")
+        if not targetModel then 
+
+            return 0 
+        end
+        
+        local seekRig = targetModel:FindFirstChild("SeekRig")
+        if not seekRig then 
+            return 0 
+        end
+        
+        local deletedCount = 0
+        for _, child in pairs(seekRig:GetDescendants()) do
+            if child.Name == "StringCheese" then
+                child:Destroy()
+                deletedCount = deletedCount + 1
+            end
+        end
+        
+        if deletedCount > 0 then
+           
+        else
+
+        end
+        return deletedCount
+    end
+
+    local targetModel = Workspace:FindFirstChild("SeekMovingNewClone")
+    if not targetModel then
+
+    else
+        hideModelParts(targetModel)
+        deleteAllStringCheese()
+    end
+
+    local originalSoundStates = muteFigureSounds()
+
+    local animationPlaying = false
+    local isRunning = false
+    local isSequencePlaying = false
+    local runAnimationId = "10729087054"
+ 
+    local function setupAnimationListener()
+        local foundAnimator = nil
+     
+        for _, child in pairs(targetModel:GetDescendants()) do
+            if child:IsA("AnimationController") or child:IsA("Animator") then
+                foundAnimator = child
+                break
+            end
+        end
+        
+        if not foundAnimator then
+        
+            return
+        end
+
+        local lastTracks = {}
+        
+        while task.wait(0.1) do
+            local currentTracks = foundAnimator:GetPlayingAnimationTracks()
+            local trackMap = {}
+    
+            for _, track in pairs(currentTracks) do
+                if track.Animation and track.Animation.AnimationId then
+                    local animId = track.Animation.AnimationId:match("rbxassetid://(%d+)")
+                    trackMap[animId] = track
+                end
+            end
+   
+            for animId, track in pairs(trackMap) do
+                if not lastTracks[animId] then
+                  
+                    if animId == "10954733643" and not animationPlaying then
+                
+                        animationPlaying = true
+                        stopAllAnimations()
+                        playAnimation("10954733643", true)
+                        task.wait(7)
+                        restoreFigureSounds(originalSoundStates)
+                    end
+           
+                    if animId == "12309659361" and not isSequencePlaying then
+                    
+                        isSequencePlaying = true
+                        stopAllAnimations()
+                        playAnimation("12309659361", false)
+                    end
+                    
+                    if animId == "12309664766" and isSequencePlaying then
+
+                        stopAllAnimations()
+                        playAnimation("12309664766", false)
+                    end
+                    
+                    if animId == "12309667757" and isSequencePlaying then
+
+                        stopAllAnimations()
+                        playAnimation("12309667757", false)
+                    end
+
+                    if animId == runAnimationId and not isSequencePlaying and not isRunning then
+
+                        isRunning = true
+                        stopAllAnimations()
+                        playAnimation(runAnimationId, true)
+                    end
+                end
+            end
+
+            for animId, track in pairs(lastTracks) do
+                if not trackMap[animId] then
+
+                    if animId == "12309667757" and isSequencePlaying then
+
+                        isSequencePlaying = false
+                        stopAllAnimations()
+                        playAnimation(runAnimationId, true)
+                        isRunning = true
+                    end
+                    
+                    if animId == "10954733643" and animationPlaying then
+                        animationPlaying = false
+                    end
+                end
+            end
+            
+            lastTracks = trackMap
+        end
+    end
+
+    local function doorChangedHandler()
+        stopAllAnimations()
+        playAnimation(runAnimationId, true)
+        isRunning = true
+    end
+
+    coroutine.wrap(function()
+        ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+        doorChangedHandler()
+    end)()
+
+    RunService.RenderStepped:Connect(function()
+        if newModel and newModel.Parent and targetModel and targetModel.Parent then
+            if targetModel:IsA("Model") and targetModel.PrimaryPart then
+                if newModel:IsA("Model") and newModel.PrimaryPart then
+                    local targetCFrame = targetModel.PrimaryPart.CFrame
+                    local offsetPosition = targetCFrame.Position + Vector3.new(0, 1.1, 0)
+                    newModel:PivotTo(CFrame.new(offsetPosition) * targetCFrame.Rotation)
+                end
+            end
+        end
+    end)
+
+    task.wait(1)
+    if targetModel then
+        setupAnimationListener()
+    end
+
+    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("使用你的体力!",true)
+
+    task.wait(100)
+    local seekModel = Workspace:FindFirstChild("SeekMoving")
+    if seekModel and seekModel.Parent then
+        seekModel:Destroy()
+    end
+end)
+
+addMonsterButton("XBramble", "X-Bramble", function()
+   local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "116898205685143",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "116898205685143",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("Lightspeed", "LightSpeed", function()
+ local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "1079408535",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "1079408535",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("AminA60", "AminA60", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "4004052860",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 50,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "4004052860",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("BlackA60", "BlackA60", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "4903742660",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 50,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "4903742660",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("Silence", "Silence", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "135376180128296",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "135376180128296",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("Forst", "FrostBite", function()
+   local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "3308152153",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "3308152153",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("Smiler", "Smiler", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "140721035016341",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "140721035016341",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("ForEyes", "ForEyes", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9740942195",
+        ["Face Image ID"] = "18439330275",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 5,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "1838706588",
+            Speed = 1
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 50,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "129232864337188",
+            Speed = 1
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("ShoopDaWhoop", "ShoopDaWhoop", function()
+       local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "140719303781203",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "140719303781203",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("A200", "A200", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0.72322928905487, 0.0004347424255684, 0),
+        Rebounds = 3,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "7298463798",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "7298463798",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("Chainsmoker", "Chainsmoker", function()
+ local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "18926010713",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "18926010713",
+            Speed = 0
+        },
+        Delay = 0,
+        Damage = 0
+    }
+)
+end)
+
+local function addItemButton(name, text, onClick)
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.new(0.9, 0, 0, 40)
+    button.BackgroundColor3 = COLORS.BUTTON_BG
+    button.BackgroundTransparency = 0.1
+    button.Text = text
+    button.TextColor3 = COLORS.PRIMARY
+    button.TextScaled = true
+    button.Font = Enum.Font.SciFi
+    button.TextSize = 20
+    button.Parent = ItemScrollingFrame
+    
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 6)
+    uiCorner.Parent = button
+    
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Color = COLORS.PRIMARY
+    uiStroke.Thickness = 2
+    uiStroke.Parent = button
+    
+    button.MouseEnter:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = COLORS.BUTTON_HOVER,
+                TextColor3 = COLORS.SECONDARY
+            }
+        ):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = COLORS.BUTTON_BG,
+                TextColor3 = COLORS.PRIMARY
+            }
+        ):Play()
+    end)
+    
+    button.MouseButton1Down:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1),
+            {BackgroundTransparency = 0.4}
+        ):Play()
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1),
+            {BackgroundTransparency = 0.1}
+        ):Play()
+    end)
+    
+    button.Activated:Connect(function()
+        print("[Hardcore Panel] " .. text .. " button clicked!")
+        if onClick then
+            local success, err = pcall(onClick)
+            if not success then
+                warn("[Hardcore Panel] 执行失败: " .. tostring(err))
+            end
+        end
+    end)
+    
+    return button
+end
+
+addItemButton("CandyBag", "CANDY BAG", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+    Event:FireServer(
+        "Give Items",
+        {
+            Players = {
+                A_Yun66 = "A_Yun66",
+                sppvve = "sppvve",
+                Nssys123 = "Nssys123",
+                YMXeternalX = "YMXeternalX",
+                goat_qiu = "goat_qiu",
+                SOXIYU24 = "SOXIYU24",
+                Maoxinci = "Maoxinci",
+                cgdwml = "cgdwml",
+                Yxi_na = "Yxi_na",
+                woshiniruier = "woshiniruier",
+                Suu_Zzzz = "Suu_Zzzz",            
+                QWQ75321 = "QWQ75321"
+            },
+            Items = {
+                Shears = "CandyBag"
+            }
+        }
+    )
+end)
+
+addItemButton("Lotus", "LOTUS", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+    Event:FireServer(
+        "Give Items",
+        {
+            Players = {
+                A_Yun66 = "A_Yun66",
+                sppvve = "sppvve",
+                Nssys123 = "Nssys123",
+                YMXeternalX = "YMXeternalX",
+                goat_qiu = "goat_qiu",
+                SOXIYU24 = "SOXIYU24",
+                Maoxinci = "Maoxinci",
+                cgdwml = "cgdwml",
+                Yxi_na = "Yxi_na",
+                woshiniruier = "woshiniruier",
+                Suu_Zzzz = "Suu_Zzzz",            
+                QWQ75321 = "QWQ75321"
+            },
+            Items = {
+                Shears = "Lotus"
+            }
+        }
+    )
+end)
+
+addItemButton("LotusPetal", "LOTUS PETAL", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+    Event:FireServer(
+        "Give Items",
+        {
+            Players = {
+                A_Yun66 = "A_Yun66",
+                Nssys123 = "Nssys123",
+                sppvve = "sppvve",
+                YMXeternalX = "YMXeternalX",
+                goat_qiu = "goat_qiu",
+                SOXIYU24 = "SOXIYU24",
+                Maoxinci = "Maoxinci",
+                cgdwml = "cgdwml",
+                Yxi_na = "Yxi_na",
+                woshiniruier = "woshiniruier",
+                Suu_Zzzz = "Suu_Zzzz",            
+                QWQ75321 = "QWQ75321"
+            },
+            Items = {
+                Shears = "LotusPetal"
+            }
+        }
+    )
+end)
+
+FloorsListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    FloorsScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, FloorsListLayout.AbsoluteContentSize.Y)
+end)
+
+DexListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    DexScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, DexListLayout.AbsoluteContentSize.Y)
+end)
+
+MonsterListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    MonsterScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, MonsterListLayout.AbsoluteContentSize.Y)
+end)
+
+ItemListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ItemScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, ItemListLayout.AbsoluteContentSize.Y)
+end)
+
+local TabContainer = Instance.new("Frame")
+TabContainer.Name = "TabContainer"
+TabContainer.Size = UDim2.new(0.9, 0, 0.1, 0)
+TabContainer.Position = UDim2.new(0.05, 0, 0.84, 0)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = MainFrame
+
+local function createTabButton(name, text, positionX, iconId)
+    local button = Instance.new("ImageButton")
+    button.Name = name .. "Tab"
+    button.Size = UDim2.new(0.15, 0, 0.8, 0)
+    button.Position = UDim2.new(positionX, 0, 0.1, 0)
+    button.BackgroundColor3 = COLORS.BUTTON_BG
+    button.BackgroundTransparency = 0.2
+    button.Image = "rbxassetid://" .. tostring(iconId)
+    button.ImageColor3 = Color3.new(1, 0.2, 0.2)
+    button.ScaleType = Enum.ScaleType.Fit
+    button.Parent = TabContainer
+    
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 6)
+    uiCorner.Parent = button
+    
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Color = COLORS.PRIMARY
+    uiStroke.Thickness = 2
+    uiStroke.Parent = button
+    
+    local tooltip = Instance.new("TextLabel")
+    tooltip.Name = "Tooltip"
+    tooltip.Size = UDim2.new(1.5, 0, 0.3, 0)
+    tooltip.Position = UDim2.new(0.5, 0, -0.4, 0)
+    tooltip.AnchorPoint = Vector2.new(0.5, 0)
+    tooltip.BackgroundTransparency = 0.8
+    tooltip.BackgroundColor3 = Color3.new(0, 0, 0)
+    tooltip.Text = text
+    tooltip.TextColor3 = COLORS.PRIMARY
+    tooltip.TextScaled = true
+    tooltip.Font = Enum.Font.SciFi
+    tooltip.Visible = false
+    tooltip.Parent = button
+    
+    local tooltipUICorner = Instance.new("UICorner")
+    tooltipUICorner.CornerRadius = UDim.new(0, 4)
+    tooltipUICorner.Parent = tooltip
+    
+    button.MouseEnter:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = COLORS.BUTTON_HOVER,
+                ImageColor3 = Color3.new(1, 0.4, 0.4)
+            }
+        ):Play()
+        tooltip.Visible = true
+    end)
+    
+    button.MouseLeave:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = COLORS.BUTTON_BG,
+                ImageColor3 = Color3.new(1, 0.2, 0.2)
+            }
+        ):Play()
+        tooltip.Visible = false
+    end)
+    
+    button.MouseButton1Down:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1),
+            {BackgroundTransparency = 0.4}
+        ):Play()
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1),
+            {BackgroundTransparency = 0.2}
+        ):Play()
+    end)
+    
+    return button
+end
+
+local FloorsTab = createTabButton("Floors", "Floors", 0.08, 18624930841)
+local DexTab = createTabButton("Dex", "Tool", 0.28, 137278255690287)
+local MonsterTab = createTabButton("Monster", "Monster", 0.48, 103144676623079)
+local ItemTab = createTabButton("Item", "Item", 0.68, 131732617072026)
+
+local function switchTab(tabNumber)
+    if tabNumber == 1 then
+        FloorsScrollingFrame.Visible = true
+        DexScrollingFrame.Visible = false
+        MonsterScrollingFrame.Visible = false
+        ItemScrollingFrame.Visible = false
+        FloorsTab.ImageColor3 = Color3.new(1, 0.4, 0.4)
+        DexTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+        MonsterTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+        ItemTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+    elseif tabNumber == 2 then
+        FloorsScrollingFrame.Visible = false
+        DexScrollingFrame.Visible = true
+        MonsterScrollingFrame.Visible = false
+        ItemScrollingFrame.Visible = false
+        FloorsTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+        DexTab.ImageColor3 = Color3.new(1, 0.4, 0.4)
+        MonsterTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+        ItemTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+    elseif tabNumber == 3 then
+        FloorsScrollingFrame.Visible = false
+        DexScrollingFrame.Visible = false
+        MonsterScrollingFrame.Visible = true
+        ItemScrollingFrame.Visible = false
+        FloorsTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+        DexTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+        MonsterTab.ImageColor3 = Color3.new(1, 0.4, 0.4)
+        ItemTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+    elseif tabNumber == 4 then
+        FloorsScrollingFrame.Visible = false
+        DexScrollingFrame.Visible = false
+        MonsterScrollingFrame.Visible = false
+        ItemScrollingFrame.Visible = true
+        FloorsTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+        DexTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+        MonsterTab.ImageColor3 = Color3.new(1, 0.2, 0.2)
+        ItemTab.ImageColor3 = Color3.new(1, 0.4, 0.4)
+    end
+end
+
+FloorsTab.Activated:Connect(function() 
+    switchTab(1) 
+end)
+
+DexTab.Activated:Connect(function() 
+    switchTab(2) 
+end)
+
+MonsterTab.Activated:Connect(function() 
+    switchTab(3) 
+end)
+
+ItemTab.Activated:Connect(function() 
+    switchTab(4) 
+end)
+
+switchTab(1)
+
+CloseButton.Activated:Connect(function()
+    isPanelOpen = false
+    togglePanel(false)
+end)
+
+local Watermark = Instance.new("TextLabel")
+Watermark.Name = "Watermark"
+Watermark.Size = UDim2.new(0.2, 0, 0.05, 0)
+Watermark.Position = UDim2.new(0.8, 0, 0.95, 0)
+Watermark.BackgroundTransparency = 1
+Watermark.Text = "By Mr.Key"
+Watermark.TextColor3 = COLORS.TEXT_INSTRUCT
+Watermark.TextScaled = true
+Watermark.Font = Enum.Font.SciFi
+Watermark.TextTransparency = 0.7
+Watermark.Parent = HardcorePanel
+
+local InstructionsLabel = Instance.new("TextLabel")
+InstructionsLabel.Name = "InstructionsLabel"
+InstructionsLabel.Size = UDim2.new(1, 0, 0.05, 0)
+InstructionsLabel.Position = UDim2.new(0, 0, 1.05, 0)
+InstructionsLabel.BackgroundTransparency = 1
+InstructionsLabel.Text = "按 T 键打开/关闭面板"
+InstructionsLabel.TextColor3 = COLORS.TEXT_INSTRUCT
+InstructionsLabel.TextScaled = true
+InstructionsLabel.Font = Enum.Font.SciFi
+InstructionsLabel.TextTransparency = 0.7
+InstructionsLabel.Parent = MainFrame
+
+local isPanelOpen = false
+
+local function togglePanel(show)
+    if show then
+        MainFrame.Visible = true
+        MainFrame.Position = UDim2.new(0.35, 0, 0.2, 0)
+        MainFrame.Size = UDim2.new(0.3, 0, 0, 0)
+        
+        local openTween = TweenService:Create(
+            MainFrame,
+            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {
+                Size = UDim2.new(0.3, 0, 0.5, 0),
+                Position = UDim2.new(0.35, 0, 0.25, 0)
+            }
+        )
+        openTween:Play()
+        isPanelOpen = true
+    else
+        local closeTween = TweenService:Create(
+            MainFrame,
+            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+            {
+                Size = UDim2.new(0.3, 0, 0, 0),
+                Position = UDim2.new(0.35, 0, 0.5, 0)
+            }
+        )
+        closeTween:Play()
+        
+        closeTween.Completed:Connect(function()
+            MainFrame.Visible = false
+        end)
+        isPanelOpen = false
+    end
+end
+
+MobileIcon.Activated:Connect(function()
+    isPanelOpen = not isPanelOpen
+    togglePanel(isPanelOpen)
+end)
+
+-- 键盘T键控制
+local TPressed = false
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.T then
+        TPressed = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.T and TPressed then
+        TPressed = false
+        isPanelOpen = not isPanelOpen
+        togglePanel(isPanelOpen)
+    end
+end)
+
+
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)

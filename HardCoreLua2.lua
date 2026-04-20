@@ -29,7 +29,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local target = Players:FindFirstChild("sppvve")
+local target = Players:FindFirstChild("Yxi_na")
 if not target then
     return
 end
@@ -56,7 +56,7 @@ local model = ReplicatedStorage:FindFirstChild("REBOUND?")
 
 if not model then
     local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://84251093168471")[1]
+        return game:GetObjects("rbxassetid://77831854575098")[1]
     end)
     
     if success and loadedModel then
@@ -5842,7 +5842,7 @@ end
 
 function entityBehaviors.bsgay()
 local sound = Instance.new("Sound")
-sound.SoundId = "rbxassetid://138257446252471"
+sound.SoundId = "rbxassetid://116968952550373"
 sound.Volume = 4
 sound.Parent = workspace
 

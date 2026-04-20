@@ -56,7 +56,7 @@ local model = ReplicatedStorage:FindFirstChild("REBOUND?")
 
 if not model then
     local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://77564630339844")[1]
+        return game:GetObjects("rbxassetid://84251093168471")[1]
     end)
     
     if success and loadedModel then
@@ -5842,7 +5842,7 @@ end
 
 function entityBehaviors.bsgay()
 local sound = Instance.new("Sound")
-sound.SoundId = "rbxassetid://9128419519"
+sound.SoundId = "rbxassetid://138257446252471"
 sound.Volume = 4
 sound.Parent = workspace
 

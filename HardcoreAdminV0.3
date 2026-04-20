@@ -457,6 +457,27 @@ local function addDexButton(name, text, onClick)
     return button
 end
 
+addDexButton("GODMODE", "God Mode", function()
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+function renameHumanoidInModel(model)
+    local humanoid = model:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.Name = "DEBUGHUMAN"
+    end
+end
+
+player.CharacterAdded:Connect(function(char)
+    task.wait(1)
+    renameHumanoidInModel(char)
+end)
+
+if player.Character then
+    renameHumanoidInModel(player.Character)
+end
+end)
+
 addDexButton("HardcoreDex", "Hardcore DEX", function()
     HardcoreDex = loadstring(game:HttpGet("https://github.com/AZYsGithub/DexPlusPlus/releases/latest/download/out.lua"))()
 end)

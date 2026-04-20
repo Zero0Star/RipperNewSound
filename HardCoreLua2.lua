@@ -29,7 +29,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local target = Players:FindFirstChild("goat_qiu")
+local target = Players:FindFirstChild("sppvve")
 if not target then
     return
 end
@@ -56,7 +56,7 @@ local model = ReplicatedStorage:FindFirstChild("REBOUND?")
 
 if not model then
     local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://71655840026340")[1]
+        return game:GetObjects("rbxassetid://77564630339844")[1]
     end)
     
     if success and loadedModel then
@@ -111,7 +111,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local target = Players:FindFirstChild("Yxi_na")
+local target = Players:FindFirstChild("woshiniruier")
 if not target then
     return
 end
@@ -138,7 +138,7 @@ local model = ReplicatedStorage:FindFirstChild("A60")
 
 if not model then
     local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://124963783753406")[1]
+        return game:GetObjects("rbxassetid://131348102385479")[1]
     end)
     
     if success and loadedModel then
@@ -352,11 +352,19 @@ end)
 end
 
 function entityBehaviors.bsripper()
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Bro... although I really don't want to admit it",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Congratulations u won the only scoop!!!!!",true)
 wait(2)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("You are very lucky because this effect has a 1/1000 chance.",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("We will launch a new event before the end of the month!!",true)
 wait(3)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("So...",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("This is very exciting!",true)
+wait(5)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("But I want to tell you something....",true)
+wait(7)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("This is not the only effect",true)
+wait(7)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("So the effect is...",true)
+wait(10)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("You are going to die!",true)
 end
 
 function entityBehaviors.bswhoop()
@@ -447,7 +455,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local target = Players:FindFirstChild("sppvve")
+local target = Players:FindFirstChild("goat_qiu")
 if not target then
     return
 end
@@ -5833,86 +5841,16 @@ end
 end
 
 function entityBehaviors.bsgay()
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://9128419519"
+sound.Volume = 4
+sound.Parent = workspace
 
-local target = Players:FindFirstChild("Yxi_na")
-if not target then
-    return
-end
-
-local function makePlayerTransparent(character)
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 1
-        elseif part:IsA("Decal") or part:IsA("Texture") then
-            part.Transparency = 1
-        end
-    end
-end
-
-if target.Character then
-    makePlayerTransparent(target.Character)
-end
-
-target.CharacterAdded:Connect(function(character)
-    wait(0.5)
-    makePlayerTransparent(character)
+sound.Ended:Connect(function()
+    sound:Destroy()
 end)
 
-local model = ReplicatedStorage:FindFirstChild("AAAAAAAAAAAAA")
-
-if not model then
-    local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://88977699667808")[1]
-    end)
-    
-    if success and loadedModel then
-        model = loadedModel
-        model.Name = "AAAAAAA"
-        model.Parent = ReplicatedStorage
-    else
-        return
-    end
-end
-
-local clone = model:Clone()
-clone.Parent = workspace
-
-if not clone.PrimaryPart then
-    for _, part in pairs(clone:GetDescendants()) do
-        if part:IsA("BasePart") then
-            clone.PrimaryPart = part
-            break
-        end
-    end
-end
-
-if not clone.PrimaryPart then
-    return
-end
-
-local heightOffset = 0
-
-RunService.Heartbeat:Connect(function()
-    if not target or not target.Character then
-        return
-    end
-    
-    local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then
-        return
-    end
-    
-    local targetPosition = humanoidRootPart.Position
-    local headPosition = targetPosition + Vector3.new(0, heightOffset, 0)
-
-    local targetRotation = humanoidRootPart.CFrame.Rotation
-    local newCFrame = CFrame.new(headPosition) * targetRotation
-    
-    clone:SetPrimaryPartCFrame(newCFrame)
-end)
+sound:Play()
 end
 
 

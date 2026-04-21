@@ -105,7 +105,7 @@ local function createUI()
         sprintButton.Name = "SprintButton"
         sprintButton.Parent = mobileGUI
         sprintButton.Size = UDim2.new(0.25, 0, 0.2, 0)
-        sprintButton.Position = UDim2.new(0.6, 0, 0.74, 0)
+        sprintButton.Position = UDim2.new(0.8, 0, 0.25, 0)
         sprintButton.Image = "rbxassetid://111292680671790"
         sprintButton.BackgroundTransparency = 1 
         sprintButton.BorderSizePixel = 0

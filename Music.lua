@@ -699,15 +699,6 @@ task.spawn(function()
         if not success2 or not jumpscare then
             return
         end
-
-        local a90 = jumpscare:FindFirstChild("Jumpscare_A90")
-        if a90 then
-            local face = a90:FindFirstChild("Face")
-            if face then face.Image = "rbxassetid://12635832722" end
-            
-            local faceAngry = a90:FindFirstChild("FaceAngry")
-            if faceAngry then faceAngry.Image = "rbxassetid://12635955412" end
-        end
         
         local ambush = jumpscare:FindFirstChild("Jumpscare_Ambush")
         if ambush and ambush:FindFirstChild("ImageLabel") then
@@ -741,5 +732,5 @@ task.spawn(function()
 end)
 Players.PlayerAdded:Connect(UpdateUI)
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingMusic... Doors HardCore V9.9 By Mr.key & HeavenNow :)"
+hint.Text = "LoadingMusic... Doors HardCore V10 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)

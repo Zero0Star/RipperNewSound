@@ -1007,8 +1007,7 @@ addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
         
         return keyParts
     end
-    
-    -- 为门查找可高亮的部件
+
     local function findDoorPart(door)
         if not door then return nil end
         
@@ -1030,14 +1029,12 @@ addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
         
         return nil
     end
-    
-    -- 创建高亮效果
+
     local function createHighlight(target, name)
         if not target or not target:IsA("BasePart") then
             return nil
         end
-        
-        -- 检查是否已有高亮
+
         if target:FindFirstChild(name .. "Highlight") then
             return target:FindFirstChild(name .. "Highlight")
         end
@@ -1055,12 +1052,11 @@ addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
         state.highlights[highlight] = true
         return highlight
     end
-    
-    -- 扫描并高亮当前所有钥匙和门
+
     local function scanAndHighlightAll()
         for _, room in pairs(CurrentRooms:GetChildren()) do
             if room:IsA("Model") then
-                -- 查找并高亮钥匙的所有部件
+
                 local assets = room:FindFirstChild("Assets")
                 if assets then
                     local keyObtain = assets:FindFirstChild("KeyObtain")
@@ -1071,8 +1067,7 @@ addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
                         end
                     end
                 end
-                
-                -- 查找并高亮门
+
                 local door = room:FindFirstChild("Door")
                 if door then
                     local doorPart = findDoorPart(door)
@@ -1083,15 +1078,13 @@ addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
             end
         end
     end
-    
-    -- 监听新房间添加
+
     local function startMonitoring()
-        -- 监听新房间添加
+
         local roomAddedConnection = CurrentRooms.ChildAdded:Connect(function(room)
             if state.isEnabled and room:IsA("Model") then
                 task.wait(0.3)
-                
-                -- 扫描钥匙
+
                 local assets = room:FindFirstChild("Assets")
                 if assets then
                     local keyObtain = assets:FindFirstChild("KeyObtain")
@@ -1102,8 +1095,7 @@ addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
                         end
                     end
                 end
-                
-                -- 扫描门
+
                 local door = room:FindFirstChild("Door")
                 if door then
                     local doorPart = findDoorPart(door)
@@ -1115,11 +1107,10 @@ addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
         end)
         
         table.insert(state.connections, roomAddedConnection)
-        
-        -- 监听现有房间变化
+
         for _, room in pairs(CurrentRooms:GetChildren()) do
             if room:IsA("Model") then
-                -- 监听Assets变化
+
                 local assetsConnection
                 assetsConnection = room:GetPropertyChangedSignal("Assets"):Connect(function()
                     if state.isEnabled and room:FindFirstChild("Assets") then
@@ -1138,8 +1129,7 @@ addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
                 end)
                 
                 table.insert(state.connections, assetsConnection)
-                
-                -- 监听Door变化
+
                 local doorConnection
                 doorConnection = room:GetPropertyChangedSignal("Door"):Connect(function()
                     if state.isEnabled and room:FindFirstChild("Door") then
@@ -1155,18 +1145,15 @@ addDexButton("KeyDoorHighlight", "KeyDoorHighLight", function()
             end
         end
     end
-    
-    -- 清理所有高亮和连接
+
     local function cleanupAll()
-        -- 清理高亮效果
         for highlight, _ in pairs(state.highlights) do
             if highlight and highlight.Parent then
                 highlight:Destroy()
             end
         end
         state.highlights = {}
-        
-        -- 清理连接
+
         for _, connection in ipairs(state.connections) do
             if connection and typeof(connection) == "RBXScriptConnection" then
                 connection:Disconnect()
@@ -1420,6 +1407,34 @@ Event:FireServer(
     }
 )
 end)
+
+addMonsterButton("Fluster11", "Fluster", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "14",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "14",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
 addMonsterButton("INGOA1", "Indescribable GodOne", function()
 local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
 Event:FireServer(
@@ -1716,7 +1731,34 @@ Event:FireServer(
 )
 end)
 
-addMonsterButton("TUMA", "TUMA", function()
+addMonsterButton("SMILE1S", "???", function()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "Spawn Custom Entity",
+    {
+        ["Fog Image ID"] = "9712725118",
+        ["Face Image ID"] = "9712725118",
+        ["Fog Color"] = Color3.new(0, 0, 0),
+        Rebounds = 0,
+        ["Far Sound"] = {
+            Pitch = 1,
+            AudioId = "16",
+            Speed = 0
+        },
+        ["Light Color"] = Color3.new(0, 0, 0),
+        Speed = 0,
+        ["Close Sound"] = {
+            Pitch = 1,
+            AudioId = "16",
+            Speed = 0
+        },
+        Delay = 100,
+        Damage = 0
+    }
+)
+end)
+
+addMonsterButton("TUMA", "Threat", function()
 local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
 Event:FireServer(
     "Spawn Custom Entity",

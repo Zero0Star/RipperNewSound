@@ -1698,6 +1698,649 @@ spawn(function()
 end)
 end
 
+function entityBehaviors.MOVERS()
+local MainUI = game:GetObjects("rbxassetid://95819908379371")[1]
+MainUI.Parent = game.Players.LocalPlayer.PlayerGui
+local plr = game.Players.LocalPlayer
+local arg1 = game.Workspace.CurrentCamera
+local Jumpscare_Mover = MainUI.Jumpscare.Jumpscare_A90
+Jumpscare_Mover.BackgroundTransparency = 1
+Jumpscare_Mover.Face.Visible = true
+Jumpscare_Mover.FaceAngry.Visible = false
+Jumpscare_Mover.Static.Visible = true
+Jumpscare_Mover.Static2.Visible = true
+Jumpscare_Mover.Static.ImageTransparency = 1
+Jumpscare_Mover.Static2.ImageTransparency = 1
+Jumpscare_Mover.Face.Image = "rbxassetid://119177305867863"
+Jumpscare_Mover.FaceAngry.Image = "rbxassetid://77341058717266"
+
+Jumpscare_Mover.Face.ImageColor3 = Color3.new(0, 0, 0)
+Jumpscare_Mover.Face.Position = UDim2.new(0.5, 0, 0.5, 0)
+Jumpscare_Mover.Visible = true
+
+Jumpscare_Mover.BackgroundColor3 = Color3.new(0, 0, 0)
+Jumpscare_Mover.Static.ImageColor3 = Color3.new(0, 0, 0)
+Jumpscare_Mover.Static2.ImageColor3 = Color3.new(0, 0, 0)
+
+local spawnSound = Instance.new("Sound")
+spawnSound.SoundId = "rbxassetid://138085276131551"
+spawnSound.Volume = 8
+spawnSound.Parent = Jumpscare_Mover
+spawnSound:Play()
+
+local jumpscareSound = Instance.new("Sound")
+jumpscareSound.SoundId = "rbxassetid://139300381946118"
+jumpscareSound.Volume = 8
+jumpscareSound.Parent = Jumpscare_Mover
+
+local fadeTime = 5
+local fadeSteps = 50
+local fadeInterval = fadeTime / fadeSteps
+
+for i = 0, 1, 1/fadeSteps do
+    Jumpscare_Mover.Face.ImageTransparency = 1 - i
+    Jumpscare_Mover.Static.ImageTransparency = 1 - i
+    Jumpscare_Mover.Static2.ImageTransparency = 1 - i
+    Jumpscare_Mover.BackgroundTransparency = 1 - i
+    task.wait(fadeInterval)
+end
+
+Jumpscare_Mover.Face.ImageTransparency = 0
+Jumpscare_Mover.Static.ImageTransparency = 0.8
+Jumpscare_Mover.Static2.ImageTransparency = 0.8
+Jumpscare_Mover.BackgroundTransparency = 0
+Jumpscare_Mover.Face.ImageColor3 = Color3.new(1, 1, 1)
+
+local isMoving = false
+local wasMoving = false
+local LookVector = arg1.CFrame.LookVector
+local isActive = true
+local stopCheckTime = 0
+local lastMoveTime = 0
+local damageApplied = false
+
+local function applyDamage()
+    if damageApplied then return end
+    damageApplied = true
+    
+    plr.Character.Humanoid.Health -= 99
+    
+    local function TriggerDeathHint(DeathMessages, DeathCauseString)
+        spawn(function()
+            for _ = 1, 50 do
+                game:GetService("ReplicatedStorage").GameStats["Player_" .. game.Players.LocalPlayer.Name].Total.DeathCause.Value = DeathCauseString
+                firesignal(game:GetService("ReplicatedStorage").RemotesFolder.DeathHint.OnClientEvent, DeathMessages, "Yellow")
+                wait()
+            end
+        end)
+    end
+
+    TriggerDeathHint({
+        "嗯,又死了,你死于Mover",
+        "它非常讨厌A-90",
+        "出现时务必保持移动"
+    }, "Mover")
+end
+
+task.delay(0.2, function()
+    while isActive do
+        task.wait(0.03333333333333333)
+        Jumpscare_Mover.Static.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
+        Jumpscare_Mover.Static.Rotation = math.random(0, 1) * 180
+        Jumpscare_Mover.Static2.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
+        Jumpscare_Mover.Static2.Rotation = math.random(0, 1) * 180
+        Jumpscare_Mover.Face.Position = UDim2.new(0.5, 0, 0.49, math.random(-1, 1))
+        Jumpscare_Mover.FaceAngry.Position = UDim2.new(0.5 + math.random(-100, 100) / 50000, 0, 0.49 + math.random(-100, 100) / 30000, math.random(-1, 1))
+        local randint = math.random(0, 1)
+        Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, randint, randint)
+        
+        local currentMoving = false
+        if 0.4 < (LookVector - arg1.CFrame.LookVector).Magnitude then
+            currentMoving = true
+        end
+        if 0.4 < plr.Character.Humanoid.MoveDirection.Magnitude then
+            currentMoving = true
+        end
+        
+        if currentMoving then
+            isMoving = true
+            wasMoving = true
+            lastMoveTime = tick()
+        else
+            if wasMoving then
+                isActive = false
+                Jumpscare_Mover.Face.Image = "rbxassetid://77341058717266"
+                jumpscareSound:Play()
+                
+                task.wait(0.03333333333333333)
+                Jumpscare_Mover.Face.ImageColor3 = Color3.new(1, 0, 0)
+                Jumpscare_Mover.Static.ImageTransparency = 0
+                Jumpscare_Mover.Static2.ImageTransparency = 0.5
+                
+                task.wait(0.06666666666666667)
+                Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
+                Jumpscare_Mover.FaceAngry.Visible = true
+                
+                task.wait(0.06666666666666667)
+                Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
+                Jumpscare_Mover.Face.Visible = false
+                Jumpscare_Mover.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
+                
+                task.wait(0.75)
+                applyDamage()
+                
+                task.wait(0.1)
+                Jumpscare_Mover.FaceAngry.Visible = false
+                Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 1, 1)
+                Jumpscare_Mover.Static.ImageTransparency = 1
+                Jumpscare_Mover.Static2.ImageTransparency = 1
+                
+                task.wait(0.06666666666666667)
+                Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 0, 0)
+                
+                task.wait(0.06666666666666667)
+                Jumpscare_Mover.BackgroundColor3 = Color3.new(0, 0, 0)
+                
+                task.wait(0.06666666666666667)
+                break
+            end
+        end
+        
+        LookVector = arg1.CFrame.LookVector
+    end
+end)
+
+task.wait(5)
+
+if isActive then
+    if not wasMoving then
+        Jumpscare_Mover.Face.Image = "rbxassetid://77341058717266"
+        jumpscareSound:Play()
+        
+        task.wait(0.03333333333333333)
+        Jumpscare_Mover.Face.ImageColor3 = Color3.new(1, 0, 0)
+        Jumpscare_Mover.Static.ImageTransparency = 0
+        Jumpscare_Mover.Static2.ImageTransparency = 0.5
+        
+        task.wait(0.06666666666666667)
+        Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
+        Jumpscare_Mover.FaceAngry.Visible = true
+        
+        task.wait(0.06666666666666667)
+        Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
+        Jumpscare_Mover.Face.Visible = false
+        Jumpscare_Mover.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
+        
+        task.wait(0.75)
+        applyDamage()
+        
+        task.wait(0.1)
+        Jumpscare_Mover.FaceAngry.Visible = false
+        Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 1, 1)
+        Jumpscare_Mover.Static.ImageTransparency = 1
+        Jumpscare_Mover.Static2.ImageTransparency = 1
+        
+        task.wait(0.06666666666666667)
+        Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 0, 0)
+        
+        task.wait(0.06666666666666667)
+        Jumpscare_Mover.BackgroundColor3 = Color3.new(0, 0, 0)
+        
+        task.wait(0.06666666666666667)
+    else
+        spawnSound:Stop()
+        Jumpscare_Mover.BackgroundTransparency = 1
+        Jumpscare_Mover.Face.ImageTransparency = 1
+        Jumpscare_Mover.Static.ImageTransparency = 1
+        Jumpscare_Mover.Static2.ImageTransparency = 1
+    end
+end
+
+isActive = false
+Jumpscare_Mover.Visible = false
+task.wait(2)
+MainUI:Destroy()
+end
+function entityBehaviors.SMILEWH()
+function GetRoom()
+    return workspace.CurrentRooms:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local function LoadCustomInstance(source)
+    local model
+    
+    if tonumber(source) then
+        local success, result = pcall(function()
+            return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+        end)
+        if success and result then
+            model = result
+        end
+    end
+    
+    if model then
+        model.Parent = workspace
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            end
+        end
+    end
+    
+    return model
+end
+
+local function Damage(Amount)
+    local Players = game:GetService("Players")
+
+    local Player = Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    local Humanoid = Character:WaitForChild("Humanoid")
+    
+    local DamageAmount = (Amount / 100) * Humanoid.MaxHealth
+    local NewHealth = Humanoid.Health - DamageAmount
+    
+    if NewHealth <= 0 then
+        Player:SetAttribute("Alive", false)
+        replicatesignal(Player.Kill)
+    else
+        Humanoid.Health = NewHealth
+    end
+end
+
+local s = LoadCustomInstance(139610986522701)
+if not s then
+    return
+end
+
+local targetCFrame
+local isModel = s:IsA("Model")
+local entityPart
+
+if isModel then
+    local room = GetRoom()
+    if not room then
+        return
+    end
+    
+    local roomEntrance = room:WaitForChild("RoomEntrance")
+    targetCFrame = roomEntrance.CFrame * CFrame.new(0, 0, -25)
+    local roomBaseY = roomEntrance.Position.Y
+    
+    if s.PrimaryPart then
+        s:SetPrimaryPartCFrame(targetCFrame + Vector3.new(0, 15, 0))
+    else
+        local primary = s:FindFirstChildWhichIsA("BasePart")
+        if primary then
+            s.PrimaryPart = primary
+            s:SetPrimaryPartCFrame(targetCFrame + Vector3.new(0, 15, 0))
+        end
+    end
+    entityPart = s.PrimaryPart
+else
+    entityPart = s:FindFirstChildWhichIsA("BasePart")
+    if entityPart then
+        local room = GetRoom()
+        if not room then
+            return
+        end
+        
+        local roomEntrance = room:WaitForChild("RoomEntrance")
+        targetCFrame = roomEntrance.CFrame * CFrame.new(0, 0, -25)
+        local roomBaseY = roomEntrance.Position.Y
+        
+        entityPart.CFrame = targetCFrame + Vector3.new(0, 15, 0)
+        if entityPart:FindFirstChild("Part") then
+            entityPart.Part.CFrame = entityPart.CFrame
+        end
+    end
+end
+
+if not targetCFrame or not entityPart then
+    return
+end
+
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://139637448871564"
+sound.Volume = 1
+sound.Parent = workspace
+sound:Play()
+
+local countdownEnded = false
+local roomChanged = false
+local startY = targetCFrame.Y + 15
+local targetY = targetCFrame.Y + 3
+local dropDuration = 3
+local dropStartTime = tick()
+
+spawn(function()
+    while not roomChanged do
+        local elapsedTime = tick() - dropStartTime
+        local progress = math.min(elapsedTime / dropDuration, 1)
+        local currentY = startY + (targetY - startY) * (progress * progress * (3 - 2 * progress))
+        
+        if isModel and s.PrimaryPart then
+            local pos = targetCFrame.Position
+            s:SetPrimaryPartCFrame(CFrame.new(pos.X, currentY, pos.Z))
+        elseif entityPart then
+            local pos = targetCFrame.Position
+            entityPart.CFrame = CFrame.new(pos.X, currentY, pos.Z)
+        end
+        
+        if progress >= 1 then
+            break
+        end
+        
+        game:GetService("RunService").Heartbeat:Wait()
+    end
+end)
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CountdownGui"
+screenGui.Parent = playerGui
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+
+local textLabel = Instance.new("TextLabel")
+textLabel.Size = UDim2.new(1, 0, 0.1, 0)
+textLabel.Position = UDim2.new(0, 0, 0.1, 0)
+textLabel.BackgroundTransparency = 1
+textLabel.TextColor3 = Color3.new(1, 0.2, 0.2)
+textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+textLabel.TextStrokeTransparency = 0
+textLabel.TextScaled = true
+textLabel.Text = "20"
+textLabel.Parent = screenGui
+
+local fontSuccess, customFont = pcall(function()
+    return Font.fromId(12187372382)
+end)
+
+if fontSuccess and customFont then
+    textLabel.FontFace = customFont
+else
+    textLabel.Font = Enum.Font.GothamBlack
+end
+
+local countdownTask
+countdownTask = spawn(function()
+    for i = 20, 1, -1 do
+        if roomChanged then
+            break
+        end
+        textLabel.Text = tostring(i)
+        local progress = (20 - i) / 20
+        textLabel.TextColor3 = Color3.new(1, 1 - progress * 0.8, 1 - progress * 0.8)
+        wait(1)
+    end
+    if not roomChanged then
+        countdownEnded = true
+        textLabel.Text = "0"
+        textLabel.TextColor3 = Color3.new(1, 0, 0)
+        wait(0.5)
+    end
+    if screenGui and screenGui.Parent then
+        screenGui:Destroy()
+    end
+end)
+
+local roomChangeCount = 0
+local connection
+connection = game.ReplicatedStorage.GameData.LatestRoom.Changed:Connect(function()
+    roomChangeCount = roomChangeCount + 1
+    if roomChangeCount == 3 then
+        roomChanged = true
+        if connection then 
+            connection:Disconnect() 
+        end
+        if s and s.Parent then
+            s:Destroy()
+        end
+        if sound then
+            sound:Stop()
+            sound:Destroy()
+        end
+        if countdownTask then
+            coroutine.close(countdownTask)
+        end
+        if screenGui and screenGui.Parent then
+            screenGui:Destroy()
+        end
+    end
+end)
+
+spawn(function()
+    wait(20.5)
+    if not roomChanged and countdownEnded then
+        replicatesignal(player.Kill)
+    end
+end)
+end
+
+function entityBehaviors.SMILEWH2()
+function GetRoom()
+    return workspace.CurrentRooms:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local function LoadCustomInstance(source)
+    local model
+    
+    if tonumber(source) then
+        local success, result = pcall(function()
+            return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+        end)
+        if success and result then
+            model = result
+        end
+    end
+    
+    if model then
+        model.Parent = workspace
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            end
+        end
+    end
+    
+    return model
+end
+
+local function Damage(Amount)
+    local Players = game:GetService("Players")
+
+    local Player = Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    local Humanoid = Character:WaitForChild("Humanoid")
+    
+    local DamageAmount = (Amount / 100) * Humanoid.MaxHealth
+    local NewHealth = Humanoid.Health - DamageAmount
+    
+    if NewHealth <= 0 then
+        Player:SetAttribute("Alive", false)
+        replicatesignal(Player.Kill)
+    else
+        Humanoid.Health = NewHealth
+    end
+end
+
+local s = LoadCustomInstance(139610986522701)
+if not s then
+    return
+end
+
+local targetCFrame
+local isModel = s:IsA("Model")
+local entityPart
+
+if isModel then
+    local room = GetRoom()
+    if not room then
+        return
+    end
+    
+    local roomEntrance = room:WaitForChild("RoomEntrance")
+    targetCFrame = roomEntrance.CFrame * CFrame.new(0, 0, -25)
+    local roomBaseY = roomEntrance.Position.Y
+    
+    if s.PrimaryPart then
+        s:SetPrimaryPartCFrame(targetCFrame + Vector3.new(0, 15, 0))
+    else
+        local primary = s:FindFirstChildWhichIsA("BasePart")
+        if primary then
+            s.PrimaryPart = primary
+            s:SetPrimaryPartCFrame(targetCFrame + Vector3.new(0, 15, 0))
+        end
+    end
+    entityPart = s.PrimaryPart
+else
+    entityPart = s:FindFirstChildWhichIsA("BasePart")
+    if entityPart then
+        local room = GetRoom()
+        if not room then
+            return
+        end
+        
+        local roomEntrance = room:WaitForChild("RoomEntrance")
+        targetCFrame = roomEntrance.CFrame * CFrame.new(0, 0, -25)
+        local roomBaseY = roomEntrance.Position.Y
+        
+        entityPart.CFrame = targetCFrame + Vector3.new(0, 15, 0)
+        if entityPart:FindFirstChild("Part") then
+            entityPart.Part.CFrame = entityPart.CFrame
+        end
+    end
+end
+
+if not targetCFrame or not entityPart then
+    return
+end
+
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://139637448871564"
+sound.Volume = 1
+sound.Parent = workspace
+sound:Play()
+
+local countdownEnded = false
+local roomChanged = false
+local startY = targetCFrame.Y + 15
+local targetY = targetCFrame.Y + 3
+local dropDuration = 3
+local dropStartTime = tick()
+
+spawn(function()
+    while not roomChanged do
+        local elapsedTime = tick() - dropStartTime
+        local progress = math.min(elapsedTime / dropDuration, 1)
+        local currentY = startY + (targetY - startY) * (progress * progress * (3 - 2 * progress))
+        
+        if isModel and s.PrimaryPart then
+            local pos = targetCFrame.Position
+            s:SetPrimaryPartCFrame(CFrame.new(pos.X, currentY, pos.Z))
+        elseif entityPart then
+            local pos = targetCFrame.Position
+            entityPart.CFrame = CFrame.new(pos.X, currentY, pos.Z)
+        end
+        
+        if progress >= 1 then
+            break
+        end
+        
+        game:GetService("RunService").Heartbeat:Wait()
+    end
+end)
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CountdownGui"
+screenGui.Parent = playerGui
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+
+local textLabel = Instance.new("TextLabel")
+textLabel.Size = UDim2.new(1, 0, 0.1, 0)
+textLabel.Position = UDim2.new(0, 0, 0.1, 0)
+textLabel.BackgroundTransparency = 1
+textLabel.TextColor3 = Color3.new(1, 0.2, 0.2)
+textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+textLabel.TextStrokeTransparency = 0
+textLabel.TextScaled = true
+textLabel.Text = "20"
+textLabel.Parent = screenGui
+
+local fontSuccess, customFont = pcall(function()
+    return Font.fromId(12187372382)
+end)
+
+if fontSuccess and customFont then
+    textLabel.FontFace = customFont
+else
+    textLabel.Font = Enum.Font.GothamBlack
+end
+
+local countdownTask
+countdownTask = spawn(function()
+    for i = 20, 1, -1 do
+        if roomChanged then
+            break
+        end
+        textLabel.Text = tostring(i)
+        local progress = (20 - i) / 20
+        textLabel.TextColor3 = Color3.new(1, 1 - progress * 0.8, 1 - progress * 0.8)
+        wait(1)
+    end
+    if not roomChanged then
+        countdownEnded = true
+        textLabel.Text = "0"
+        textLabel.TextColor3 = Color3.new(1, 0, 0)
+        wait(0.5)
+    end
+    if screenGui and screenGui.Parent then
+        screenGui:Destroy()
+    end
+end)
+
+local roomChangeCount = 0
+local connection
+connection = game.ReplicatedStorage.GameData.LatestRoom.Changed:Connect(function()
+    roomChangeCount = roomChangeCount + 1
+    if roomChangeCount == 1 then
+        roomChanged = true
+        if connection then 
+            connection:Disconnect() 
+        end
+        if s and s.Parent then
+            s:Destroy()
+        end
+        if sound then
+            sound:Stop()
+            sound:Destroy()
+        end
+        if countdownTask then
+            coroutine.close(countdownTask)
+        end
+        if screenGui and screenGui.Parent then
+            screenGui:Destroy()
+        end
+    end
+end)
+end
+
+spawn(function()
+    wait(20.5)
+    if not roomChanged and countdownEnded then
+        replicatesignal(player.Kill)
+    end
+end)
+
 function entityBehaviors.munci1()
 local entity = spawner.Create({Entity = {Name = "Angry Munci",Asset = "74683697319835",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,
 Range = 100,Values = {10, 30, 0.1, 1}},Movement = {Speed = 1000,Delay = 5,Reversed = false},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},
@@ -1731,6 +2374,143 @@ local entityModel = entity.Model
 	end
 end)
 entity:Run()
+end
+
+function entityBehaviors.FLU()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local function Damage(Amount)
+    local Player = Players.LocalPlayer
+    local Character = Player.Character
+    if not Character then
+        return
+    end
+    
+    local Humanoid = Character:FindFirstChild("Humanoid")
+    if not Humanoid then
+        return
+    end
+    
+    local NewHealth = Humanoid.Health - Amount
+    
+    if NewHealth <= 0 then
+        Player:SetAttribute("Alive", false)
+        if game.ReplicatedStorage:FindFirstChild("Kill") then
+            game.ReplicatedStorage.Kill:FireServer(Player)
+        end
+    else
+        Humanoid.Health = NewHealth
+    end
+end
+
+local function GetRoom()
+    return workspace.CurrentRooms:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local function LoadCustomInstance(source)
+    local model
+    
+    if tonumber(source) then
+        local success, result = pcall(function()
+            return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+        end)
+        if success and result then
+            model = result
+        end
+    end
+    
+    if model then
+        model.Parent = workspace
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            end
+        end
+    end
+    
+    return model
+end
+
+local currentRoom = GetRoom()
+if not currentRoom then
+    return
+end
+
+local s = LoadCustomInstance(91070303750730)
+if not s then
+    return
+end
+
+local modelPosition
+if s:IsA("Model") then
+    if s.PrimaryPart then
+        s:SetPrimaryPartCFrame(currentRoom:WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 0, -40))
+        modelPosition = s.PrimaryPart.Position
+    else
+        local primary = s:FindFirstChildWhichIsA("BasePart")
+        if primary then
+            s.PrimaryPart = primary
+            s:SetPrimaryPartCFrame(currentRoom:WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 0, -40))
+            modelPosition = primary.Position
+        end
+    end
+else
+    s.CFrame = currentRoom:WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 0, -40)
+    modelPosition = s.Position
+end
+
+local lastCheckTime = 0
+local damageLoop = RunService.Heartbeat:Connect(function(deltaTime)
+    if not s or not s.Parent then
+        damageLoop:Disconnect()
+        return
+    end
+    
+    lastCheckTime = lastCheckTime + deltaTime
+    if lastCheckTime < 1 then
+        return
+    end
+    lastCheckTime = 0
+    
+    local player = Players.LocalPlayer
+    local character = player.Character
+    if not character then
+        return
+    end
+    
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then
+        return
+    end
+    
+    local distance = (humanoidRootPart.Position - modelPosition).Magnitude
+    if distance > 18 then
+        return
+    end
+    
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {s}
+    raycastParams.IgnoreWater = true
+    
+    local raycastResult = workspace:Raycast(
+        modelPosition,
+        (humanoidRootPart.Position - modelPosition).Unit * 18,
+        raycastParams
+    )
+    
+    if raycastResult then
+        local hitPart = raycastResult.Instance
+        if hitPart and hitPart:IsDescendantOf(character) then
+            Damage(20)
+        end
+    end
+end)
+
+game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+damageLoop:Disconnect()
+s:Destroy()
 end
 
 function entityBehaviors.CLCR()
@@ -2061,6 +2841,8 @@ end
 wait(2)
 end
 
+
+
 local entityConfig = {
     ["rbxassetid://1"]  = entityBehaviors.SA90,
     ["rbxassetid://2"]  = entityBehaviors.WH1T3,
@@ -2073,7 +2855,11 @@ local entityConfig = {
     ["rbxassetid://9"]  = entityBehaviors.dread,
     ["rbxassetid://10"]  = entityBehaviors.DEPTH1,
     ["rbxassetid://11"]  = entityBehaviors.coomon,
-    ["rbxassetid://13"]  = entityBehaviors.CLCR, 
+    ["rbxassetid://13"]  = entityBehaviors.CLCR,
+    ["rbxassetid://14"]  = entityBehaviors.FLU,
+    ["rbxassetid://15"]  = entityBehaviors.MOVERS,
+    ["rbxassetid://16"]  = entityBehaviors.SMILEWH,
+    ["rbxassetid://17"]  = entityBehaviors.SMILEWH2,  
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

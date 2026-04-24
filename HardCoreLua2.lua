@@ -5440,7 +5440,7 @@ function CustomGitSound(soundlink, vol, filename)
     return sound
 end
 
-local testModelId = 109454100989014
+local testModelId = 125704500942256
 
 local function GetMaxExistingRoom()
     local rooms = workspace.CurrentRooms:GetChildren()
@@ -6091,5 +6091,5 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingTwo... Doors HardCore V9.9 By Mr.key & HeavenNow :)"
+hint.Text = "LoadingTwo... Doors HardCore V10 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 2)

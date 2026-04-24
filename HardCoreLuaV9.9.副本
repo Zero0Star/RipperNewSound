@@ -40,7 +40,7 @@ OS.Thickness = 6
 OS.Parent = MC
 local TL = Instance.new("TextLabel")
 TL.Name = "Title"
-TL.Text = "HardCore V9.9"
+TL.Text = "HardCore V10"
 TL.FontFace = CF
 TL.TextSize = 32
 TL.TextColor3 = Color3.fromRGB(255, 240, 230)
@@ -62,7 +62,7 @@ TI.Name = "TopImage"
 TI.Size = UDim2.new(0.9, 0, 0.3, 0)
 TI.Position = UDim2.new(0.05, 0, 0.12, 0)
 TI.BackgroundTransparency = 1
-TI.Image = "rbxassetid://104518262998983"
+TI.Image = "rbxassetid://93821404325686"
 TI.ScaleType = Enum.ScaleType.Crop
 TI.Parent = MC
 local C2 = Instance.new("UICorner")
@@ -95,7 +95,7 @@ MB.Position = UDim2.new(0.05, 0, 0.1, 0)
 MB.BackgroundColor3 = Color3.fromRGB(255, 222, 189)
 MB.BackgroundTransparency = 0.1
 MB.AutoButtonColor = true
-MB.Text = "(New)Mines"
+MB.Text = "Mines"
 MB.FontFace = CF
 MB.TextColor3 = Color3.fromRGB(80, 60, 40)
 MB.Parent = BC
@@ -329,6 +329,7 @@ PB.MouseButton1Click:Connect(function()
         "HardcoreOne",
         "HardcoreTwo", 
         "HardcoreITEM",
+        "HardcoreFour",
         "HardcoremUSIC"
     }
     local found = {}
@@ -349,10 +350,10 @@ PB.MouseButton1Click:Connect(function()
             
             pcall(function()
                 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-                    .caption("HardCore Loading: " .. count .. "/4", true)
+                    .caption("HardCore Loading: " .. count .. "/5", true)
             end)
             
-            if count == 4 then
+            if count == 5 then
                 isDone = true
                 if connection then
                     connection:Disconnect()
@@ -361,7 +362,7 @@ PB.MouseButton1Click:Connect(function()
                 
                 pcall(function()
                     require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-                        .caption("HardCore is all loaded!", true)
+                        .caption("HardCoreHotel is all loaded!", true)
                 end)
             end
         end
@@ -384,6 +385,7 @@ PB.MouseButton1Click:Connect(function()
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua2.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/Music.lua?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/Item.lua?raw=true"
         }
         for _, url in ipairs(scriptUrls) do

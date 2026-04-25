@@ -22,6 +22,7 @@ local function CustomGitSound(soundlink, vol, filename)
 end
 local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
+local dgmusic = "https://github.com/eoyoustme/rebouna/blob/main/HesBehindYouRUN.mp3?raw=true"
 local entityBehaviors = {}
 
 function entityBehaviors.SA90()
@@ -1390,7 +1391,7 @@ coroutine.wrap(function()
 end)()
 local entity = spawner.Create({Entity = {Name = "Depth",Asset = "93356386746722",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,
 Range = 100,Values = {10, 30, 0.1, 1}},Movement = {Speed = 180,Delay = 2,Reversed = false},Rebounding = {Enabled = true,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},
-Damage = {Enabled = false,Range = 99,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {
+Damage = {Enabled = true,Range = 99,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {
 Type = "Guiding",Hints = {"你死于Depth", "当灯光变蓝时他会出现", "他会上锁当前房间的门", "所以务必尽快离开!"},Cause = "Depth"}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 local entityModel = entity.Model
@@ -2967,6 +2968,112 @@ achievementGiver({
     Reason = "Escape The HardCore Hotel.",
     Image = "rbxassetid://17412983060"
 })
+end
+
+function entityBehaviors.DeerGodTWO()
+local entity = spawner.Create({Entity = {Name = "Deer god",Asset = "94961532857273",HeightOffset = -0.8},Lights = {Flicker = {Enabled = true,Duration = 50},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 5, 0.1, 1}},Movement = {Speed = 25,Delay = 0,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 10,Amount = 200 },Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {
+                "It seems you are so unfortunate...", 
+                "You died by the Deer God", 
+                "That powerful force will drag you into the abyss.",
+                "The cross cannot guarantee your safety.",
+                "See you next time."},Cause = "Deer God"}})
+
+    entity:SetCallback("OnSpawned", function()
+        entityModel = entity.Model
+        if entityModel then
+            if not entityModel.PrimaryPart then
+                local primaryPart = entityModel:FindFirstChild("Main") or entityModel:FindFirstChildWhichIsA("BasePart")
+                if primaryPart then
+                    entityModel.PrimaryPart = primaryPart
+                end
+            end
+        end
+    
+        startChaseSystem()
+    end)
+    
+    entity:SetCallback("OnDespawning", function()
+    
+        if chaseConnection then
+            chaseConnection:Disconnect()
+            chaseConnection = nil
+        end
+    end)
+
+    entity:SetCallback("OnDamagePlayer", function(newHealth)
+        if newHealth == 0 then
+    
+            if chaseConnection then
+                chaseConnection:Disconnect()
+                chaseConnection = nil
+            end
+    
+            if entityModel and entityModel.PrimaryPart then
+                local currentPos = entityModel.PrimaryPart.Position
+                local forwardDir = entityModel.PrimaryPart.CFrame.LookVector
+                local targetPos = currentPos + forwardDir * 10
+                
+                entityModel:SetPrimaryPartCFrame(CFrame.new(currentPos, targetPos))
+            end
+        end
+    end)
+    
+    entity:SetCallback("OnRebounding", function(startOfRebound)
+        if not entityModel then return end
+        
+        local main = entityModel:FindFirstChild("Main")
+        if not main then return end
+        
+        local attachment = main:WaitForChild("Attachment")
+        local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+        local sounds = {
+            footsteps = main:WaitForChild("Footsteps"),
+            playSound = main:WaitForChild("PlaySound"),
+            switch = main:WaitForChild("Switch"),
+            switchBack = main:WaitForChild("SwitchBack")
+        }
+    
+        for _, c in attachment:GetChildren() do
+            c.Enabled = (not startOfRebound)
+        end
+        for _, c in AttachmentSwitch:GetChildren() do
+            c.Enabled = startOfRebound
+        end
+    
+        if startOfRebound == true then
+            sounds.footsteps.PlaybackSpeed = 0.35
+            sounds.playSound.PlaybackSpeed = 0.25
+            sounds.switch:Play()
+        else
+            sounds.footsteps.PlaybackSpeed = 0.25
+            sounds.playSound.PlaybackSpeed = 0.16
+            sounds.switchBack:Play()
+        end
+    end)
+
+    entity:Run()
+    
+    function GitAud(soundgit, filename)
+        local url = soundgit
+        local FileName = filename
+        writefile(FileName .. ".mp3", game:HttpGet(url))
+    
+        return (getcustomasset or getsynasset)(FileName .. ".mp3")
+    end
+    
+    function CustomGitSound(soundlink, vol, filename)
+        local sound = Instance.new("Sound")
+        sound.SoundId = GitAud(soundlink, filename)
+        sound.Parent = workspace
+        sound.Name = filename or "Music"
+        sound.Volume = vol or 1
+        sound:Play()
+    end
+    local volume = 4
+    local localFileName = "DeerGod"
+    CustomGitSound(dgmusic, volume, localFileName)
+end
+
 local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
 local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
 achievementFrame.Revives.Text = "1,000"
@@ -3010,7 +3117,8 @@ local entityConfig = {
     ["rbxassetid://27"]  = entityBehaviors.ThreatTIME,
     ["rbxassetid://28"]  = entityBehaviors.HIMCJ,
     ["rbxassetid://29"]  = entityBehaviors.osb,
-    ["rbxassetid://30"]  = entityBehaviors.WINCJ,  
+    ["rbxassetid://30"]  = entityBehaviors.WINCJ,
+    ["rbxassetid://31"]  = entityBehaviors.DeerGodTWO,  
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

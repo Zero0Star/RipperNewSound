@@ -358,7 +358,7 @@ require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("
 wait(7)
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Q30W98UDHASKJBCDJL,AUHIWSD,.",true)
 wait(10)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("SADILUJHNLCWASKUJDH4657GH",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("NightMare Mode True",true)
 end
 
 function entityBehaviors.bswhoop()

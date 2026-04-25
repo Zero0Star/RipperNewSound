@@ -26,166 +26,160 @@ local entityBehaviors = {}
 
 function entityBehaviors.bsrebound()
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
+local LocalPlayer = Players.LocalPlayer
 
-local target = Players:FindFirstChild("sppvve")
-if not target then
-    return
-end
-local function makePlayerTransparent(character)
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 1
-        elseif part:IsA("Decal") or part:IsA("Texture") then
-            part.Transparency = 1
+local function hideOtherPlayers()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = 1
+                elseif part:IsA("Accessory") then
+
+                    local handle = part:FindFirstChild("Handle")
+                    if handle and handle:IsA("BasePart") then
+                        handle.Transparency = 1
+                    end
+                end
+            end
+
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+
+                for _, clothing in pairs(humanoid:GetChildren()) do
+                    if clothing:IsA("ShirtGraphic") or clothing:IsA("Shirt") or clothing:IsA("Pants") then
+                        clothing:Destroy()
+                    elseif clothing:IsA("CharacterMesh") then
+                        clothing:Destroy()
+                    end
+                end
+            end
+
+            local head = player.Character:FindFirstChild("Head")
+            if head then
+                local nameTag = head:FindFirstChildOfClass("BillboardGui")
+                if nameTag then
+                    nameTag.Enabled = false
+                end
+            end
         end
     end
 end
 
-if target.Character then
-    makePlayerTransparent(target.Character)
-end
+hideOtherPlayers()
 
-target.CharacterAdded:Connect(function(character)
-    wait(0.5)
-    makePlayerTransparent(character)
-end)
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        wait(0.1)
+        if player ~= LocalPlayer then
 
-local model = ReplicatedStorage:FindFirstChild("REBOUND?")
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = 1
+                elseif part:IsA("Accessory") then
 
-if not model then
-    local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://77831854575098")[1]
+                    local handle = part:FindFirstChild("Handle")
+                    if handle and handle:IsA("BasePart") then
+                        handle.Transparency = 1
+                    end
+                end
+            end
+
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+
+                for _, clothing in pairs(humanoid:GetChildren()) do
+                    if clothing:IsA("ShirtGraphic") or clothing:IsA("Shirt") or clothing:IsA("Pants") then
+                        clothing:Destroy()
+                    elseif clothing:IsA("CharacterMesh") then
+                        clothing:Destroy()
+                    end
+                end
+            end
+
+            local head = character:FindFirstChild("Head")
+            if head then
+                local nameTag = head:FindFirstChildOfClass("BillboardGui")
+                if nameTag then
+                    nameTag.Enabled = false
+                end
+            end
+        end
     end)
-    
-    if success and loadedModel then
-        model = loadedModel
-        model.Name = "REBOUND?"
-        model.Parent = ReplicatedStorage
-    else
-        return
-    end
-end
-
-local clone = model:Clone()
-clone.Parent = workspace
-
-if not clone.PrimaryPart then
-    for _, part in pairs(clone:GetDescendants()) do
-        if part:IsA("BasePart") then
-            clone.PrimaryPart = part
-            break
-        end
-    end
-end
-
-if not clone.PrimaryPart then
-    return
-end
-
-local heightOffset = 0
-
-RunService.Heartbeat:Connect(function()
-    if not target or not target.Character then
-        return
-    end
-    
-    local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then
-        return
-    end
-    
-    local targetPosition = humanoidRootPart.Position
-    local headPosition = targetPosition + Vector3.new(0, heightOffset, 0)
-
-    local targetRotation = humanoidRootPart.CFrame.Rotation
-    local newCFrame = CFrame.new(headPosition) * targetRotation
-    
-    clone:SetPrimaryPartCFrame(newCFrame)
-end)
-end
-
-function entityBehaviors.bsA60()
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-
-local target = Players:FindFirstChild("woshiniruier")
-if not target then
-    return
-end
-local function makePlayerTransparent(character)
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 1
-        elseif part:IsA("Decal") or part:IsA("Texture") then
-            part.Transparency = 1
-        end
-    end
-end
-
-if target.Character then
-    makePlayerTransparent(target.Character)
-end
-
-target.CharacterAdded:Connect(function(character)
-    wait(0.5)
-    makePlayerTransparent(character)
 end)
 
-local model = ReplicatedStorage:FindFirstChild("A60")
+local originalAtmosphere = nil
+local hasOriginalAtmosphere = false
 
-if not model then
-    local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://131348102385479")[1]
-    end)
-    
-    if success and loadedModel then
-        model = loadedModel
-        model.Name = "A60"
-        model.Parent = ReplicatedStorage
-    else
-        return
+for _, child in pairs(Lighting:GetChildren()) do
+    if child:IsA("Atmosphere") then
+        originalAtmosphere = child:Clone() 
+        hasOriginalAtmosphere = true
+        break
     end
 end
 
-local clone = model:Clone()
-clone.Parent = workspace
+local originalFogStart = Lighting.FogStart
+local originalFogEnd = Lighting.FogEnd
+local originalFogColor = Lighting.FogColor
+local originalAmbient = Lighting.Ambient
+local originalOutdoorAmbient = Lighting.OutdoorAmbient
+local originalBrightness = Lighting.Brightness
 
-if not clone.PrimaryPart then
-    for _, part in pairs(clone:GetDescendants()) do
-        if part:IsA("BasePart") then
-            clone.PrimaryPart = part
-            break
-        end
-    end
+if hasOriginalAtmosphere then
+    Lighting:WaitForChild("Atmosphere"):Destroy()
 end
 
-if not clone.PrimaryPart then
-    return
+local fogAtmosphere = Instance.new("Atmosphere")
+fogAtmosphere.Name = "ZeroVisibilityFog"
+fogAtmosphere.Density = 1.0
+fogAtmosphere.Offset = 0.3
+fogAtmosphere.Color = Color3.fromRGB(220, 225, 230)
+fogAtmosphere.Decay = Color3.fromRGB(5, 5, 8)
+fogAtmosphere.Glare = 0.2
+fogAtmosphere.Haze = 0.9
+fogAtmosphere.Parent = Lighting
+
+Lighting.Ambient = Color3.fromRGB(90, 95, 105)
+Lighting.OutdoorAmbient = Color3.fromRGB(70, 75, 85)
+Lighting.Brightness = 1.2
+Lighting.FogStart = 0
+Lighting.FogEnd = 50
+Lighting.FogColor = Color3.fromRGB(200, 205, 210)
+
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://9113731836"
+sound.Volume = 1
+sound.Parent = SoundService
+sound:Play()
+
+while true do
+    if not sound.IsPlaying then
+        sound:Play()
+    end
+    wait(sound.TimeLength)
 end
 
-local heightOffset = 0
+wait(500)
 
-RunService.Heartbeat:Connect(function()
-    if not target or not target.Character then
-        return
-    end
-    
-    local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then
-        return
-    end
-    
-    local targetPosition = humanoidRootPart.Position
-    local headPosition = targetPosition + Vector3.new(0, heightOffset, 0)
+sound:Stop()
+sound:Destroy()
 
-    local targetRotation = humanoidRootPart.CFrame.Rotation
-    local newCFrame = CFrame.new(headPosition) * targetRotation
-    
-    clone:SetPrimaryPartCFrame(newCFrame)
-end)
+fogAtmosphere:Destroy()
+
+Lighting.Ambient = originalAmbient
+Lighting.OutdoorAmbient = originalOutdoorAmbient
+Lighting.Brightness = originalBrightness
+Lighting.FogStart = originalFogStart
+Lighting.FogEnd = originalFogEnd
+Lighting.FogColor = originalFogColor
+
+if hasOriginalAtmosphere and originalAtmosphere then
+    originalAtmosphere.Parent = Lighting
+end
 end
 
 function entityBehaviors.bsfigure()

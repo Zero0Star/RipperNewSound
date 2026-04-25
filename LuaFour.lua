@@ -47,7 +47,7 @@ local isMoving = false
 game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game.RemoteListener.Modules.A90.Spawn:Play()
 task.wait(0.03333333333333333)
 Jumpscare_A90.Face.ImageColor3 = Color3.new(1, 1, 1)
-task.wait(0.3)
+task.wait(0.22)
 Jumpscare_A90.BackgroundTransparency = 0
 Jumpscare_A90.Face.Position = UDim2.new(0.5, 0, 0.49, 0)
 task.wait(0.03333333333333333)

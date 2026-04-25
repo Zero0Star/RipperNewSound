@@ -20,6 +20,7 @@ local function CustomGitSound(soundlink, vol, filename)
     sound:Play()
     return sound
 end
+local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entityBehaviors = {}
 
@@ -2854,7 +2855,131 @@ end
 wait(2)
 end
 
+function entityBehaviors.FlusterCJS()
+achievementGiver({
+Title = "Very Infatuated",Desc = "I think I definitely attracted YOU!!.",Reason = "Survive the Fluster.",Image = "rbxassetid://14133894525"
+})
+end
 
+function entityBehaviors.WHCJS()
+achievementGiver({
+    Title = "Time Speed",
+    Desc = "I really Dont want you to die so horribly...",
+    Reason = "Survive the ???.",
+    Image = "rbxassetid://140643536755244"
+})
+end
+
+function entityBehaviors.KITTYCJS()
+achievementGiver({
+    Title = "It In The Dark",
+    Desc = "I will keep watching you...",
+    Reason = "Survive the Kitty.",
+    Image = "rbxassetid://718694537"
+})
+end
+
+function entityBehaviors.bseyes()
+achievementGiver({
+    Title = "Hard to Describe",
+    Desc = "Why don't you look at me?",
+    Reason = "Survive the Broken Eyes.",
+    Image = "rbxassetid://9794814895"
+})
+end
+
+function entityBehaviors.DEPTHCJS()
+achievementGiver({
+    Title = "Reforged",
+    Desc = "I can't stand this noise..",
+    Reason = "Survive the Depth.",
+    Image = "rbxassetid://10840981841"
+})
+end
+
+function entityBehaviors.burgermunci()
+achievementGiver({
+    Title = "Black Shadow",
+    Desc = "I am getting faster! but. I want to eat burger more!!!",
+    Reason = "Survive the Angry Munci.",
+    Image = "rbxassetid://12405576774"
+})
+end
+
+function entityBehaviors.wh1t3cj()
+achievementGiver({
+    Title = "My existence",
+    Desc = "I am everywhere...",
+    Reason = "Survive the WH1T3.",
+    Image = "rbxassetid://128887691943007"
+})
+end
+
+function entityBehaviors.cldread()
+achievementGiver({
+    Title = "Exhaust Time",
+    Desc = "You'd better hide.",
+    Reason = "Survive the Clock Dread.",
+    Image = "rbxassetid://109096782093778"
+})
+end
+
+function entityBehaviors.HUNGERCJ()
+achievementGiver({
+    Title = "Very Hungry",
+    Desc = "Where is my food?",
+    Reason = "Survive the Hunger.",
+    Image = "rbxassetid://10969362005"
+})
+end
+
+function entityBehaviors.ThreatTIME()
+achievementGiver({
+    Title = "This My field",
+    Desc = "Why are you running?",
+    Reason = "Survive the Threat.",
+    Image = "rbxassetid://7140092710"
+})
+end
+
+function entityBehaviors.HIMCJ()
+achievementGiver({
+    Title = "That it",
+    Desc = "What is this sound",
+    Reason = "Survive the Him.",
+    Image = "rbxassetid://15765633161"
+})
+end
+
+function entityBehaviors.osb()
+achievementGiver({
+    Title = "Secret admirer",
+    Desc = "U seem to be very obsessed with me",
+    Reason = "Survive the Obsession.",
+    Image = "rbxassetid://12671476495"
+})
+end
+
+function entityBehaviors.WINCJ()
+achievementGiver({
+    Title = "Radiance The Land",
+    Desc = "Where are we going next?",
+    Reason = "Escape The HardCore Hotel.",
+    Image = "rbxassetid://17412983060"
+})
+local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
+achievementFrame.Revives.Text = "1,000"
+achievementFrame.Stardust.Text = "0"
+achievementFrame.Knobs.Text = "43,000"
+achievementFrame.Knobs.Visible = true
+achievementFrame.Revives.Visible = true
+achievementFrame.KnobsIcon.Visible = true
+achievementFrame.StardustIcon.Visible = false
+achievementFrame.RevivesIcon.Visible = true
+achievementFrame.Visible = true
+achievementFrame.Stardust.Visible = false
+end
 
 local entityConfig = {
     ["rbxassetid://1"]  = entityBehaviors.SA90,
@@ -2872,7 +2997,20 @@ local entityConfig = {
     ["rbxassetid://14"]  = entityBehaviors.FLU,
     ["rbxassetid://15"]  = entityBehaviors.MOVERS,
     ["rbxassetid://16"]  = entityBehaviors.SMILEWH,
-    ["rbxassetid://17"]  = entityBehaviors.SMILEWH2,  
+    ["rbxassetid://17"]  = entityBehaviors.SMILEWH2,
+    ["rbxassetid://18"]  = entityBehaviors.FlusterCJS,
+    ["rbxassetid://19"]  = entityBehaviors.WHCJS,
+    ["rbxassetid://20"]  = entityBehaviors.KITTYCJS,
+    ["rbxassetid://21"]  = entityBehaviors.bseyes,
+    ["rbxassetid://22"]  = entityBehaviors.DEPTHCJS,
+    ["rbxassetid://23"]  = entityBehaviors.burgermunci,
+    ["rbxassetid://24"]  = entityBehaviors.wh1t3cj,
+    ["rbxassetid://25"]  = entityBehaviors.cldread,
+    ["rbxassetid://26"]  = entityBehaviors.HUNGERCJ,
+    ["rbxassetid://27"]  = entityBehaviors.ThreatTIME,
+    ["rbxassetid://28"]  = entityBehaviors.HIMCJ,
+    ["rbxassetid://29"]  = entityBehaviors.osb,
+    ["rbxassetid://30"]  = entityBehaviors.WINCJ,  
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

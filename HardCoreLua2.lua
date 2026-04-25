@@ -1564,88 +1564,109 @@ end
 
 function entityBehaviors.RipperSw()
 function GitAud(soundgit, filename)
-        local url = soundgit
-        local fileName = filename or "temp_audio"
-        local fullFileName = fileName .. ".mp3"
-        local success, audioData = pcall(function()
-            return game:HttpGet(url)
-        end)
-        if not success then
-            return nil
-        end
-        local writeSuccess, writeError = pcall(function()
-            writefile(fullFileName, audioData)
-        end)
-        if not writeSuccess then
-            return nil
-        end
-        local assetPath
-        if getsynasset then
-            assetPath = getsynasset(fullFileName)
-        elseif getcustomasset then
-            assetPath = getcustomasset(fullFileName)
-        else
-            return nil
-        end
-        return assetPath
-    end
-    
-    function CustomGitSound(soundlink, vol, filename)
-        local sound = Instance.new("Sound")
-        sound.SoundId = GitAud(soundlink, filename)
-        if not sound.SoundId then
-            return
-        end
-        sound.Parent = workspace
-        sound.Name = filename or "GitHub_Music"
-        sound.Volume = vol or 1
-        sound.Loaded:Wait()
-        sound:Play()
-        sound.Ended:Connect(function()
-            sound:Destroy()
-        end)
-    end
-    
-    local githubAudioUrl = "https://github.com/Zero0Star/RipperMPSound/blob/master/RipperNewSound.mp3?raw=true"
-    local volume = 2
-    local saveName = "RipperSound"
-    CustomGitSound(githubAudioUrl, volume, saveName)
-    
-    local TweenService = game:GetService("TweenService")
-    local targetColor = Color3.fromRGB(255, 93, 93)
-    local fadeDuration = 1
-    local fadeInfo = TweenInfo.new(
-        fadeDuration,
-        Enum.EasingStyle.Linear,
-        Enum.EasingDirection.Out
-    )
-    
-    local function createFadeTween(object)
-        if object:IsA("BasePart") or object:IsA("Light") then
-            local tween = TweenService:Create(object, fadeInfo, {Color = targetColor})
-            tween:Play()
-            return tween
-        end
+    local url = soundgit
+    local fileName = filename or "temp_audio"
+    local fullFileName = fileName .. ".mp3"
+    local success, audioData = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if not success then
         return nil
     end
-    
-    local function modifyObjectsWithTween()
-        local allTweens = {}
-        for _, room in pairs(workspace.CurrentRooms:GetChildren()) do
-            if room:IsA("Model") then
-                local assets = room:FindFirstChild("Assets")
-                if assets then
-                    for _, chandelier in pairs(assets:GetChildren()) do
-                        if chandelier:IsA("Model") and chandelier.Name == "Chandelier" then
-                            local lightFixture = chandelier:FindFirstChild("LightFixture")
+    local writeSuccess, writeError = pcall(function()
+        writefile(fullFileName, audioData)
+    end)
+    if not writeSuccess then
+        return nil
+    end
+    local assetPath
+    if getsynasset then
+        assetPath = getsynasset(fullFileName)
+    elseif getcustomasset then
+        assetPath = getcustomasset(fullFileName)
+    else
+        return nil
+    end
+    return assetPath
+end
+
+function CustomGitSound(soundlink, vol, filename)
+    local sound = Instance.new("Sound")
+    sound.SoundId = GitAud(soundlink, filename)
+    if not sound.SoundId then
+        return
+    end
+    sound.Parent = workspace
+    sound.Name = filename or "GitHub_Music"
+    sound.Volume = vol or 1
+    sound.Loaded:Wait()
+    sound:Play()
+    sound.Ended:Connect(function()
+        sound:Destroy()
+    end)
+end
+
+local githubAudioUrl = "https://github.com/Zero0Star/RipperMPSound/blob/master/RipperNewSound.mp3?raw=true"
+local volume = 2
+local saveName = "RipperSound"
+CustomGitSound(githubAudioUrl, volume, saveName)
+
+local explosionSoundUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/RipperDoorend.mp3?raw=true"
+local explosionSoundPath = GitAud(explosionSoundUrl, "RipperExplosionSound")
+local doorExplosionSoundPath = GitAud(explosionSoundUrl, "RipperDoorSound")
+
+local TweenService = game:GetService("TweenService")
+local targetColor = Color3.fromRGB(255, 93, 93)
+local fadeDuration = 1
+local fadeInfo = TweenInfo.new(
+    fadeDuration,
+    Enum.EasingStyle.Linear,
+    Enum.EasingDirection.Out
+)
+
+local function createFadeTween(object)
+    if object:IsA("BasePart") or object:IsA("Light") then
+        local tween = TweenService:Create(object, fadeInfo, {Color = targetColor})
+        tween:Play()
+        return tween
+    end
+    return nil
+end
+
+local function modifyObjectsWithTween()
+    local allTweens = {}
+    for _, room in pairs(workspace.CurrentRooms:GetChildren()) do
+        if room:IsA("Model") then
+            local assets = room:FindFirstChild("Assets")
+            if assets then
+                for _, chandelier in pairs(assets:GetChildren()) do
+                    if chandelier:IsA("Model") and chandelier.Name == "Chandelier" then
+                        local lightFixture = chandelier:FindFirstChild("LightFixture")
+                        if lightFixture then
+                            local pointLight = lightFixture:FindFirstChild("PointLight")
+                            if pointLight and pointLight:IsA("PointLight") then
+                                table.insert(allTweens, createFadeTween(pointLight))
+                            end
+                            local spotLight = lightFixture:FindFirstChild("SpotLight")
+                            if spotLight and spotLight:IsA("SpotLight") then
+                                table.insert(allTweens, createFadeTween(spotLight))
+                            end
+                            local neon = lightFixture:FindFirstChild("Neon")
+                            if neon and neon:IsA("BasePart") then
+                                table.insert(allTweens, createFadeTween(neon))
+                            end
+                        end
+                    end
+                end
+                local lightFixtures = assets:FindFirstChild("Light_Fixtures")
+                if lightFixtures then
+                    for _, lightStand in pairs(lightFixtures:GetChildren()) do
+                        if lightStand:IsA("Model") and lightStand.Name == "LightStand" then
+                            local lightFixture = lightStand:FindFirstChild("LightFixture")
                             if lightFixture then
                                 local pointLight = lightFixture:FindFirstChild("PointLight")
                                 if pointLight and pointLight:IsA("PointLight") then
                                     table.insert(allTweens, createFadeTween(pointLight))
-                                end
-                                local spotLight = lightFixture:FindFirstChild("SpotLight")
-                                if spotLight and spotLight:IsA("SpotLight") then
-                                    table.insert(allTweens, createFadeTween(spotLight))
                                 end
                                 local neon = lightFixture:FindFirstChild("Neon")
                                 if neon and neon:IsA("BasePart") then
@@ -1654,32 +1675,15 @@ function GitAud(soundgit, filename)
                             end
                         end
                     end
-                    local lightFixtures = assets:FindFirstChild("Light_Fixtures")
-                    if lightFixtures then
-                        for _, lightStand in pairs(lightFixtures:GetChildren()) do
-                            if lightStand:IsA("Model") and lightStand.Name == "LightStand" then
-                                local lightFixture = lightStand:FindFirstChild("LightFixture")
-                                if lightFixture then
-                                    local pointLight = lightFixture:FindFirstChild("PointLight")
-                                    if pointLight and pointLight:IsA("PointLight") then
-                                        table.insert(allTweens, createFadeTween(pointLight))
-                                    end
-                                    local neon = lightFixture:FindFirstChild("Neon")
-                                    if neon and neon:IsA("BasePart") then
-                                        table.insert(allTweens, createFadeTween(neon))
-                                    end
-                                end
-                            end
-                        end
-                    end
                 end
             end
         end
     end
-    coroutine.wrap(function()
-        modifyObjectsWithTween()
-    end)()
-    local TweenService = game:GetService("TweenService")
+end
+coroutine.wrap(function()
+    modifyObjectsWithTween()
+end)()
+local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1762,8 +1766,10 @@ local function TriggerRipperJumpScare(ripper, playerChar, snapshottedRipperPosit
         screamSound.Pitch = 0.7
 
         local explodeSound = Instance.new("Sound", workspace)
-        explodeSound.SoundId = "rbxassetid://1837829565"
-        explodeSound.Volume = 3
+        if explosionSoundPath then
+            explodeSound.SoundId = explosionSoundPath
+        end
+        explodeSound.Volume = 10
         explodeSound.Pitch = 1
 
         local camera = workspace.CurrentCamera
@@ -1773,6 +1779,14 @@ local function TriggerRipperJumpScare(ripper, playerChar, snapshottedRipperPosit
         end
 
         explodeSound:Play()
+
+        local explosionCameraShaker = require(game.ReplicatedStorage.CameraShaker)
+        local explosionCam = workspace.CurrentCamera
+        local explosionCamShake = explosionCameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+            explosionCam.CFrame = explosionCam.CFrame * shakeCf
+        end)
+        explosionCamShake:Start()
+        explosionCamShake:ShakeOnce(50, 400, 0.1, 0.7, 2, 1)
 
         local originalCameraType = camera.CameraType
         camera.CameraType = Enum.CameraType.Scriptable
@@ -1871,16 +1885,37 @@ local function ExecuteRipperPathfinding()
 
     local currentRooms = workspace.CurrentRooms
     local latestRoomValue = game.ReplicatedStorage.GameData.LatestRoom.Value
-
-    local startNode
-    local firstRoom = currentRooms:GetChildren()[1]
-    if firstRoom then
-        if firstRoom:FindFirstChild("PathfindNodes") and firstRoom.PathfindNodes:FindFirstChild("1") then
-            startNode = firstRoom.PathfindNodes["1"]
-        elseif firstRoom:FindFirstChild("RoomExit") then
-            startNode = firstRoom.RoomExit
+    
+    local minRoomNumber = math.huge
+    local minRoom = nil
+    local allRooms = {}
+    
+    for _, room in pairs(currentRooms:GetChildren()) do
+        if room:IsA("Model") then
+            local roomNumber = tonumber(room.Name)
+            if roomNumber and roomNumber <= latestRoomValue then
+                allRooms[roomNumber] = room
+                if roomNumber < minRoomNumber then
+                    minRoomNumber = roomNumber
+                    minRoom = room
+                end
+            end
         end
     end
+    
+    if not minRoom then
+        minRoom = currentRooms:GetChildren()[1]
+    end
+    
+    if not minRoom then return end
+
+    local startNode
+    if minRoom:FindFirstChild("PathfindNodes") and minRoom.PathfindNodes:FindFirstChild("1") then
+        startNode = minRoom.PathfindNodes["1"]
+    elseif minRoom:FindFirstChild("RoomExit") then
+        startNode = minRoom.RoomExit
+    end
+    
     if not startNode then return end
 
     ripper.CFrame = startNode.CFrame + Vector3.new(0, 2, 0)
@@ -1933,8 +1968,11 @@ local function ExecuteRipperPathfinding()
         end
     end)
 
-    for _, room in pairs(currentRooms:GetChildren()) do
+    for roomNum = minRoomNumber, latestRoomValue do
         if isJumpScaring then break end
+        local room = allRooms[roomNum]
+        if not room then break end
+        
         if room:FindFirstChild("PathfindNodes") then
             for _, node in pairs(room.PathfindNodes:GetChildren()) do
                 if isJumpScaring then break end
@@ -1961,16 +1999,27 @@ local function ExecuteRipperPathfinding()
     end
 
     if not isJumpScaring then
-        local lastRoom = currentRooms:GetChildren()[#currentRooms:GetChildren()]
+        local lastRoom = allRooms[latestRoomValue] or currentRooms:GetChildren()[#currentRooms:GetChildren()]
         if lastRoom and lastRoom:FindFirstChild("Door") then
             lastRoom.Door.ClientOpen:FireServer()
         end
     end
 
     local explodeSound = Instance.new("Sound", ripper)
-    explodeSound.SoundId = "rbxassetid://1837829565"
-    explodeSound.Volume = 10
+    if doorExplosionSoundPath then
+        explodeSound.SoundId = doorExplosionSoundPath
+    end
+    explodeSound.Volume = 5
     explodeSound:Play()
+    
+    local endExplosionCameraShaker = require(game.ReplicatedStorage.CameraShaker)
+    local endExplosionCam = workspace.CurrentCamera
+    local endExplosionCamShake = endExplosionCameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+        endExplosionCam.CFrame = endExplosionCam.CFrame * shakeCf
+    end)
+    endExplosionCamShake:Start()
+    endExplosionCamShake:ShakeOnce(300, 400, 0.1, 0.7, 2, 1)
+    
     wait(1)
     ripper.Anchored = false
     ripper.CanCollide = false
@@ -1996,6 +2045,8 @@ task.spawn(function()
     wait(7)
     ExecuteRipperPathfinding()
 end)
+
+local function runFinalCameraShake()
     local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
     local camara = game.Workspace.CurrentCamera
     local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
@@ -2003,6 +2054,9 @@ end)
     end)
     camShake:Start()
     camShake:ShakeOnce(10, 200, 0.1, 6, 2, 0.5)
+end
+
+runFinalCameraShake()
 end
 
 function entityBehaviors.GodEgg()

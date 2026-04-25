@@ -522,7 +522,6 @@ local function isPlayerLookingAtEntity(entity)
     local dot = cameraDirection:Dot(toEntity)
     return dot > 0.7
 end
-
 local damageConnection
 local function startDamageLoop(entity)
     if damageConnection then
@@ -535,29 +534,30 @@ local function startDamageLoop(entity)
             damageConnection:Disconnect()
             return
         end
-        
+
         if not isPlayerLookingAtEntity(entity) then
             lastDamageTime = lastDamageTime + deltaTime
             if lastDamageTime >= 0.5 then
                 lastDamageTime = 0
+
                 local Player = Players.LocalPlayer
                 local Character = Player.Character or Player.CharacterAdded:Wait()
                 local Humanoid = Character:WaitForChild("Humanoid")
+
                 local NewHealth = Humanoid.Health - 10
-                
+
+                Humanoid.Health = NewHealth
+
                 if NewHealth <= 0 then
                     Player:SetAttribute("Alive", false)
                     if game.ReplicatedStorage:FindFirstChild("Kill") then
                         game.ReplicatedStorage.Kill:FireServer(Player)
                     end
-                else
-                    Humanoid.Health = NewHealth
                 end
             end
         end
     end)
 end
-
 function GetRoom()
     return workspace.CurrentRooms:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
 end
@@ -2437,7 +2437,7 @@ if not currentRoom then
     return
 end
 
-local s = LoadCustomInstance(91070303750730)
+local s = LoadCustomInstance(138743339338089)
 if not s then
     return
 end
@@ -2503,7 +2503,20 @@ local damageLoop = RunService.Heartbeat:Connect(function(deltaTime)
     if raycastResult then
         local hitPart = raycastResult.Instance
         if hitPart and hitPart:IsDescendantOf(character) then
-            Damage(20)
+            local Humanoid = character:FindFirstChild("Humanoid")
+            if not Humanoid or Humanoid.Health <= 0 then
+                return
+            end
+            
+            local NewHealth = Humanoid.Health - 15
+            Humanoid.Health = NewHealth
+            
+            if NewHealth <= 0 then
+                player:SetAttribute("Alive", false)
+                if game.ReplicatedStorage:FindFirstChild("Kill") then
+                    game.ReplicatedStorage.Kill:FireServer(player)
+                end
+            end
         end
     end
 end)

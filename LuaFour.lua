@@ -1,10 +1,4 @@
-if workspace:FindFirstChild("HardcoreFour") then
-    return
-end
-local marker = Instance.new("BoolValue")
-marker.Name = "HardcoreFour"
-marker.Value = true
-marker.Parent = workspace
+
 local function GitAud(soundgit, filename)
     local url = soundgit
     local FileName = filename
@@ -2968,6 +2962,18 @@ achievementGiver({
     Reason = "Escape The HardCore Hotel.",
     Image = "rbxassetid://17412983060"
 })
+local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
+achievementFrame.Revives.Text = "1,000"
+achievementFrame.Stardust.Text = "0"
+achievementFrame.Knobs.Text = "43,000"
+achievementFrame.Knobs.Visible = true
+achievementFrame.Revives.Visible = true
+achievementFrame.KnobsIcon.Visible = true
+achievementFrame.StardustIcon.Visible = false
+achievementFrame.RevivesIcon.Visible = true
+achievementFrame.Visible = true
+achievementFrame.Stardust.Visible = false
 end
 
 function entityBehaviors.DeerGodTWO()
@@ -3074,19 +3080,6 @@ local entity = spawner.Create({Entity = {Name = "Deer god",Asset = "949615328572
     CustomGitSound(dgmusic, volume, localFileName)
 end
 
-local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
-achievementFrame.Revives.Text = "1,000"
-achievementFrame.Stardust.Text = "0"
-achievementFrame.Knobs.Text = "43,000"
-achievementFrame.Knobs.Visible = true
-achievementFrame.Revives.Visible = true
-achievementFrame.KnobsIcon.Visible = true
-achievementFrame.StardustIcon.Visible = false
-achievementFrame.RevivesIcon.Visible = true
-achievementFrame.Visible = true
-achievementFrame.Stardust.Visible = false
-end
 
 local entityConfig = {
     ["rbxassetid://1"]  = entityBehaviors.SA90,

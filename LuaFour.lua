@@ -2856,13 +2856,25 @@ Title = "Very Infatuated",Desc = "I think I definitely attracted YOU!!.",Reason 
 })
 end
 
-function entityBehaviors.WHCJS()
+function entityBehaviors.MufflerCJ()
 achievementGiver({
-    Title = "Time Speed",
-    Desc = "I really Dont want you to die so horribly...",
-    Reason = "Survive the ???.",
-    Image = "rbxassetid://140643536755244"
+    Title = "Multiverse Monster",
+    Desc = "An incredibly powerful monster...",
+    Reason = "Defeat Muffler.",
+    Image = "rbxassetid://131767322927740"
 })
+local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
+achievementFrame.Revives.Text = "100"
+achievementFrame.Stardust.Text = "20"
+achievementFrame.Knobs.Text = "5000"
+achievementFrame.Knobs.Visible = true
+achievementFrame.Revives.Visible = true
+achievementFrame.KnobsIcon.Visible = true
+achievementFrame.StardustIcon.Visible = true
+achievementFrame.RevivesIcon.Visible = true
+achievementFrame.Visible = true
+achievementFrame.Stardust.Visible = true
 end
 
 function entityBehaviors.KITTYCJS()
@@ -2883,13 +2895,455 @@ achievementGiver({
 })
 end
 
-function entityBehaviors.DEPTHCJS()
-achievementGiver({
-    Title = "Reforged",
-    Desc = "I can't stand this noise..",
-    Reason = "Survive the Depth.",
-    Image = "rbxassetid://10840981841"
-})
+function entityBehaviors.Muffler1()
+function GetRoom()
+    return workspace.CurrentRooms:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local function LoadCustomInstance(source)
+    local model
+    
+    if tonumber(source) then
+        local success, result = pcall(function()
+            return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+        end)
+        if success and result then
+            model = result
+        end
+    end
+    
+    if model then
+        model.Parent = workspace
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            end
+        end
+    end
+    
+    return model
+end
+
+local s = LoadCustomInstance(113018476110287)
+if not s then
+    return
+end
+
+local targetCFrame
+local isModel = s:IsA("Model")
+local entityPart
+
+if isModel then
+    local room = GetRoom()
+    if not room then
+        return
+    end
+    
+    local roomEntrance = room:WaitForChild("RoomEntrance")
+    targetCFrame = roomEntrance.CFrame * CFrame.new(0, -13, -25)
+    local roomBaseY = roomEntrance.Position.Y
+    
+    if s.PrimaryPart then
+        s:SetPrimaryPartCFrame(targetCFrame + Vector3.new(0, 15, 0))
+    else
+        local primary = s:FindFirstChildWhichIsA("BasePart")
+        if primary then
+            s.PrimaryPart = primary
+            s:SetPrimaryPartCFrame(targetCFrame + Vector3.new(0, 15, 0))
+        end
+    end
+    entityPart = s.PrimaryPart
+else
+    entityPart = s:FindFirstChildWhichIsA("BasePart")
+    if entityPart then
+        local room = GetRoom()
+        if not room then
+            return
+        end
+        
+        local roomEntrance = room:WaitForChild("RoomEntrance")
+        targetCFrame = roomEntrance.CFrame * CFrame.new(0, -13, -25)
+        local roomBaseY = roomEntrance.Position.Y
+        
+        entityPart.CFrame = targetCFrame + Vector3.new(0, 15, 0)
+        if entityPart:FindFirstChild("Part") then
+            entityPart.Part.CFrame = entityPart.CFrame
+        end
+    end
+end
+
+if not targetCFrame or not entityPart then
+    return
+end
+
+local countdownEnded = false
+local roomChanged = false
+local startY = targetCFrame.Y + 15
+local targetY = targetCFrame.Y + 3
+local dropDuration = 3
+local dropStartTime = tick()
+
+spawn(function()
+    while not roomChanged do
+        local elapsedTime = tick() - dropStartTime
+        local progress = math.min(elapsedTime / dropDuration, 1)
+        local currentY = startY + (targetY - startY) * (progress * progress * (3 - 2 * progress))
+        
+        if isModel and s.PrimaryPart then
+            local pos = targetCFrame.Position
+            s:SetPrimaryPartCFrame(CFrame.new(pos.X, currentY, pos.Z))
+        elseif entityPart then
+            local pos = targetCFrame.Position
+            entityPart.CFrame = CFrame.new(pos.X, currentY, pos.Z)
+        end
+        
+        if progress >= 1 then
+            break
+        end
+        
+        game:GetService("RunService").Heartbeat:Wait()
+    end
+end)
+
+end
+
+function entityBehaviors.Muffler2()
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("....",true)
+wait(4)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("You extremely foolish human.",true)
+wait(2)
+local muffler = workspace:FindFirstChild("Muffler")
+if not muffler or not muffler:IsA("Model") then
+    return
+end
+
+local closeStatic = muffler:FindFirstChild("Close Static")
+if closeStatic and closeStatic:IsA("Sound") then
+    closeStatic.Volume = 0
+end
+
+function DownloadAudio(url, filename)
+    local success, audioData = pcall(function()
+        return game:HttpGet(url)
+    end)
+    
+    if not success then
+        return nil
+    end
+    
+    writefile(filename .. ".mp3", audioData)
+    
+    if getsynasset then
+        return getsynasset(filename .. ".mp3")
+    end
+    return nil
+end
+
+function ChangeSkybox()
+
+    local lighting = game:GetService("Lighting")
+    
+    pcall(function()
+        local newSky = Instance.new("Sky")
+        newSky.SkyboxBk = "rbxassetid://159454299"
+        newSky.SkyboxDn = "rbxassetid://159454296"
+        newSky.SkyboxFt = "rbxassetid://159454293"
+        newSky.SkyboxLf = "rbxassetid://159454286"
+        newSky.SkyboxRt = "rbxassetid://159454300"
+        newSky.SkyboxUp = "rbxassetid://159454288"
+        
+        for _, sky in pairs(lighting:GetChildren()) do
+            if sky:IsA("Sky") then
+                sky:Destroy()
+            end
+        end
+        
+        newSky.Parent = lighting
+    end)
+end
+
+function CameraShakeEffect()
+
+    pcall(function()
+        local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+        local camara = workspace.CurrentCamera
+        local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+            camara.CFrame = camara.CFrame * shakeCf
+        end)
+        camShake:Start()
+        camShake:ShakeOnce(5, 50, 0.1, 20, 2, 0.5)
+    end)
+end
+
+local bossStartId = DownloadAudio(
+    "https://github.com/Zero0Star/RipperNewSound/blob/master/MuteBossMusicStart.mp3?raw=true",
+    "BOSSstart"
+)
+
+if bossStartId then
+    local startSound = Instance.new("Sound")
+    startSound.SoundId = bossStartId
+    startSound.Parent = workspace
+    startSound.Volume = 2
+    startSound:Play()
+
+    spawn(function()
+        startSound.Ended:Wait()
+        local bossEndId = DownloadAudio(
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/MuteBossMusicEnd.mp3?raw=true",
+            "BOSSEND"
+        )
+        if bossEndId then
+            local endSound = Instance.new("Sound")
+            endSound.SoundId = bossEndId
+            endSound.Parent = workspace
+            endSound.Volume = 2
+            endSound:Play()
+        end
+    end)
+
+    wait(5)
+
+    local eightSeven = muffler:FindFirstChild("EightSeven")
+    if eightSeven then
+        local faceAttach = eightSeven:FindFirstChild("FaceAttach")
+        if faceAttach then
+            local particle = faceAttach:FindFirstChildWhichIsA("ParticleEmitter")
+            if particle then
+
+                CameraShakeEffect()
+
+                particle.Transparency = NumberSequence.new(1)
+                for i = 1, 0.2, -0.016 do
+                    particle.Transparency = NumberSequence.new(i)
+                    wait(0.016)
+                end
+            end
+        end
+    end
+
+    for _, obj in pairs(workspace.CurrentRooms:GetDescendants()) do
+        if obj.Name == "DropCeiling" and obj.Parent and obj.Parent.Name == "Parts" then
+            obj:Destroy()
+        end
+    end
+    
+    local camera = workspace:FindFirstChild("Camera")
+    if camera then
+        local skyboxPart = camera:FindFirstChild("SkyboxPart")
+        if skyboxPart then skyboxPart:Destroy() end
+    end
+
+    wait(2)
+
+    if not muffler.PrimaryPart then
+        local primary = muffler:FindFirstChildWhichIsA("BasePart")
+        if primary then
+            muffler.PrimaryPart = primary
+        end
+    end
+    
+    if muffler.PrimaryPart then
+        local startPos = muffler.PrimaryPart.Position
+        local targetHeight = startPos.Y + 100
+        local riseTime = 2.8
+        local startTime = tick()
+        
+        spawn(function()
+            while tick() - startTime < riseTime do
+                local elapsed = tick() - startTime
+                local progress = elapsed / riseTime
+                if progress > 1 then progress = 1 end
+                
+                local ease = progress * progress * (3 - 2 * progress)
+                local newY = startPos.Y + (targetHeight - startPos.Y) * ease
+                
+                muffler:SetPrimaryPartCFrame(CFrame.new(startPos.X, newY, startPos.Z))
+                wait(0.016)
+            end
+            spawn(function()
+                local eightSeven = muffler:FindFirstChild("EightSeven")
+                if eightSeven then
+                    local camAttach = eightSeven:FindFirstChild("CamAttach")
+                    if camAttach then
+                        local bubble = camAttach:FindFirstChild("Bubble")
+                        local crescents = camAttach:FindFirstChild("crescents")
+                        local smoke = camAttach:FindFirstChild("Smoke")
+
+                        if smoke and smoke:IsA("ParticleEmitter") then
+                            spawn(function()
+                                for i = 1, 0.2, -0.016 do
+                                    smoke.Transparency = NumberSequence.new(i)
+                                    wait(0.016)
+                                end
+                            end)
+                        end
+
+                        if bubble and crescents then
+                            spawn(function()
+                                for i = 0, 1, 0.016 do
+                                    local progress = i
+                                    local ease = progress * progress * (3 - 2 * progress)
+                                    local alpha = 1 - 0.8 * ease
+                                    local size = 1 + 109 * ease
+                                    
+                                    bubble.Transparency = NumberSequence.new(alpha)
+                                    crescents.Transparency = NumberSequence.new(alpha)
+                                    
+                                    local sizeSeq = NumberSequence.new({
+                                        NumberSequenceKeypoint.new(0, size),
+                                        NumberSequenceKeypoint.new(1, size)
+                                    })
+                                    bubble.Size = sizeSeq
+                                    crescents.Size = sizeSeq
+                                    
+                                    wait(0.016)
+                                end
+
+                                spawn(function()
+                                    ChangeSkybox()
+                                end)
+                            end)
+                        end
+                    end
+                end
+            end)
+        end)
+    end
+end
+end
+
+function entityBehaviors.Muffler3()
+local function EnhancedBeamEffect()
+    local muffler = workspace:FindFirstChild("Muffler")
+    if not muffler or not muffler:IsA("Model") then return end
+    
+    local eightSeven = muffler:FindFirstChild("EightSeven")
+    if not eightSeven then return end
+    
+    local attachmentFolder = eightSeven:FindFirstChild("Attachment")
+    if not attachmentFolder then return end
+    
+    local attachment1 = attachmentFolder:FindFirstChild("1")
+    if not attachment1 or not attachment1:IsA("Attachment") then return end
+    
+    local particle1 = attachment1:FindFirstChildWhichIsA("ParticleEmitter")
+    if particle1 then
+        particle1.Transparency = NumberSequence.new(1)
+        for i = 1, 0, -0.05 do
+            particle1.Transparency = NumberSequence.new(i)
+            wait(0.05)
+        end
+    end
+    
+    wait(2)
+    
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://135388974385336"
+    sound.Parent = workspace
+    sound.Volume = 5
+    sound:Play()
+
+    pcall(function()
+        local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+        local camara = workspace.CurrentCamera
+        local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+            camara.CFrame = camara.CFrame * shakeCf
+        end)
+        camShake:Start()
+        camShake:ShakeOnce(10, 50, 0.1, 8, 2, 0.5)
+    end)
+    
+    local attachment0 = attachmentFolder:FindFirstChild("0")
+    if attachment0 and attachment0:IsA("Attachment") then
+        local players = game:GetService("Players"):GetPlayers()
+        local nearestPlayer = nil
+        local minDist = math.huge
+        
+        for _, player in pairs(players) do
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local root = player.Character.HumanoidRootPart
+                local dist = (root.Position - attachment0.WorldPosition).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    nearestPlayer = player
+                end
+            end
+        end
+        
+        if nearestPlayer and nearestPlayer.Character then
+            local targetPart = nearestPlayer.Character.HumanoidRootPart
+            local originalPos = attachment0.Position
+            
+            for _, obj in pairs(attachment0:GetChildren()) do
+                if obj:IsA("ParticleEmitter") then
+                    obj.Transparency = NumberSequence.new(0)
+                end
+            end
+
+            for _, obj in pairs(muffler:GetDescendants()) do
+                if obj:IsA("Beam") then
+                    if obj.Attachment0 == attachment0 and obj.Attachment1 == attachment1 then
+                        obj.Width0 = 40
+                        obj.Width1 = 15
+                    elseif obj.Attachment0 == attachment1 and obj.Attachment1 == attachment0 then
+                        obj.Width0 = 15
+                        obj.Width1 = 60
+                    end
+                    obj.Color = ColorSequence.new(Color3.fromRGB(255, 0, 255))  -- 品红色，最亮的紫色
+
+                    obj.Transparency = NumberSequence.new(0)
+
+                    pcall(function()
+                        obj.Material = Enum.Material.Neon
+
+                        local surfaceAppearance = Instance.new("SurfaceAppearance")
+                        surfaceAppearance.ColorMap3D = Color3.fromRGB(255, 0, 255)
+                        surfaceAppearance.Parent = obj
+                    end)
+                end
+            end
+            
+            local runService = game:GetService("RunService")
+            local conn = runService.Heartbeat:Connect(function()
+                if targetPart and targetPart.Parent then
+                    local parent = attachment0.Parent
+                    while parent and not parent:IsA("BasePart") do
+                        parent = parent.Parent
+                    end
+                    
+                    if parent and parent:IsA("BasePart") then
+                        local worldPos = targetPart.Position
+                        local localPos = parent.CFrame:PointToObjectSpace(worldPos)
+                        attachment0.Position = localPos
+                    end
+                end
+            end)
+            
+            sound.Ended:Wait()
+            conn:Disconnect()
+            attachment0.Position = originalPos
+            
+            for _, obj in pairs(attachment0:GetChildren()) do
+                if obj:IsA("ParticleEmitter") then
+                    obj.Transparency = NumberSequence.new(1)
+                end
+            end
+            
+            for _, obj in pairs(muffler:GetDescendants()) do
+                if obj:IsA("Beam") then
+                    obj.Transparency = NumberSequence.new(1)
+                end
+            end
+            
+            if particle1 then
+                particle1.Transparency = NumberSequence.new(1)
+            end
+        end
+    end
+end
+
+EnhancedBeamEffect()
 end
 
 function entityBehaviors.burgermunci()
@@ -3099,10 +3553,12 @@ local entityConfig = {
     ["rbxassetid://16"]  = entityBehaviors.SMILEWH,
     ["rbxassetid://17"]  = entityBehaviors.SMILEWH2,
     ["rbxassetid://18"]  = entityBehaviors.FlusterCJS,
-    ["rbxassetid://19"]  = entityBehaviors.WHCJS,
+    ["rbxassetid://19"]  = entityBehaviors.MufflerCJ,
     ["rbxassetid://20"]  = entityBehaviors.KITTYCJS,
     ["rbxassetid://21"]  = entityBehaviors.bseyes,
-    ["rbxassetid://22"]  = entityBehaviors.DEPTHCJS,
+    ["rbxassetid://22"]  = entityBehaviors.Muffler1,
+    ["rbxassetid://32"]  = entityBehaviors.Muffler2,
+    ["rbxassetid://33"]  = entityBehaviors.Muffler3,
     ["rbxassetid://23"]  = entityBehaviors.burgermunci,
     ["rbxassetid://24"]  = entityBehaviors.wh1t3cj,
     ["rbxassetid://25"]  = entityBehaviors.cldread,

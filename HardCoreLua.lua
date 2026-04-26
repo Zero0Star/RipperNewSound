@@ -1429,10 +1429,58 @@ end
 
 function entityBehaviors.A60Ps1()
 local entity = spawner.Create({
-Entity = {Name = "A60",Asset = "14169212325",HeightOffset = 0},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},
-Movement = {Speed = 150,Delay = 3,Reversed = false},Rebounding = {Enabled = true,Type = "ambush",Min = 3,Max = 3,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 100,Amount = 125},
-Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于A60", "...", "你会从Ambush那学会点什么", "他随时可能出现!"},Cause = ""}})
+	Entity = {
+		Name = "A60",
+		Asset = "117633452506607",
+		HeightOffset = 0
+	},
+	Lights = {
+		Flicker = {
+			Enabled = false,
+			Duration = 10
+		},
+		Shatter = false,
+		Repair = false
+	},
+	Earthquake = {
+		Enabled = false
+	},
+	CameraShake = {
+		Enabled = true,
+		Range = 200,
+		Values = {1.5, 20, 0.1, 1}
+	},
+	Movement = {
+		Speed = 350,
+		Delay = 3,
+		Reversed = false
+	},
+	Rebounding = {
+		Enabled = true,
+		Type = "ambush",
+		Min = 5,
+		Max = 5,
+		Delay = math.random(10, 30) / 10
+	},
+	Damage = {
+		Enabled = true,
+		Range = 100,
+		Amount = 125
+	},
+	Crucifixion = {
+		Enabled = true,
+		Range = 100,
+		Resist = false,
+		Break = true
+	},
+	Death = {
+		Type = "Guiding",
+		Hints = {"你死于A60", "...", "你会从Ambush那学会点什么", "他随时可能出现!"},
+		Cause = ""
+	}
+})
 entity:SetCallback("OnRebounding", function(startOfRebound)
+	-- Variables for the entity
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
 	local attachment = main:WaitForChild("Attachment")
@@ -1443,12 +1491,17 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		switch = main:WaitForChild("Switch"),
 		switchBack = main:WaitForChild("SwitchBack")
 	}
+
+	-- Toggle particle emitters and lights within the entityModel
+	-- To switch between green & red state
 	for _, c in attachment:GetChildren() do
 		c.Enabled = (not startOfRebound)
 	end
 	for _, c in AttachmentSwitch:GetChildren() do
 		c.Enabled = startOfRebound
 	end
+
+	-- Play sounds
 	if startOfRebound == true then
 		sounds.footsteps.PlaybackSpeed = 0.35
 		sounds.playSound.PlaybackSpeed = 0.25
@@ -1458,8 +1511,33 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 		sounds.playSound.PlaybackSpeed = 0.16
 		sounds.switchBack:Play()
 	end
+	
 end)
+
 entity:Run()
+
+local face = workspace:WaitForChild("A60"):WaitForChild("RushNew"):WaitForChild("Main"):WaitForChild("Face")
+if face and face:IsA("ParticleEmitter") then
+    while true do
+        face.Texture = "rbxassetid://12145534911"
+        wait(0.1)
+        face.Texture = "rbxassetid://12145554242"
+        wait(0.1)
+        face.Texture = "rbxassetid://12145599498"
+        wait(0.1)
+        face.Texture = "rbxassetid://12145599275"
+        wait(0.1)
+        face.Texture = "rbxassetid://12155335619"
+        wait(0.1)
+        face.Texture = "rbxassetid://12145598814"
+        wait(0.1)
+        face.Texture = "rbxassetid://12146135062"
+        wait(0.1)
+        face.Texture = "rbxassetid://11378285585"
+        wait(0.1)
+    end
+else
+end
 end
 
 function entityBehaviors.A60PS2()

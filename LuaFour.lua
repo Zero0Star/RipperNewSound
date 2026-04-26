@@ -3361,13 +3361,25 @@ achievementGiver({
 })
 end
 
-function entityBehaviors.wh1t3cj()
+function entityBehaviors.v6cj()
 achievementGiver({
-    Title = "My existence",
-    Desc = "I am everywhere...",
-    Reason = "Survive the WH1T3.",
-    Image = "rbxassetid://128887691943007"
+    Title = "Challenge Hero",
+    Desc = "It's really a crazy place.",
+    Reason = "Escape The Challenge HardCore.",
+    Image = "rbxassetid://251435889"
 })
+local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
+achievementFrame.Revives.Text = "500"
+achievementFrame.Stardust.Text = "10"
+achievementFrame.Knobs.Text = "2,0000"
+achievementFrame.Knobs.Visible = true
+achievementFrame.Revives.Visible = true
+achievementFrame.KnobsIcon.Visible = true
+achievementFrame.StardustIcon.Visible = true
+achievementFrame.RevivesIcon.Visible = true
+achievementFrame.Visible = true
+achievementFrame.Stardust.Visible = true
 end
 
 function entityBehaviors.cldread()
@@ -3566,7 +3578,7 @@ local entityConfig = {
     ["rbxassetid://32"]  = entityBehaviors.Muffler2,
     ["rbxassetid://33"]  = entityBehaviors.Muffler3,
     ["rbxassetid://23"]  = entityBehaviors.burgermunci,
-    ["rbxassetid://24"]  = entityBehaviors.wh1t3cj,
+    ["rbxassetid://24"]  = entityBehaviors.v6cj,
     ["rbxassetid://25"]  = entityBehaviors.cldread,
     ["rbxassetid://26"]  = entityBehaviors.HUNGERCJ,
     ["rbxassetid://27"]  = entityBehaviors.ThreatTIME,

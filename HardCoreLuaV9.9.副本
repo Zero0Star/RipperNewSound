@@ -81,36 +81,93 @@ RecommendLabel.TextXAlignment = Enum.TextXAlignment.Center
 RecommendLabel.TextYAlignment = Enum.TextYAlignment.Center
 RecommendLabel.Parent = MC
 
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Name = "ButtonScrollFrame"
+ScrollFrame.Size = UDim2.new(0.9, 0, 0.4, 0)
+ScrollFrame.Position = UDim2.new(0.05, 0, 0.52, 0)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.ScrollBarThickness = 12
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 222, 189)
+ScrollFrame.ScrollBarImageTransparency = 0.3
+ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.Parent = MC
+
 local BC = Instance.new("Frame")
 BC.Name = "ButtonContainer"
-BC.Size = UDim2.new(0.8, 0, 0.4, 0)
-BC.Position = UDim2.new(0.1, 0, 0.55, 0) 
+BC.Size = UDim2.new(1, 0, 0, 0)
 BC.BackgroundTransparency = 1
-BC.Parent = MC
+BC.AutomaticSize = Enum.AutomaticSize.Y
+BC.Parent = ScrollFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0.08, 0)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListLayout.Parent = BC
+
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingTop = UDim.new(0.05, 0)
+UIPadding.PaddingBottom = UDim.new(0.1, 0)
+UIPadding.Parent = BC
 
 local MB = Instance.new("TextButton")
 MB.Name = "MusicButton"
-MB.Size = UDim2.new(0.9, 0, 0.4, 0)
-MB.Position = UDim2.new(0.05, 0, 0.1, 0)
+MB.Size = UDim2.new(0.9, 0, 0, 110)
+MB.LayoutOrder = 1
 MB.BackgroundColor3 = Color3.fromRGB(255, 222, 189)
 MB.BackgroundTransparency = 0.1
 MB.AutoButtonColor = true
 MB.Text = "Mines"
 MB.FontFace = CF
 MB.TextColor3 = Color3.fromRGB(80, 60, 40)
+MB.TextScaled = true
+MB.TextSize = 24
 MB.Parent = BC
 
 local PB = Instance.new("TextButton")
 PB.Name = "PlayButton"
-PB.Size = UDim2.new(0.9, 0, 0.4, 0)
-PB.Position = UDim2.new(0.05, 0, 0.55, 0)
+PB.Size = UDim2.new(0.9, 0, 0, 110)
+PB.LayoutOrder = 2
 PB.BackgroundColor3 = Color3.fromRGB(255, 222, 189)
 PB.BackgroundTransparency = 0.1
 PB.AutoButtonColor = true
 PB.Text = "Hotel"
 PB.FontFace = CF
 PB.TextColor3 = Color3.fromRGB(80, 60, 40)
+PB.TextScaled = true
+PB.TextSize = 24
 PB.Parent = BC
+
+local CB2 = Instance.new("TextButton")
+CB2.Name = "ChallengeButton"
+CB2.Size = UDim2.new(0.9, 0, 0, 110)
+CB2.LayoutOrder = 3
+CB2.BackgroundColor3 = Color3.fromRGB(255, 222, 189)
+CB2.BackgroundTransparency = 0.1
+CB2.AutoButtonColor = true
+CB2.Text = "Challenge"
+CB2.FontFace = CF
+CB2.TextColor3 = Color3.fromRGB(80, 60, 40)
+CB2.TextScaled = true
+CB2.TextSize = 24
+CB2.Parent = BC
+
+local UB = Instance.new("TextButton")
+UB.Name = "UnknownButton"
+UB.Size = UDim2.new(1.5, 0, 0, 110)
+UB.LayoutOrder = 4
+UB.BackgroundColor3 = Color3.fromRGB(255, 222, 189)
+UB.BackgroundTransparency = 0.1
+UB.AutoButtonColor = true
+UB.Text = "???"
+UB.FontFace = CF
+UB.TextColor3 = Color3.fromRGB(80, 60, 40)
+UB.TextScaled = true
+UB.TextSize = 24
+UB.Parent = BC
 
 local C3 = Instance.new("UICorner")
 C3.CornerRadius = UDim.new(0.15, 0)
@@ -120,23 +177,50 @@ local C4 = Instance.new("UICorner")
 C4.CornerRadius = UDim.new(0.15, 0)
 C4.Parent = PB
 
+local C5 = Instance.new("UICorner")
+C5.CornerRadius = UDim.new(0.15, 0)
+C5.Parent = CB2
+
+local C6 = Instance.new("UICorner")
+C6.CornerRadius = UDim.new(0.15, 0)
+C6.Parent = UB
+
 local S1 = Instance.new("UIStroke")
 S1.Color = Color3.fromRGB(220, 190, 160)
-S1.Thickness = 2
+S1.Thickness = 3
 S1.Parent = MB
 
 local S2 = Instance.new("UIStroke")
 S2.Color = Color3.fromRGB(220, 190, 160)
-S2.Thickness = 2
+S2.Thickness = 3
 S2.Parent = PB
 
+local S3 = Instance.new("UIStroke")
+S3.Color = Color3.fromRGB(220, 190, 160)
+S3.Thickness = 3
+S3.Parent = CB2
+
+local S4 = Instance.new("UIStroke")
+S4.Color = Color3.fromRGB(220, 190, 160)
+S4.Thickness = 3
+S4.Parent = UB
+
 local function KJ1()
-    local buttonHeight = BC.AbsoluteSize.Y * 0.4
-    return math.floor(buttonHeight)
+    local containerHeight = ScrollFrame.AbsoluteSize.Y
+    local buttonCount = 4
+    local totalPadding = (buttonCount - 1) * UIListLayout.Padding.Offset + UIPadding.PaddingTop.Offset + UIPadding.PaddingBottom.Offset
+    local availableHeight = containerHeight - totalPadding
+    local buttonHeight = availableHeight / buttonCount
+    return math.min(math.floor(buttonHeight * 0.3), 30)  -- 增加了文本大小
 end
 
-MB.TextSize = KJ1()
-PB.TextSize = KJ1()
+local function updateButtonSizes()
+    local textSize = KJ1()
+    MB.TextSize = textSize
+    PB.TextSize = textSize
+    CB2.TextSize = textSize
+    UB.TextSize = textSize
+end
 
 local function KJ2(btn)
     btn.MouseEnter:Connect(function()
@@ -158,8 +242,12 @@ end
 
 KJ2(MB)
 KJ2(PB)
+KJ2(CB2)
+KJ2(UB)
 KJ3(MB)
 KJ3(PB)
+KJ3(CB2)
+KJ3(UB)
 
 local function playAudio()
     local sound = Instance.new("Sound")
@@ -173,6 +261,101 @@ local function playAudio()
 
     sound:Play()
 end
+
+UB.MouseButton1Click:Connect(function()
+    playAudio()
+    pcall(function()
+        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("This mode is not available", true)
+    end)
+end)
+
+CB2.MouseButton1Click:Connect(function()
+    playAudio()
+    local RunService = game:GetService("RunService")
+    local items = {
+        "HardcoreOne",
+        "HardcoreTwo", 
+        "HardcoreFour",
+        "HardcoremUSIC"
+    }
+    local found = {}
+    local connection = nil
+    local isDone = false
+    local lastCount = 0
+
+    local function updateProgress()
+        local count = 0
+        for _, name in ipairs(items) do
+            if found[name] then
+                count = count + 1
+            end
+        end
+
+        if count ~= lastCount then
+            lastCount = count
+            
+            pcall(function()
+                require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
+                    .caption("HardCore Loading: " .. count .. "/4", true)
+            end)
+            
+            if count == 4 then
+                isDone = true
+                if connection then
+                    connection:Disconnect()
+                    connection = nil
+                end
+                
+                pcall(function()
+                    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
+                        .caption("HardCore is all loaded!", true)
+                end)
+            end
+        end
+    end
+
+    connection = RunService.Heartbeat:Connect(function()
+        for _, name in ipairs(items) do
+            if not found[name] then
+                local item = workspace:FindFirstChild(name)
+                if item and item:IsA("BoolValue") then
+                    found[name] = true
+                    updateProgress()
+                end
+            end
+        end
+    end)
+    task.spawn(function()
+        local scriptUrls = {
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua2.lua?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua.lua?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/Music.lua?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour.lua?raw=true",
+        }
+        for _, url in ipairs(scriptUrls) do
+            if url and url ~= "" then
+                pcall(function()
+                    local remoteCode = game:HttpGet(url, true)
+                    loadstring(remoteCode)()
+                end)
+                if _ < #scriptUrls then 
+                    wait(5)
+                end
+            end
+        end
+    end)
+        game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("HardCore Alreadystarted",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).titlelocation("HardCore V6 Classic Edition",true)
+wait(3)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Original script By Noonie & Ping",true)
+wait(4)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Current version By Heaven",true)
+wait(4)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Thank you for playing!",true)
+    updateProgress()
+    playAudio()
+end)
 
 MB.MouseButton1Click:Connect(function()
     playAudio()
@@ -530,11 +713,7 @@ KJ4()
 
 RunService.RenderStepped:Connect(function()
     if SG and SG.Parent then
-        local newSize = KJ1()
-        if newSize > 0 then
-            MB.TextSize = newSize
-            PB.TextSize = newSize
-        end
+        updateButtonSizes()
     end
 end)
 

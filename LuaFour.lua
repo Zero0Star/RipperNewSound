@@ -1,4 +1,10 @@
-
+if workspace:FindFirstChild("HardcoreFour") then
+    return
+end
+local marker = Instance.new("BoolValue")
+marker.Name = "HardcoreFour"
+marker.Value = true
+marker.Parent = workspace
 local function GitAud(soundgit, filename)
     local url = soundgit
     local FileName = filename

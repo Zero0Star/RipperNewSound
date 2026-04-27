@@ -1541,508 +1541,503 @@ end
 end
 
 function entityBehaviors.A60PS2()
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local waypointFolder = Workspace:FindFirstChild("A60_Waypoints")
-if not waypointFolder then
-    waypointFolder = Instance.new("Folder")
-    waypointFolder.Name = "A60_Waypoints"
-    waypointFolder.Parent = Workspace
+function DEATHMESSAGE(messages, deathCause)
+    spawn(function()
+        for _ = 1, 50 do
+            wait()
+            game:GetService("ReplicatedStorage").GameStats["Player_" .. game.Players.LocalPlayer.Name].Total.DeathCause.Value = deathCause
+            firesignal(game:GetService("ReplicatedStorage").RemotesFolder.DeathHint.OnClientEvent, messages, "Blue")
+        end
+    end)
 end
 
-for _, wp in ipairs(waypointFolder:GetChildren()) do
-    wp:Destroy()
+local originalDEATHMESSAGE = DEATHMESSAGE
+
+local jumpscareActive = false
+local entityTimerActive = false
+local attackDetectionActive = true
+local loopActive = false
+
+DEATHMESSAGE = function(messages, deathCause)
+    originalDEATHMESSAGE(messages, deathCause)
+    
+    if deathCause == "A-60" and not jumpscareActive then
+        jumpscareActive = true
+
+        spawn(function()
+            local jumpSound = Instance.new("Sound")
+            jumpSound.Parent = workspace
+            jumpSound.Volume = 10
+            jumpSound.SoundId = "rbxassetid://103879029437685"
+            jumpSound:Play()
+
+            wait(jumpSound.TimeLength)
+            jumpSound:Destroy()
+        end)
+        
+        local function PlayA60Jumpscare()
+            local JumpscareGUI = Instance.new("ScreenGui")
+            JumpscareGUI.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+            JumpscareGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+            
+            local JumpscareEnd = Instance.new("ImageLabel")
+            JumpscareEnd.Name = "JumpscareEnd"
+            JumpscareEnd.Parent = JumpscareGUI
+            JumpscareEnd.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            JumpscareEnd.BackgroundTransparency = 1
+            JumpscareEnd.Position = UDim2.new(0.468, 0, 0.455, 0)
+            JumpscareEnd.Size = UDim2.new(0.064, 0, 0.088, 0)
+            JumpscareEnd.Image = "rbxassetid://0"
+            JumpscareEnd.ImageColor3 = Color3.fromRGB(255, 0, 4)
+            JumpscareEnd.ZIndex = 10
+            
+            local FullScreen = Instance.new("ImageLabel")
+            FullScreen.Name = "Full"
+            FullScreen.Parent = JumpscareGUI
+            FullScreen.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            FullScreen.BackgroundTransparency = 1
+            FullScreen.Position = UDim2.new(-0.061, 0, -0.224, 0)
+            FullScreen.Size = UDim2.new(1.122, 0, 1.447, 0)
+            FullScreen.Image = "rbxassetid://11151804223"
+            FullScreen.ImageTransparency = 1
+            FullScreen.ZIndex = 5
+            
+            local A60 = workspace:FindFirstChild("A-60")
+            if not A60 then
+                JumpscareGUI:Destroy()
+                return
+            end
+            
+            local RushModel = A60:FindFirstChild("RushNew")
+            if not RushModel then
+                JumpscareGUI:Destroy()
+                return
+            end
+            
+            local Player = game.Players.LocalPlayer
+            local Character = Player.Character
+            if not Character then
+                JumpscareGUI:Destroy()
+                return
+            end
+            
+            local Camera = workspace.CurrentCamera
+            
+            local CameraShaker
+            local success, shakerModule = pcall(function()
+                return require(game:GetService("ReplicatedStorage"):FindFirstChild("CameraShaker") or 
+                       game:GetService("ReplicatedStorage"):WaitForChild("CameraShaker"))
+            end)
+            
+            if success and shakerModule then
+                CameraShaker = shakerModule.new(Enum.RenderPriority.Camera.Value, function(cameraShake)
+                    Camera.CFrame = Camera.CFrame * cameraShake
+                end)
+                CameraShaker:Start()
+            end
+            
+            local A60Clone = RushModel:Clone()
+            A60Clone.Parent = Camera
+            A60Clone.Name = "A-60_SCARE"
+            
+            for _, descendant in pairs(A60Clone:GetDescendants()) do
+                if descendant:IsA("Sound") then
+                    descendant:Destroy()
+                end
+            end
+            
+            local faceImages = A60Clone:FindFirstChild("IMAGEIDS")
+            if faceImages then
+                task.spawn(function()
+                    while A60Clone.Parent do
+                        local images = faceImages:GetChildren()
+                        if #images > 0 then
+                            local randomImage = images[math.random(1, #images)]
+                            local mainFace = A60Clone:FindFirstChild("Main")
+                            if mainFace and mainFace:FindFirstChild("Face") then
+                                mainFace.Face.Texture = randomImage.Image
+                            end
+                        end
+                        task.wait(math.random(0, 20) / 1000)
+                    end
+                end)
+            end
+            
+            if CameraShaker then
+                CameraShaker:ShakeOnce(25, 25, 0, 4, 90, 60)
+            end
+            
+            local colorEffect = Instance.new("ColorCorrectionEffect")
+            colorEffect.Parent = game:GetService("Lighting")
+            
+            game:GetService("TweenService"):Create(colorEffect, TweenInfo.new(0.5), {
+                Brightness = 0.2,
+                Contrast = 0.2,
+                Saturation = -0.2,
+                TintColor = Color3.fromRGB(255, 0, 4)
+            }):Play()
+            
+            local targetOffset = Vector3.new(0, -1.2, -5)
+            local lerpSpeed = 0.8
+            
+            task.spawn(function()
+                local startTime = tick()
+                while tick() - startTime < 0.5 and A60Clone.Parent do
+                    local alpha = (tick() - startTime) / 0.5
+                    A60Clone.CFrame = A60Clone.CFrame:Lerp(Camera.CFrame * CFrame.new(targetOffset), lerpSpeed)
+                    task.wait()
+                end
+                
+                local mainFace = A60Clone:FindFirstChild("Main")
+                if mainFace and mainFace:FindFirstChild("Face") then
+                    JumpscareEnd.Image = mainFace.Face.Texture
+                end
+                
+                game:GetService("TweenService"):Create(JumpscareEnd, TweenInfo.new(0.5), {
+                    Size = FullScreen.Size,
+                    Position = FullScreen.Position,
+                    Rotation = math.random(-20, 20)
+                }):Play()
+                
+                game:GetService("TweenService"):Create(colorEffect, TweenInfo.new(10), {
+                    Brightness = 0,
+                    Contrast = 0,
+                    Saturation = 0,
+                    TintColor = Color3.fromRGB(255, 255, 255)
+                }):Play()
+                
+                game:GetService("TweenService"):Create(A60Clone, TweenInfo.new(1), {
+                    CFrame = Camera.CFrame * CFrame.new(Vector3.new(0, -1.2, 45))
+                }):Play()
+                
+                task.wait(0.5)
+                
+                game:GetService("TweenService"):Create(JumpscareEnd, TweenInfo.new(0.5), {
+                    ImageTransparency = 1
+                }):Play()
+                
+                task.wait(0.5)
+                
+                A60Clone:Destroy()
+                task.wait(2)
+                colorEffect:Destroy()
+                task.wait(1)
+                JumpscareGUI:Destroy()
+                jumpscareActive = false
+            end)
+        end
+        
+        PlayA60Jumpscare()
+    end
 end
 
+local models = game:GetObjects("rbxassetid://117633452506607")
+local figureModel = models[1]
+figureModel.Parent = workspace
+figureModel.Name = "A-60"
+
+local room50 = workspace.CurrentRooms["50"]
+local startModel = room50:FindFirstChild("Door", true)
+
+if not startModel then
+    return
+end
+
+local startPart = startModel:FindFirstChild("Hidden")
+if not startPart then
+    return
+end
+
+local figureNodesFolder = workspace.CurrentRooms["50"].FigureSetup.FigureNodes
 local allWaypoints = {}
-local figureNodes = {}
 
-local function findAllOneParts(parent)
-    for _, child in ipairs(parent:GetChildren()) do
-        if child.Name == "1" and child:IsA("BasePart") then
-            table.insert(figureNodes, {
-                part = child,
-                position = child.Position
-            })
-        end
-        if #child:GetChildren() > 0 then
-            findAllOneParts(child)
+for _, waypoint in pairs(figureNodesFolder:GetChildren()) do
+    if waypoint:IsA("BasePart") then
+        table.insert(allWaypoints, waypoint)
+    end
+end
+
+if #allWaypoints == 0 then
+    return
+end
+
+if not figureModel.PrimaryPart then
+    for _, part in pairs(figureModel:GetDescendants()) do
+        if part:IsA("BasePart") then
+            figureModel.PrimaryPart = part
+            break
         end
     end
 end
 
-local currentRooms = Workspace:FindFirstChild("CurrentRooms")
-if currentRooms then
-    findAllOneParts(currentRooms)
+if not figureModel.PrimaryPart then
+    return
 end
 
-if #figureNodes == 0 then
-    findAllOneParts(Workspace)
+local startHeightOffset = 3
+local startPos = Vector3.new(
+    startPart.Position.X,
+    startPart.Position.Y + startHeightOffset,
+    startPart.Position.Z
+)
+
+if figureModel and figureModel.PrimaryPart then
+    figureModel:SetPrimaryPartCFrame(CFrame.new(startPos))
 end
 
-if #figureNodes > 0 then
-    for _, node in ipairs(figureNodes) do
+local function moveToPosition(targetPosition, speed)
+    if not figureModel or not figureModel.PrimaryPart then
+        return
     end
     
-    for _, node in ipairs(figureNodes) do
-        for _ = 1, 2 do
-            table.insert(allWaypoints, {
-                part = node.part,
-                position = node.position,
-                isOnePart = true
-            })
-        end
+    local startPos = figureModel.PrimaryPart.Position
+    local endPos = Vector3.new(
+        targetPosition.X,
+        targetPosition.Y + startHeightOffset,
+        targetPosition.Z
+    )
+    
+    local distance = (endPos - startPos).Magnitude
+    if distance == 0 then
+        return
     end
     
-    for _ = 1, 3 do
-        for _, node in ipairs(figureNodes) do
-            table.insert(allWaypoints, {
-                part = node.part,
-                position = node.position + Vector3.new(
-                    math.random(-3, 3),
-                    math.random(-0.5, 0.5),
-                    math.random(-3, 3)
-                ),
-                isOnePart = true,
-                isOffset = true
-            })
-        end
-    end
+    local duration = distance / speed
+    local startTime = tick()
     
-    for _ = 1, math.random(3, 6) do
-        for i = #allWaypoints, 2, -1 do
-            local j = math.random(i)
-            allWaypoints[i], allWaypoints[j] = allWaypoints[j], allWaypoints[i]
+    local RunService = game:GetService("RunService")
+    local connection
+    connection = RunService.Heartbeat:Connect(function(deltaTime)
+        if not figureModel or not figureModel.PrimaryPart then
+            if connection then
+                connection:Disconnect()
+            end
+            return
         end
-    end
-else
-    local currentRooms = Workspace:FindFirstChild("CurrentRooms")
-    if currentRooms then
-        local waypointCount = 0
         
-        local function processDoor(doorModel, roomName, doorType)
-            local position
+        local elapsed = tick() - startTime
+        local progress = math.min(elapsed / duration, 1)
+        
+        local currentPos = Vector3.new(
+            startPos.X + (endPos.X - startPos.X) * progress,
+            startPos.Y + (endPos.Y - startPos.Y) * progress,
+            startPos.Z + (endPos.Z - startPos.Z) * progress
+        )
+        
+        figureModel:SetPrimaryPartCFrame(CFrame.new(currentPos))
+        
+        if progress >= 1 and connection then
+            connection:Disconnect()
+        end
+    end)
+    
+    while tick() - startTime < duration do
+        wait()
+    end
+    
+    if figureModel and figureModel.PrimaryPart then
+        figureModel:SetPrimaryPartCFrame(CFrame.new(endPos))
+    end
+end
+
+local function getNearestWaypoint(currentPos, remainingWaypoints)
+    local nearest = nil
+    local nearestDistance = math.huge
+    
+    for _, waypoint in pairs(remainingWaypoints) do
+        local waypointWithOffset = Vector3.new(
+            waypoint.Position.X,
+            waypoint.Position.Y + startHeightOffset,
+            waypoint.Position.Z
+        )
+        local distance = (waypointWithOffset - currentPos).Magnitude
+        if distance < nearestDistance then
+            nearestDistance = distance
+            nearest = waypoint
+        end
+    end
+    
+    return nearest
+end
+
+local function setupAttackDetection()
+    local isAttacking = false
+    local attackRange = 70
+    local attackCooldown = 0.5
+    local deathMessages = {
+        "你被A-60击败了...",
+        "巨大的嘈杂声中能感知到你的存在",
+        "保持距离，寻找安全的位置"
+    }
+    
+    spawn(function()
+        while figureModel and figureModel.Parent and attackDetectionActive do
+            wait(attackCooldown)
             
-            if doorModel.PrimaryPart then
-                position = doorModel:GetPivot().Position
-            else
-                local parts = {}
-                for _, part in ipairs(doorModel:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        table.insert(parts, part.Position)
-                    end
-                end
+            local player = game.Players.LocalPlayer
+            if player and player.Character and player.Character:FindFirstChild("Humanoid") then
+                local character = player.Character
+                local humanoid = character:FindFirstChild("Humanoid")
+                local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
                 
-                if #parts > 0 then
-                    local sum = Vector3.new(0, 0, 0)
-                    for _, pos in ipairs(parts) do
-                        sum = sum + pos
+                if humanoid and humanoidRootPart and humanoid.Health > 0 then
+                    if not figureModel or not figureModel.PrimaryPart then
+                        break
                     end
-                    position = sum / #parts
+                    
+                    local entityPosition = figureModel.PrimaryPart.Position
+                    local playerPosition = humanoidRootPart.Position
+                    local distance = (playerPosition - entityPosition).Magnitude
+                    
+                    if distance <= attackRange then
+                        local rayDirection = (playerPosition - entityPosition).Unit
+                        local ray = Ray.new(entityPosition, rayDirection * attackRange)
+                        
+                        local ignoreList = {figureModel}
+                        local hitPart, hitPosition = workspace:FindPartOnRayWithIgnoreList(ray, ignoreList)
+                        
+                        if hitPart and hitPart:IsDescendantOf(character) then
+                            if not isAttacking then
+                                isAttacking = true
+                                
+                                humanoid:TakeDamage(100)
+                                
+                                DEATHMESSAGE(deathMessages, "A-60")
+                                
+                                wait(1)
+                                isAttacking = false
+                            end
+                        end
+                    end
                 end
+            end
+        end
+    end)
+end
+
+local function moveThroughWaypoints()
+    if not figureModel or not figureModel.PrimaryPart then
+        return
+    end
+    
+    local remainingWaypoints = {}
+    for _, wp in pairs(allWaypoints) do
+        table.insert(remainingWaypoints, wp)
+    end
+    
+    local visitedWaypoints = {}
+    local currentPos = figureModel.PrimaryPart.Position
+    
+    while #remainingWaypoints > 0 do
+        if not figureModel or not figureModel.PrimaryPart then
+            break
+        end
+        
+        local nearest = getNearestWaypoint(currentPos, remainingWaypoints)
+        if nearest then
+            moveToPosition(nearest.Position, 140)
+            
+            if not figureModel or not figureModel.PrimaryPart then
+                break
             end
             
-            if position then
-                waypointCount = waypointCount + 1
-                
-                local waypoint = Instance.new("Part")
-                waypoint.Name = "A60_WP_" .. waypointCount
-                waypoint.Size = Vector3.new(2, 2, 2)
-                waypoint.Position = position
-                waypoint.Anchored = true
-                waypoint.CanCollide = false
-                waypoint.Transparency = 1
-                waypoint.Parent = waypointFolder
-                
-                for _ = 1, 2 do
-                    table.insert(allWaypoints, {
-                        part = waypoint,
-                        position = waypoint.Position,
-                        room = roomName,
-                        index = waypointCount,
-                        doorType = doorType,
-                        isDoor = true
-                    })
-                end
-                
-                for _ = 1, 4 do
-                    local offsetPos = position + Vector3.new(
-                        math.random(-4, 4),
-                        math.random(0, 2),
-                        math.random(-4, 4)
-                    )
-                    
-                    waypointCount = waypointCount + 1
-                    local offsetWaypoint = Instance.new("Part")
-                    offsetWaypoint.Name = "A60_WP_" .. waypointCount .. "_Offset"
-                    offsetWaypoint.Size = Vector3.new(2, 2, 2)
-                    offsetWaypoint.Position = offsetPos
-                    offsetWaypoint.Anchored = true
-                    offsetWaypoint.CanCollide = false
-                    offsetWaypoint.Transparency = 1
-                    offsetWaypoint.Parent = waypointFolder
-                    
-                    table.insert(allWaypoints, {
-                        part = offsetWaypoint,
-                        position = offsetPos,
-                        room = roomName,
-                        index = waypointCount,
-                        doorType = doorType,
-                        isDoor = true,
-                        isOffset = true
-                    })
+            currentPos = figureModel.PrimaryPart.Position
+            table.insert(visitedWaypoints, nearest)
+            
+            for i, wp in pairs(remainingWaypoints) do
+                if wp == nearest then
+                    table.remove(remainingWaypoints, i)
+                    break
                 end
             end
-        end
-        
-        for _, room in ipairs(currentRooms:GetChildren()) do
-            if room:IsA("Model") then
-                for _, child in ipairs(room:GetDescendants()) do
-                    if child:IsA("Model") and (child.Name == "Door" or child.Name == "DoorNormal" or child.Name == "SideroomDupe") then
-                        processDoor(child, room.Name, child.Name)
-                    end
-                end
-            end
-        end
-        
-        for _ = 1, math.random(3, 6) do
-            for i = #allWaypoints, 2, -1 do
-                local j = math.random(i)
-                allWaypoints[i], allWaypoints[j] = allWaypoints[j], allWaypoints[i]
-            end
-        end
-    end
-end
-
-local a60Model
-local success, result = pcall(function()
-    return game:GetObjects("rbxassetid://85615143036194")[1]
-end)
-
-if success and result then
-    a60Model = result
-    a60Model.Name = "A60"
-    a60Model.Parent = Workspace
-    
-    if #allWaypoints > 0 then
-        a60Model:PivotTo(CFrame.new(allWaypoints[1].position + Vector3.new(5, 0, 5)))
-    end
-else
-    a60Model = Instance.new("Model")
-    a60Model.Name = "A60"
-    
-    local torso = Instance.new("Part")
-    torso.Name = "Torso"
-    torso.Size = Vector3.new(2, 4, 2)
-    torso.Position = Vector3.new(0, 5, 0)
-    torso.Anchored = false
-    torso.CanCollide = true
-    torso.Color = Color3.fromRGB(139, 69, 19)
-    torso.Material = Enum.Material.Wood
-    torso.Parent = a60Model
-    
-    a60Model.PrimaryPart = torso
-    a60Model.Parent = Workspace
-end
-
-local function addFaceParticleAnimation()
-    local faceParticle
-    for _, child in ipairs(a60Model:GetDescendants()) do
-        if child:IsA("ParticleEmitter") and child.Name == "Face" then
-            faceParticle = child
+        else
             break
         end
     end
     
-    if not faceParticle then
-        return
-    end
-
-    local particleTextures = {
-        "rbxassetid://16020415559",
-        "rbxassetid://16020423090", 
-        "rbxassetid://16020425703",
-        "rbxassetid://16020417711",
-        "rbxassetid://16020432826",
-        "rbxassetid://16020430685",
-        "rbxassetid://16020435171"
-    }
-    
-    local currentTextureIndex = 1
-    local animationSpeed = 0.1
-    local isAnimating = true
-
-    local originalTexture = faceParticle.Texture
-    local originalEnabled = faceParticle.Enabled
-
-    coroutine.wrap(function()
-        while a60Model and a60Model.Parent and faceParticle and faceParticle.Parent and isAnimating do
-
-            faceParticle.Enabled = true
-
-            faceParticle.Texture = particleTextures[currentTextureIndex]
-
-            currentTextureIndex = currentTextureIndex + 1
-            if currentTextureIndex > #particleTextures then
-                currentTextureIndex = 1
-            end
-
-            local currentSpeed = animationSpeed * (0.8 + math.random() * 0.4)
-            wait(currentSpeed)
+    for i = #visitedWaypoints - 1, 1, -1 do
+        if not figureModel or not figureModel.PrimaryPart then
+            break
         end
-    end)()
-    local function setAnimationSpeed(speed)
-        animationSpeed = math.max(0.05, math.min(0.5, speed))
-    end
-    
-    local function stopAnimation()
-        isAnimating = false
-        faceParticle.Texture = originalTexture
-    end
-    
-    local function startAnimation()
-        isAnimating = true
-    end
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
         
-        if input.KeyCode == Enum.KeyCode.F then
-            isAnimating = not isAnimating
-            if isAnimating then
-            else
-            end
+        local waypoint = visitedWaypoints[i]
+        moveToPosition(waypoint.Position, 140)
+        
+        if not figureModel or not figureModel.PrimaryPart then
+            break
+        end
+        
+        currentPos = figureModel.PrimaryPart.Position
+    end
+    
+    for i = 2, #visitedWaypoints do
+        if not figureModel or not figureModel.PrimaryPart then
+            break
+        end
+        
+        local waypoint = visitedWaypoints[i]
+        moveToPosition(waypoint.Position, 140)
+        
+        if not figureModel or not figureModel.PrimaryPart then
+            break
+        end
+        
+        currentPos = figureModel.PrimaryPart.Position
+    end
+end
+
+if not entityTimerActive then
+    entityTimerActive = true
+    loopActive = true
+    
+    setupAttackDetection()
+    
+    spawn(function()
+        while loopActive and figureModel and figureModel.Parent do
+            moveThroughWaypoints()
+            wait(0.1)
         end
     end)
     
-    return {
-        setSpeed = setAnimationSpeed,
-        stop = stopAnimation,
-        start = startAnimation
-    }
-end
-
-local currentWaypointIndex = 1
-local isMoving = true
-local baseSpeed = 60
-local rotationSpeed = 0.6
-local reachedDistance = 8.0
-local smoothFactor = 0.6
-local visitCounts = {}
-local lastVisitTime = {}
-
-for i = 1, #allWaypoints do
-    visitCounts[i] = 0
-    lastVisitTime[i] = 0
-end
-
-local function getWaypoint()
-    if #allWaypoints == 0 then
-        return nil, 1
-    end
-    
-    local currentTime = tick()
-    local validWaypoints = {}
-    
-    for i, wp in ipairs(allWaypoints) do
-        if wp and wp.part and wp.part.Parent then
-            if currentTime - lastVisitTime[i] > 2 then
-                table.insert(validWaypoints, {index = i, waypoint = wp})
-            end
-        end
-    end
-    
-    if #validWaypoints > 0 then
-        local choice = validWaypoints[math.random(1, #validWaypoints)]
-        currentWaypointIndex = choice.index
-        return choice.waypoint, currentWaypointIndex
-    end
-    
-    for i = 1, #allWaypoints do
-        local wp = allWaypoints[i]
-        if wp and wp.part and wp.part.Parent then
-            currentWaypointIndex = i
-            return wp, currentWaypointIndex
-        end
-    end
-    
-    return nil, 1
-end
-
-local function checkReachedWaypoint(waypoint)
-    if not waypoint or not waypoint.part or not waypoint.part.Parent then
-        return false
-    end
-    
-    local monsterPos = a60Model:GetPivot().Position
-    local waypointPos = waypoint.position
-    local distance = (monsterPos - waypointPos).Magnitude
-    
-    return distance <= reachedDistance
-end
-
-local lastUpdate = tick()
-local currentTarget, currentIndex = getWaypoint()
-local velocity = Vector3.new(0, 0, 0)
-local wobbleIntensity = 0.15
-local wobbleSpeed = 3.0
-local wobbleTime = 0
-local targetSwitchTime = 0
-local minTargetTime = 1.0
-local maxTargetTime = 5.0
-local speedMultiplier = 1.0
-local zigzagAmount = 0
-local zigzagSpeed = 2.0
-local zigzagIntensity = 0.3
-if #figureNodes > 0 then
-else
-end
-
-coroutine.wrap(function()
-    wait(60)
-    
-    for _, waypoint in ipairs(allWaypoints) do
-        if not waypoint.isOnePart and waypoint.part and waypoint.part.Parent then
-            waypoint.part:Destroy()
-        end
-    end
-    
-    if a60Model and a60Model.Parent then
-        a60Model:Destroy()
-    end
-    
-    if waypointFolder and waypointFolder.Parent then
-        waypointFolder:Destroy()
-    end
-end)()
-
-coroutine.wrap(function()
-    while a60Model and a60Model.Parent do
-        local deltaTime = math.min(tick() - lastUpdate, 0.033)
-        lastUpdate = tick()
-        wobbleTime = wobbleTime + deltaTime * wobbleSpeed
-        zigzagAmount = zigzagAmount + deltaTime * zigzagSpeed
+    spawn(function()
+        wait(60)
         
-        if isMoving and currentTarget then
-            local monsterCFrame = a60Model:GetPivot()
-            local monsterPos = monsterCFrame.Position
-            local targetPos = currentTarget.position
-            
-            local direction = (targetPos - monsterPos)
-            local distance = direction.Magnitude
-            
-            if distance > 0.1 then
-                local moveDirection = direction.Unit
-                
-                local targetSpeed = baseSpeed * speedMultiplier
-                
-                if math.random() < 0.4 then
-                    speedMultiplier = 0.7 + math.random() * 1.3
-                end
-                
-                if distance < 20 then
-                    targetSpeed = targetSpeed * 0.8
-                elseif distance > 40 then
-                    targetSpeed = targetSpeed * 1.4
-                end
-                
-                if tick() - targetSwitchTime > minTargetTime + math.random() * (maxTargetTime - minTargetTime) then
-                    if math.random() < 0.6 then
-                        currentTarget, currentIndex = getWaypoint()
-                        targetSwitchTime = tick()
-                    end
-                end
-                
-                local zigzagOffset = Vector3.new(
-                    math.sin(zigzagAmount) * zigzagIntensity,
-                    0,
-                    math.cos(zigzagAmount * 0.7) * zigzagIntensity * 0.5
-                )
-                
-                moveDirection = (moveDirection + zigzagOffset * 0.1).Unit
-                
-                local targetVelocity = moveDirection * targetSpeed
-                velocity = velocity:Lerp(targetVelocity, smoothFactor)
-                
-                local wobbleOffset = Vector3.new(
-                    math.sin(wobbleTime) * wobbleIntensity * 2.0,
-                    math.cos(wobbleTime * 1.3) * wobbleIntensity * 1.0,
-                    math.cos(wobbleTime * 0.9) * wobbleIntensity * 1.5
-                )
-                
-                local newPosition = monsterPos + (velocity * deltaTime) + wobbleOffset
-                
-                if moveDirection.Magnitude > 0.1 then
-                    local yawOffset = math.rad(math.sin(wobbleTime * 0.7) * 8)
-                    local pitchOffset = math.rad(math.cos(wobbleTime * 1.1) * 6)
-                    local rollOffset = math.rad(math.sin(wobbleTime * 1.4) * 4)
-                    
-                    local rotatedDirection = CFrame.Angles(pitchOffset, yawOffset, rollOffset) * moveDirection
-                    
-                    local lookAtCFrame = CFrame.lookAt(newPosition, newPosition + rotatedDirection)
-                    a60Model:PivotTo(lookAtCFrame)
-                end
-                
-                if checkReachedWaypoint(currentTarget) then
-                    if currentIndex then
-                        visitCounts[currentIndex] = (visitCounts[currentIndex] or 0) + 1
-                        lastVisitTime[currentIndex] = tick()
-                    end
-                    
-                    wait(math.random(0.05, 0.2))
-                    
-                    if math.random() < 0.8 then
-                        currentTarget, currentIndex = getWaypoint()
-                        targetSwitchTime = tick()
-                    end
-                    
-                    velocity = velocity * 0.2
-                end
-            else
-                if currentIndex then
-                    visitCounts[currentIndex] = (visitCounts[currentIndex] or 0) + 1
-                    lastVisitTime[currentIndex] = tick()
-                end
-                
-                wait(math.random(0.05, 0.2))
-                currentTarget, currentIndex = getWaypoint()
-                targetSwitchTime = tick()
-                velocity = Vector3.new(0, 0, 0)
-            end
+        loopActive = false
+        attackDetectionActive = false
+        
+        if figureModel and figureModel.Parent then
+            figureModel:Destroy()
         end
         
-        RunService.RenderStepped:Wait()
-    end
-end)()
-local UserInputService = game:GetService("UserInputService")
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.R then
-        currentTarget, currentIndex = getWaypoint()
-        isMoving = true
-        velocity = Vector3.new(0, 0, 0)
-        speedMultiplier = 1.0
-        
-        for i = 1, #allWaypoints do
-            visitCounts[i] = 0
-            lastVisitTime[i] = 0
-        end
-        
-        if #allWaypoints > 0 then
-            a60Model:PivotTo(CFrame.new(allWaypoints[1].position + Vector3.new(5, 0, 5)))
-        end
-        
-    elseif input.KeyCode == Enum.KeyCode.T then
-        isMoving = not isMoving
-        if isMoving then
-            velocity = Vector3.new(0, 0, 0)
+        figureModel = nil
+        entityTimerActive = false
+    end)
+end
+
+spawn(function()
+    wait(0.5)
+    local face = workspace:WaitForChild("A-60"):WaitForChild("RushNew"):WaitForChild("Main"):WaitForChild("Face")
+    if face and face:IsA("ParticleEmitter") then
+        while true do
+            face.Texture = "rbxassetid://12145534911"
+            wait(0.1)
+            face.Texture = "rbxassetid://12145554242"
+            wait(0.1)
+            face.Texture = "rbxassetid://12145599498"
+            wait(0.1)
+            face.Texture = "rbxassetid://12145599275"
+            wait(0.1)
+            face.Texture = "rbxassetid://12155335619"
+            wait(0.1)
+            face.Texture = "rbxassetid://12145598814"
+            wait(0.1)
+            face.Texture = "rbxassetid://12146135062"
+            wait(0.1)
+            face.Texture = "rbxassetid://11378285585"
+            wait(0.1)
         end
     end
 end)
-local faceController
-if a60Model then
-    faceController = addFaceParticleAnimation()
-end
 end
 
 function entityBehaviors.A500RUN()

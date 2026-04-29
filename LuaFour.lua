@@ -3014,10 +3014,7 @@ end)
 end
 
 function entityBehaviors.Muffler2()
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("....",true)
-wait(4)
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("You extremely foolish human.",true)
-wait(2)
 local muffler = workspace:FindFirstChild("Muffler")
 if not muffler or not muffler:IsA("Model") then
     return
@@ -3029,20 +3026,44 @@ if closeStatic and closeStatic:IsA("Sound") then
 end
 
 function DownloadAudio(url, filename)
+    local url = url
+    local fileName = filename or "temp_audio"
+    local fullFileName = fileName .. ".mp3"
     local success, audioData = pcall(function()
         return game:HttpGet(url)
     end)
-    
     if not success then
         return nil
     end
-    
-    writefile(filename .. ".mp3", audioData)
-    
-    if getsynasset then
-        return getsynasset(filename .. ".mp3")
+    local writeSuccess, writeError = pcall(function()
+        writefile(fullFileName, audioData)
+    end)
+    if not writeSuccess then
+        return nil
     end
-    return nil
+    local assetPath
+    if getsynasset then
+        assetPath = getsynasset(fullFileName)
+    elseif getcustomasset then
+        assetPath = getcustomasset(fullFileName)
+    else
+        return nil
+    end
+    return assetPath
+end
+
+function CustomGitSound(soundlink, vol, filename)
+    local sound = Instance.new("Sound")
+    sound.SoundId = DownloadAudio(soundlink, filename)
+    if not sound.SoundId then
+        return nil
+    end
+    sound.Parent = workspace
+    sound.Name = filename .. "_" .. tick()
+    sound.Volume = vol or 1
+    sound.Loaded:Wait()
+    sound:Play()
+    return sound
 end
 
 function ChangeSkybox()
@@ -3081,30 +3102,24 @@ function CameraShakeEffect()
     end)
 end
 
-local bossStartId = DownloadAudio(
+local bossStartSound = CustomGitSound(
     "https://github.com/Zero0Star/RipperNewSound/blob/master/MuteBossMusicStart.mp3?raw=true",
+    2,
     "BOSSstart"
 )
 
-if bossStartId then
-    local startSound = Instance.new("Sound")
-    startSound.SoundId = bossStartId
-    startSound.Parent = workspace
-    startSound.Volume = 2
-    startSound:Play()
 
+if bossStartSound then
+bossStartSound.Name = "START"
     spawn(function()
-        startSound.Ended:Wait()
-        local bossEndId = DownloadAudio(
+        bossStartSound.Ended:Wait()
+        CustomGitSound(
             "https://github.com/Zero0Star/RipperNewSound/blob/master/MuteBossMusicEnd.mp3?raw=true",
+            2,
             "BOSSEND"
         )
-        if bossEndId then
-            local endSound = Instance.new("Sound")
-            endSound.SoundId = bossEndId
-            endSound.Parent = workspace
-            endSound.Volume = 2
-            endSound:Play()
+        if bossEndSound then
+            bossEndSound.Name = "BOSSEND"
         end
     end)
 

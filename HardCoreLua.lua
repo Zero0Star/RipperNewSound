@@ -3150,7 +3150,7 @@ Event:FireServer(
     local modelNames = {
         "A-200", "A60", "Amin-60", "Black-A60", "Deer god", "DeerGod",
         "Frostbite", "@&%^#*$Indescribable God!@$*&^!Q(* ", "LightSpeed",
-        "Rebound", "Ripper", "Following_ENEMY", "Silence","Dread","Muffler","Common Sence","Fluster","Kitty","Broken eyes","Angry Munci","Shadow","Hunger","WH1T3","Obsession","HimMoving","smiler", "Chainsmoker"
+        "Rebound", "Ripper", "Following_ENEMY", "Silence","Dread","Muffler","Common Sence","Fluster","Kitty","Broken eyes","Angry Munci","Shadow","Him","Hunger","WH1T3","Obsession","HimMoving","smiler", "Chainsmoker"
     }
     for _, name in ipairs(modelNames) do
         local model = workspace:FindFirstChild(name)

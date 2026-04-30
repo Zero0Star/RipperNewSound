@@ -3150,7 +3150,7 @@ Event:FireServer(
     local modelNames = {
         "A-200", "A60", "Amin-60", "Black-A60", "Deer god", "DeerGod",
         "Frostbite", "@&%^#*$Indescribable God!@$*&^!Q(* ", "LightSpeed",
-        "Rebound", "Ripper", "Following_ENEMY", "Silence","Dread","Muffler","Common Sence","Fluster","Kitty","Broken eyes","Angry Munci","Hunger","WH1T3","Obsession","HimMoving","smiler", "Chainsmoker"
+        "Rebound", "Ripper", "Following_ENEMY", "Silence","Dread","Muffler","Common Sence","Fluster","Kitty","Broken eyes","Angry Munci","Shadow","Hunger","WH1T3","Obsession","HimMoving","smiler", "Chainsmoker"
     }
     for _, name in ipairs(modelNames) do
         local model = workspace:FindFirstChild(name)
@@ -3946,13 +3946,19 @@ Event:FireServer(
 )
 end
 
-function entityBehaviors.RipperJump()
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+function entityBehaviors.SHADOWSW()
+function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
 
 function LoadCustomInstance(source, parent)
     local model
+
     local function NormalizeGitHubURL(url)
         if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
             return url .. "?raw=true"
@@ -4002,245 +4008,39 @@ function LoadCustomInstance(source, parent)
             end)
         end
     end
+
     return model
 end
 
-local function createScreenFlash()
-
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "RipperJumpFlash"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.IgnoreGuiInset = true
-    
-    local imageLabel = Instance.new("ImageLabel")
-    imageLabel.Name = "FlashImage"
-    imageLabel.Image = "rbxassetid://2510585515"
-    imageLabel.Size = UDim2.new(1, 0, 1, 0)
-    imageLabel.Position = UDim2.new(0, 0, 0, 0)
-    imageLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-    imageLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
-    imageLabel.Size = UDim2.new(1.2, 0, 1.2, 0) 
-    imageLabel.BackgroundTransparency = 1
-    imageLabel.ImageTransparency = 0.9 
-    imageLabel.ImageColor3 = Color3.new(1, 1, 1)
-    imageLabel.Parent = screenGui
-    
-    screenGui.Parent = player:WaitForChild("PlayerGui")
-    
-    local tweenService = game:GetService("TweenService")
-
-    local flashDuration = 5
-    local startTime = tick()
-    local currentFlashCount = 0
-    
-    while tick() - startTime < flashDuration do
-        local elapsedTime = tick() - startTime
-        local progress = elapsedTime / flashDuration
-
-        local targetTransparency = 0.9 - (progress * 0.8)
-        if targetTransparency < 0.1 then
-            targetTransparency = 0.1
-        end
-
-        local currentSpeed = 0.5 - (progress * 0.4)
-        if currentSpeed < 0.1 then
-            currentSpeed = 0.1
-        end
-        
-        local flashDurationHalf = currentSpeed / 2
-
-        local fadeInTween = tweenService:Create(
-            imageLabel,
-            TweenInfo.new(flashDurationHalf * 0.5, Enum.EasingStyle.Linear),
-            {ImageTransparency = targetTransparency}
-        )
-        fadeInTween:Play()
-        fadeInTween.Completed:Wait()
-
-        wait(flashDurationHalf * 0.1)
-
-        local fadeOutTransparency = targetTransparency + 0.3
-        if fadeOutTransparency > 0.9 then
-            fadeOutTransparency = 0.9
-        end
-        
-        local fadeOutTween = tweenService:Create(
-            imageLabel,
-            TweenInfo.new(flashDurationHalf * 0.5, Enum.EasingStyle.Linear),
-            {ImageTransparency = fadeOutTransparency}
-        )
-        fadeOutTween:Play()
-        fadeOutTween.Completed:Wait()
-
-        wait(flashDurationHalf * 0.1)
-        
-        currentFlashCount += 1
-
-        if progress > 0.7 then
-            imageLabel.ImageTransparency = targetTransparency - 0.1
-        end
-    end
-
-    for i = 1, 5 do
-        local intensity = 1 - (i * 0.15)
-
-        local quickFadeIn = tweenService:Create(
-            imageLabel,
-            TweenInfo.new(0.08, Enum.EasingStyle.Linear),
-            {ImageTransparency = 0.1 + (i * 0.05)} 
-        )
-        quickFadeIn:Play()
-        quickFadeIn.Completed:Wait()
-        
-        wait(0.05)
-
-        local quickFadeOut = tweenService:Create(
-            imageLabel,
-            TweenInfo.new(0.08, Enum.EasingStyle.Linear),
-            {ImageTransparency = 0.5 + (i * 0.1)} 
-        )
-        quickFadeOut:Play()
-        quickFadeOut.Completed:Wait()
-        
-        wait(0.05)
-    end
-
-    local finalFlash = tweenService:Create(
-        imageLabel,
-        TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {ImageTransparency = 0.05}
-    )
-    finalFlash:Play()
-    finalFlash.Completed:Wait()
-    
-    wait(0.1)
-
-    local finalFadeOut = tweenService:Create(
-        imageLabel,
-        TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-        {ImageTransparency = 1}
-    )
-    finalFadeOut:Play()
-    finalFadeOut.Completed:Wait()
-
-    wait(0.3)
-    screenGui:Destroy()
+local s = LoadCustomInstance(76157710463326, workspace)  -- 可以直接使用数字ID
+if not s then
+    return
 end
 
-local function createJumpScareAtPlayer()
-    local jumpModel = LoadCustomInstance(104190508011063, workspace)
-    if not jumpModel then
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 5, -15)
+entity.Part.CFrame = entity.CFrame
 
-        return
-    end
-    
-    jumpModel.Name = "RipperJumpFace_Player"
-    
-    local primaryPart
-    if jumpModel:IsA("Model") then
-        primaryPart = jumpModel.PrimaryPart or jumpModel:FindFirstChildWhichIsA("BasePart")
-        if primaryPart then
-            jumpModel.PrimaryPart = primaryPart
-        end
-    else
-        primaryPart = jumpModel
-    end
-    
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if rootPart and primaryPart then
-        local angle = math.random() * 2 * math.pi
-        local distance = math.random(15, 25)
-        local offset = Vector3.new(
-            math.cos(angle) * distance,
-            6,
-            math.sin(angle) * distance
-        )
-        
-        local spawnPosition = rootPart.Position + offset
-        
-        if jumpModel:IsA("Model") and jumpModel.PrimaryPart then
-            jumpModel:SetPrimaryPartCFrame(CFrame.new(spawnPosition))
-        else
-            jumpModel.CFrame = CFrame.new(spawnPosition)
-        end
-        
-        local camera = workspace.CurrentCamera
-        local originalCameraType = camera.CameraType
-        local originalSubject = camera.CameraSubject
-        
-        camera.CameraType = Enum.CameraType.Scriptable
-        
-        local lookAtPos = primaryPart.Position
-        local cameraPos = lookAtPos + Vector3.new(0, 3, -7)
-        camera.CFrame = CFrame.lookAt(cameraPos, lookAtPos)
-        
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = 0
-            humanoid.JumpPower = 0
-        end
-        
-        spawn(function()
-            createScreenFlash()
-        end)
-        
-        wait(5)
-        
-        if humanoid then
-            humanoid.WalkSpeed = 16
-            humanoid.JumpPower = 50
-        end
-        
-        if camera then
-            camera.CameraType = originalCameraType
-            camera.CameraSubject = originalSubject
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
         end
     end
-    
-    jumpModel:Destroy()
 end
-
-local function triggerJumpScare()
-    if not character or not character.Parent then
-        return
-    end
-    
-    createJumpScareAtPlayer()
-end
-
-local ripperCheckConnection
-local function startRipperCheck()
-    if ripperCheckConnection then
-        ripperCheckConnection:Disconnect()
-    end
-    
-    ripperCheckConnection = game:GetService("RunService").Heartbeat:Connect(function()
-        if not character or not character.Parent then
-            if ripperCheckConnection then
-                ripperCheckConnection:Disconnect()
-            end
-            return
-        end
-        
-        local ripperModel = workspace:FindFirstChild("Ripper")
-        
-        if not ripperModel then
-            if ripperCheckConnection then
-                ripperCheckConnection:Disconnect()
-            end
-            triggerJumpScare()
-        end
-    end)
-end
-startRipperCheck()
-player.CharacterAdded:Connect(function(newChar)
-    character = newChar
-    wait(1)
-    startRipperCheck()
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
 end)
-wait(6)
-replicatesignal(game.Players.LocalPlayer.Kill)
 end
 
 function entityBehaviors.DeerGodJump()
@@ -5390,6 +5190,103 @@ initialize()
 setupPlayerEvents()
 end
 
+function entityBehaviors.HUMANSW()
+function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(131784429865597, workspace)
+if not s then
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(-20, -2.5, -10)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
+        end
+    end
+end
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
+end)
+end
+
 function entityBehaviors.Booom()
 local soundService = game:GetService("SoundService")
 local workspace = game.Workspace
@@ -5941,6 +5838,103 @@ entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 7,
 entity.Part.CFrame = entity.CFrame
 end
 
+function entityBehaviors.LOOKSW()
+function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(124094609630783, workspace)
+if not s then
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(30, 1.2, -10)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
+        end
+    end
+end
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
+end)
+end
+
 local entityConfig = {
     ["rbxassetid://140338542312593"] = entityBehaviors.FigureSpawn,
     ["rbxassetid://140612367685491"] = entityBehaviors.GodOFOne,
@@ -5967,11 +5961,11 @@ local entityConfig = {
     ["rbxassetid://110532875373161"] = entityBehaviors.Deergod,
     ["rbxassetid://1079408535"] = entityBehaviors.LightSpeed,
     ["rbxassetid://93679208285508"] = entityBehaviors.A200Jump,
-    ["rbxassetid://96703287490096"] = entityBehaviors.ReboundJump, 
-    ["rbxassetid://140723850841863"] = entityBehaviors.EndRoom, 
+    ["rbxassetid://96703287490096"] = entityBehaviors.HUMANSW, 
+    ["rbxassetid://140723850841863"] = entityBehaviors.EndRooms, 
     ["rbxassetid://140722528152072"] = entityBehaviors.Blast,
     ["rbxassetid://103515031866941"] = entityBehaviors.Cease, 
-    ["rbxassetid://109318460496354"] = entityBehaviors.RipperJump, 
+    ["rbxassetid://109318460496354"] = entityBehaviors.SHADOWSW, 
     ["rbxassetid://140690368868329"] = entityBehaviors.DeerGodJump, 
     ["rbxassetid://100192030036066"] = entityBehaviors.CL, 
     ["rbxassetid://9113115842"] = entityBehaviors.Shok,
@@ -5981,7 +5975,8 @@ local entityConfig = {
     ["rbxassetid://109690961059477"] = entityBehaviors.LightOSs,
     ["rbxassetid://85554051164113"] = entityBehaviors.FigureXF,
     ["rbxassetid://80450670780109"] = entityBehaviors.SuperDread,
-    ["rbxassetid://140701104317815"] = entityBehaviors.DreadJump,         
+    ["rbxassetid://140701104317815"] = entityBehaviors.DreadJump,
+    ["rbxassetid://50"] = entityBehaviors.LOOKSW,         
     ["rbxassetid://135376180128296"] = entityBehaviors.Silence
 }
 local checkedEntities = {}

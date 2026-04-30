@@ -3424,13 +3424,25 @@ achievementGiver({
 })
 end
 
-function entityBehaviors.HIMCJ()
+function entityBehaviors.horrorhotel()
 achievementGiver({
-    Title = "That it",
-    Desc = "What is this sound",
-    Reason = "Survive the Him.",
-    Image = "rbxassetid://15765633161"
+    Title = "Horror Time of Fear",
+    Desc = "Week 2...",
+    Reason = "Escape the Darkness Hotel.",
+    Image = "rbxassetid://11059000854"
 })
+local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
+achievementFrame.Revives.Text = "500"
+achievementFrame.Stardust.Text = "0"
+achievementFrame.Knobs.Text = "23,000"
+achievementFrame.Knobs.Visible = true
+achievementFrame.Revives.Visible = true
+achievementFrame.KnobsIcon.Visible = true
+achievementFrame.StardustIcon.Visible = false
+achievementFrame.RevivesIcon.Visible = true
+achievementFrame.Visible = true
+achievementFrame.Stardust.Visible = false
 end
 
 function entityBehaviors.osb()
@@ -3597,7 +3609,7 @@ local entityConfig = {
     ["rbxassetid://25"]  = entityBehaviors.cldread,
     ["rbxassetid://26"]  = entityBehaviors.HUNGERCJ,
     ["rbxassetid://27"]  = entityBehaviors.ThreatTIME,
-    ["rbxassetid://28"]  = entityBehaviors.HIMCJ,
+    ["rbxassetid://28"]  = entityBehaviors.horrorhotel,
     ["rbxassetid://29"]  = entityBehaviors.osb,
     ["rbxassetid://30"]  = entityBehaviors.WINCJ,
     ["rbxassetid://31"]  = entityBehaviors.DeerGodTWO,  

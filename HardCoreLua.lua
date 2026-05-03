@@ -63,7 +63,7 @@ local function attractToHead()
         return
     end
     local hrp = nearestPlayer.Character.HumanoidRootPart
-    local moveSpeed = 0.2
+    local moveSpeed = 0.5
     local stopDistance = 1
     while (hrp.Position - headPart.Position).Magnitude > stopDistance do
         local direction = (headPart.Position - hrp.Position).Unit

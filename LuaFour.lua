@@ -3475,6 +3475,74 @@ achievementFrame.Visible = true
 achievementFrame.Stardust.Visible = false
 end
 
+function entityBehaviors.SILENCECUR()
+local silence = workspace:FindFirstChild("Silence")
+if silence and silence:IsA("Model") then
+    local silencePos = silence.PrimaryPart and silence.PrimaryPart.Position or silence:GetPivot().Position
+    silence:Destroy()
+    
+    local model
+    pcall(function()
+        model = game:GetObjects("rbxassetid://101941879996976")[1]
+    end)
+    
+    if model and model:IsA("Model") then
+        model.Parent = workspace
+        model:PivotTo(CFrame.new(silencePos + Vector3.new(0, 6, 0)))
+        
+        local explosionCameraShaker = require(game.ReplicatedStorage.CameraShaker)
+        local explosionCam = workspace.CurrentCamera
+        local explosionCamShake = explosionCameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+            explosionCam.CFrame = explosionCam.CFrame * shakeCf
+        end)
+        explosionCamShake:Start()
+        explosionCamShake:ShakeOnce(10, 100, 0.1, 8, 10, 1)
+        
+        task.wait(7)
+        
+        local beams = {}
+        local emitters = {}
+        
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Beam") then
+                table.insert(beams, obj)
+            elseif obj:IsA("ParticleEmitter") then
+                table.insert(emitters, obj)
+            end
+        end
+        
+        local startTime = tick()
+        local duration = 1
+        
+        while tick() - startTime < duration do
+            local elapsed = tick() - startTime
+            local alpha = elapsed / duration
+            
+            for _, beam in ipairs(beams) do
+                beam.Transparency = NumberSequence.new(alpha)
+            end
+            
+            for _, emitter in ipairs(emitters) do
+                emitter.Transparency = NumberSequence.new(alpha)
+            end
+            
+            task.wait()
+        end
+        
+        for _, beam in ipairs(beams) do
+            beam.Transparency = NumberSequence.new(1)
+        end
+        
+        for _, emitter in ipairs(emitters) do
+            emitter.Transparency = NumberSequence.new(1)
+        end
+        
+        task.wait(0.5)
+        model:Destroy()
+    end
+end
+end
+
 function entityBehaviors.DeerGodTWO()
 local entity = spawner.Create({Entity = {Name = "Deer god",Asset = "94961532857273",HeightOffset = -0.8},Lights = {Flicker = {Enabled = true,Duration = 50},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 5, 0.1, 1}},Movement = {Speed = 25,Delay = 0,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 10,Amount = 200 },Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {
                 "It seems you are so unfortunate...", 
@@ -3612,7 +3680,8 @@ local entityConfig = {
     ["rbxassetid://28"]  = entityBehaviors.horrorhotel,
     ["rbxassetid://29"]  = entityBehaviors.osb,
     ["rbxassetid://30"]  = entityBehaviors.WINCJ,
-    ["rbxassetid://31"]  = entityBehaviors.DeerGodTWO,  
+    ["rbxassetid://31"]  = entityBehaviors.DeerGodTWO,
+    ["rbxassetid://32"]  = entityBehaviors.SILENCECUR,  
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

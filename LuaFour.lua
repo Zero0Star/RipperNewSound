@@ -3543,6 +3543,85 @@ if silence and silence:IsA("Model") then
 end
 end
 
+function entityBehaviors.HUNGERCUR()
+local Hunger = workspace:FindFirstChild("Hunger")
+if Hunger and Hunger:IsA("Model") then
+    local HungerPos = Hunger.PrimaryPart and Hunger.PrimaryPart.Position or Hunger:GetPivot().Position
+    Hunger:Destroy()
+    
+    local model
+    pcall(function()
+        model = game:GetObjects("rbxassetid://75267288948071")[1]
+    end)
+    
+    if model and model:IsA("Model") then
+        model.Parent = workspace
+        model:PivotTo(CFrame.new(HungerPos + Vector3.new(0, 6, 0)))
+        
+        local explosionCameraShaker = require(game.ReplicatedStorage.CameraShaker)
+        local explosionCam = workspace.CurrentCamera
+        local explosionCamShake = explosionCameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+            explosionCam.CFrame = explosionCam.CFrame * shakeCf
+        end)
+        explosionCamShake:Start()
+        explosionCamShake:ShakeOnce(10, 100, 0.1, 8, 10, 1)
+        
+        task.wait(6)
+        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("一个杂碎已经被我清除",true)
+        local beams = {}
+        local emitters = {}
+        local meshes = {}
+        
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Beam") then
+                table.insert(beams, obj)
+            elseif obj:IsA("ParticleEmitter") then
+                table.insert(emitters, obj)
+            elseif obj:IsA("MeshPart") then
+                table.insert(meshes, obj)
+            end
+        end
+        
+        local startTime = tick()
+        local duration = 1
+        
+        while tick() - startTime < duration do
+            local elapsed = tick() - startTime
+            local alpha = elapsed / duration
+            
+            for _, beam in ipairs(beams) do
+                beam.Transparency = NumberSequence.new(alpha)
+            end
+            
+            for _, emitter in ipairs(emitters) do
+                emitter.Transparency = NumberSequence.new(alpha)
+            end
+            
+            for _, mesh in ipairs(meshes) do
+                mesh.Transparency = alpha
+            end
+            
+            task.wait()
+        end
+        
+        for _, beam in ipairs(beams) do
+            beam.Transparency = NumberSequence.new(1)
+        end
+        
+        for _, emitter in ipairs(emitters) do
+            emitter.Transparency = NumberSequence.new(1)
+        end
+        
+        for _, mesh in ipairs(meshes) do
+            mesh.Transparency = 1
+        end
+        
+        task.wait(0.5)
+        model:Destroy()
+    end
+end
+end
+
 function entityBehaviors.DeerGodTWO()
 local entity = spawner.Create({Entity = {Name = "Deer god",Asset = "94961532857273",HeightOffset = -0.8},Lights = {Flicker = {Enabled = true,Duration = 50},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 5, 0.1, 1}},Movement = {Speed = 25,Delay = 0,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 10,Amount = 200 },Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {
                 "It seems you are so unfortunate...", 
@@ -3681,7 +3760,8 @@ local entityConfig = {
     ["rbxassetid://29"]  = entityBehaviors.osb,
     ["rbxassetid://30"]  = entityBehaviors.WINCJ,
     ["rbxassetid://31"]  = entityBehaviors.DeerGodTWO,
-    ["rbxassetid://32"]  = entityBehaviors.SILENCECUR,  
+    ["rbxassetid://32"]  = entityBehaviors.SILENCECUR,
+    ["rbxassetid://33"]  = entityBehaviors.HUNGERCUR,  
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

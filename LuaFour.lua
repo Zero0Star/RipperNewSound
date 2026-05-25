@@ -3646,7 +3646,7 @@ if DeerGod and DeerGod:IsA("Model") then
         explosionCamShake:ShakeOnce(10, 100, 0.1, 8, 10, 1)
         
         task.wait(7)
-        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("一个杂碎已经被我清除",true)
+        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("你不该呆在这里",true)
         local beams = {}
         local emitters = {}
         local meshes = {}

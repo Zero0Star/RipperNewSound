@@ -3622,6 +3622,85 @@ if Hunger and Hunger:IsA("Model") then
 end
 end
 
+function entityBehaviors.RIPPCUR()
+local rushNew = workspace:FindFirstChild("RushNew")
+if rushNew and rushNew:IsA("BasePart") then
+    local rushNewPos = rushNew.Position
+    rushNew:Destroy()
+    
+    local model
+    pcall(function()
+        model = game:GetObjects("rbxassetid://70558624002937")[1]
+    end)
+    
+    if model and model:IsA("Model") then
+        model.Parent = workspace
+        model:PivotTo(CFrame.new(rushNewPos + Vector3.new(0, 8, 0)))
+        
+        local explosionCameraShaker = require(game.ReplicatedStorage.CameraShaker)
+        local explosionCam = workspace.CurrentCamera
+        local explosionCamShake = explosionCameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+            explosionCam.CFrame = explosionCam.CFrame * shakeCf
+        end)
+        explosionCamShake:Start()
+        explosionCamShake:ShakeOnce(10, 100, 0.1, 8, 10, 1)
+        
+        task.wait(8)
+        
+        local beams = {}
+        local emitters = {}
+        local meshes = {}
+        
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Beam") then
+                table.insert(beams, obj)
+            elseif obj:IsA("ParticleEmitter") then
+                table.insert(emitters, obj)
+            elseif obj:IsA("MeshPart") then
+                table.insert(meshes, obj)
+            end
+        end
+        
+        local startTime = tick()
+        local duration = 1
+        
+        while tick() - startTime < duration do
+            local elapsed = tick() - startTime
+            local alpha = elapsed / duration
+            
+            for _, beam in ipairs(beams) do
+                beam.Transparency = NumberSequence.new(alpha)
+            end
+            
+            for _, emitter in ipairs(emitters) do
+                emitter.Transparency = NumberSequence.new(alpha)
+            end
+            
+            for _, mesh in ipairs(meshes) do
+                mesh.Transparency = alpha
+            end
+            
+            task.wait()
+        end
+        
+        for _, beam in ipairs(beams) do
+            beam.Transparency = NumberSequence.new(1)
+        end
+        
+        for _, emitter in ipairs(emitters) do
+            emitter.Transparency = NumberSequence.new(1)
+        end
+        
+        for _, mesh in ipairs(meshes) do
+            mesh.Transparency = 1
+        end
+        
+        task.wait(0.5)
+        model:Destroy()
+    end
+end
+end
+
 function entityBehaviors.DEERCUR()
 local DeerGod = workspace:FindFirstChild("DeerGod")
 if DeerGod and DeerGod:IsA("Model") then
@@ -3840,7 +3919,8 @@ local entityConfig = {
     ["rbxassetid://31"]  = entityBehaviors.DeerGodTWO,
     ["rbxassetid://32"]  = entityBehaviors.SILENCECUR,
     ["rbxassetid://33"]  = entityBehaviors.HUNGERCUR,
-    ["rbxassetid://34"]  = entityBehaviors.DEERCUR,   
+    ["rbxassetid://34"]  = entityBehaviors.DEERCUR,
+    ["rbxassetid://35"]  = entityBehaviors.RIPPCUR,   
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

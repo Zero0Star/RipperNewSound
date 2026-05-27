@@ -3779,6 +3779,98 @@ if DeerGod and DeerGod:IsA("Model") then
     end
 end
 end
+function entityBehaviors.REBOUCUR()
+local Rebound = workspace:FindFirstChild("Rebound")
+if Rebound and Rebound:IsA("Model") then
+    local ReboundPos
+
+    local primaryPart = Rebound.PrimaryPart
+    if not primaryPart then
+        primaryPart = Rebound:FindFirstChildWhichIsA("BasePart")
+    end
+    
+    if primaryPart then
+        ReboundPos = primaryPart.Position
+    else
+        ReboundPos = Rebound:GetPivot().Position
+    end
+    
+    Rebound:Destroy()
+    
+    local model
+    pcall(function()
+        model = game:GetObjects("rbxassetid://79375225577662")[1]
+    end)
+    
+    if model and model:IsA("Model") then
+        model.Parent = workspace
+
+        local newPrimaryPart = model.PrimaryPart
+        if not newPrimaryPart then
+            newPrimaryPart = model:FindFirstChildWhichIsA("BasePart")
+        end
+        
+        if newPrimaryPart then
+            newPrimaryPart.Anchored = true
+            newPrimaryPart.CanCollide = false
+            newPrimaryPart.CFrame = CFrame.new(ReboundPos + Vector3.new(0, 6, 0))
+        else
+            model:PivotTo(CFrame.new(ReboundPos + Vector3.new(0, 5.7, 0)))
+        end
+        
+        local explosionCameraShaker = require(game.ReplicatedStorage.CameraShaker)
+        local explosionCam = workspace.CurrentCamera
+        local explosionCamShake = explosionCameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+            explosionCam.CFrame = explosionCam.CFrame * shakeCf
+        end)
+        explosionCamShake:Start()
+        explosionCamShake:ShakeOnce(10, 100, 0.1, 8, 10, 1)
+        
+        task.wait(7)
+        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("一个杂碎已经被我清除",true)
+        
+        local beams = {}
+        local emitters = {}
+        
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Beam") then
+                table.insert(beams, obj)
+            elseif obj:IsA("ParticleEmitter") then
+                table.insert(emitters, obj)
+            end
+        end
+        
+        local startTime = tick()
+        local duration = 1
+        
+        while tick() - startTime < duration do
+            local elapsed = tick() - startTime
+            local alpha = elapsed / duration
+            
+            for _, beam in ipairs(beams) do
+                beam.Transparency = NumberSequence.new(alpha)
+            end
+            
+            for _, emitter in ipairs(emitters) do
+                emitter.Transparency = NumberSequence.new(alpha)
+            end
+            
+            task.wait()
+        end
+        
+        for _, beam in ipairs(beams) do
+            beam.Transparency = NumberSequence.new(1)
+        end
+        
+        for _, emitter in ipairs(emitters) do
+            emitter.Transparency = NumberSequence.new(1)
+        end
+        
+        task.wait(0.5)
+        model:Destroy()
+    end
+end
+end
 function entityBehaviors.DeerGodTWO()
 local entity = spawner.Create({Entity = {Name = "DeerGod",Asset = "94961532857273",HeightOffset = -0.8},Lights = {Flicker = {Enabled = true,Duration = 50},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 5, 0.1, 1}},Movement = {Speed = 25,Delay = 0,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 10,Amount = 200 },Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {
                 "It seems you are so unfortunate...", 
@@ -3920,7 +4012,8 @@ local entityConfig = {
     ["rbxassetid://32"]  = entityBehaviors.SILENCECUR,
     ["rbxassetid://33"]  = entityBehaviors.HUNGERCUR,
     ["rbxassetid://34"]  = entityBehaviors.DEERCUR,
-    ["rbxassetid://35"]  = entityBehaviors.RIPPCUR,   
+    ["rbxassetid://35"]  = entityBehaviors.RIPPCUR,
+    ["rbxassetid://36"]  = entityBehaviors.REBOUCUR,   
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

@@ -346,19 +346,8 @@ end)
 end
 
 function entityBehaviors.bsripper()
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Hello",true)
-wait(2)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("SADAIKJLUSNLCKNJSA;L/OXJNIC;OLAIJNKSWF;C",true)
-wait(3)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("19D2Q8YHDOP9Q2HY12QDINHJO;IKL",true)
-wait(5)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("ASKHNDCLAO82WHDQEPOI89W22D",true)
-wait(7)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("CNASKL.IJNHXL.JNASJKCNHKALS",true)
-wait(7)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Q30W98UDHASKJBCDJL,AUHIWSD,.",true)
-wait(10)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("NightMare Mode True",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("你的十字架得到了好奇之光的庇护",true)
+
 end
 
 function entityBehaviors.bswhoop()

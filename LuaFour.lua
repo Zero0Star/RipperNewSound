@@ -3871,13 +3871,128 @@ if Rebound and Rebound:IsA("Model") then
     end
 end
 end
+local function PreloadDeerGodSounds()
+    if workspace:FindFirstChild("DeerGod_Preloaded") then
+        return
+    end
+    
+    local function DownloadAndStoreSound(url, soundName)
+        local fullFileName = soundName .. ".mp3"
+        local success, audioData = pcall(function()
+            return game:HttpGet(url)
+        end)
+        
+        if not success then
+            return nil
+        end
+
+        local writeSuccess = pcall(function()
+            writefile(fullFileName, audioData)
+        end)
+        
+        if not writeSuccess then
+            return nil
+        end
+
+        local assetPath
+        if getsynasset then
+            assetPath = getsynasset(fullFileName)
+        elseif getcustomasset then
+            assetPath = getcustomasset(fullFileName)
+        end
+        
+        if not assetPath then
+            return nil
+        end
+
+        local sound = Instance.new("Sound")
+        sound.SoundId = assetPath
+        sound.Name = soundName .. "_Preloaded"
+        sound.Parent = workspace
+        sound.Volume = 0
+        sound:Play()
+        sound:Stop()
+        
+        return sound
+    end
+
+    if dgmusic then
+        DownloadAndStoreSound(dgmusic, "DeerGod")
+    end
+end
+
+PreloadDeerGodSounds()
+
+local function PlayPreloadedDeerGodSound(volume)
+    volume = volume or 4
+    local sound = workspace:FindFirstChild("DeerGod_Preloaded")
+    
+    if sound then
+        sound.Volume = volume
+        sound:Play()
+        return sound
+    end
+    return nil
+end
+
 function entityBehaviors.DeerGodTWO()
-local entity = spawner.Create({Entity = {Name = "DeerGod",Asset = "94961532857273",HeightOffset = -0.8},Lights = {Flicker = {Enabled = true,Duration = 50},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 5, 0.1, 1}},Movement = {Speed = 25,Delay = 0,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 10,Amount = 200 },Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {
+    local entity = spawner.Create({
+        Entity = {
+            Name = "DeerGod",
+            Asset = "94961532857273",
+            HeightOffset = -0.8
+        },
+        Lights = {
+            Flicker = {
+                Enabled = true,
+                Duration = 50
+            },
+            Shatter = true,
+            Repair = false
+        },
+        Earthquake = {
+            Enabled = false
+        },
+        CameraShake = {
+            Enabled = true,
+            Range = 1500,
+            Values = {0.5, 5, 0.1, 1}
+        },
+        Movement = {
+            Speed = 25,
+            Delay = 0,
+            Reversed = false
+        },
+        Rebounding = {
+            Enabled = false,
+            Type = "Blitz",
+            Min = 1,
+            Max = math.random(1, 2),
+            Delay = math.random(10, 30) / 10
+        },
+        Damage = {
+            Enabled = true,
+            Range = 10,
+            Amount = 200
+        },
+        Crucifixion = {
+            Enabled = true,
+            Range = 40,
+            Resist = true,
+            Break = true
+        },
+        Death = {
+            Type = "Curious",
+            Hints = {
                 "It seems you are so unfortunate...", 
                 "You died by the Deer God", 
                 "That powerful force will drag you into the abyss.",
                 "The cross cannot guarantee your safety.",
-                "See you next time."},Cause = "Deer God"}})
+                "See you next time."
+            },
+            Cause = "Deer God"
+        }
+    })
 
     entity:SetCallback("OnSpawned", function()
         entityModel = entity.Model
@@ -3894,7 +4009,6 @@ local entity = spawner.Create({Entity = {Name = "DeerGod",Asset = "9496153285727
     end)
     
     entity:SetCallback("OnDespawning", function()
-    
         if chaseConnection then
             chaseConnection:Disconnect()
             chaseConnection = nil
@@ -3903,7 +4017,6 @@ local entity = spawner.Create({Entity = {Name = "DeerGod",Asset = "9496153285727
 
     entity:SetCallback("OnDamagePlayer", function(newHealth)
         if newHealth == 0 then
-    
             if chaseConnection then
                 chaseConnection:Disconnect()
                 chaseConnection = nil
@@ -3953,26 +4066,8 @@ local entity = spawner.Create({Entity = {Name = "DeerGod",Asset = "9496153285727
     end)
 
     entity:Run()
-    
-    function GitAud(soundgit, filename)
-        local url = soundgit
-        local FileName = filename
-        writefile(FileName .. ".mp3", game:HttpGet(url))
-    
-        return (getcustomasset or getsynasset)(FileName .. ".mp3")
-    end
-    
-    function CustomGitSound(soundlink, vol, filename)
-        local sound = Instance.new("Sound")
-        sound.SoundId = GitAud(soundlink, filename)
-        sound.Parent = workspace
-        sound.Name = filename or "Music"
-        sound.Volume = vol or 1
-        sound:Play()
-    end
-    local volume = 4
-    local localFileName = "DeerGod"
-    CustomGitSound(dgmusic, volume, localFileName)
+
+    PlayPreloadedDeerGodSound(4)
 end
 
 
@@ -4055,5 +4150,5 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingTwo... Doors HardCore V10 By Mr.key & HeavenNow :)"
+hint.Text = "LoadingFour... Doors HardCore V10 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 2)

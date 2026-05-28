@@ -6,7 +6,7 @@ local function CreateFollowerSystem(modelId1, modelId2, targetPlayerName)
     local targetChar, targetHum, targetRoot
     local isActive, isInitialized = true, false
     local velocity, targetPosition = Vector3.zero, Vector3.zero
-    local lerpFactor, springForce, damping, followDist, heightOffset = 0.3, 80, 0.9, 5, -3.2
+    local lerpFactor, springForce, damping, followDist, heightOffset = 0.3, 80, 0.9, 5, -2.7
 
     local function loadModel(assetId, isMain)
         local success, model = pcall(function()

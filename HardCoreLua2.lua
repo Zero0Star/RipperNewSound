@@ -1764,7 +1764,6 @@ function entityBehaviors.RipperSw()
             screamSound.Volume = 10
             screamSound.Pitch = 0.7
 
-            -- 使用预加载的爆炸音效
             local explodeSound = Instance.new("Sound", workspace)
             local explosionSound = workspace:FindFirstChild("RipperExplosionSound")
             if explosionSound then
@@ -3716,6 +3715,143 @@ entity:Run()
 end
 function entityBehaviors.A333LODING()
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Loading...", true)
+end
+
+function entityBehaviors.gunjeffkq()
+local sound = Instance.new("Sound")
+sound.Name = "Subspace"
+sound.SoundId = "rbxassetid://89344175304287"
+sound.Volume = 4
+sound.Parent = workspace
+
+sound.Ended:Connect(function()
+    sound:Destroy()
+end)
+sound:Play()
+end
+
+function entityBehaviors.JEFFGUN2()
+local RunService = game:GetService("RunService")
+local V1 = game:GetObjects("rbxassetid://134258088105212")[1]
+V1.Parent = workspace
+local V2 = workspace:WaitForChild("JeffTheKiller")
+
+local xOffset = 0
+local yOffset = 0
+local zOffset = 0
+
+if V1:IsA("Model") then
+    local primary = V1:FindFirstChildWhichIsA("BasePart")
+    if primary then
+        V1.PrimaryPart = primary
+    end
+end
+
+local function HS()
+    if not V2 then return end
+    
+    local function HP(obj)
+        if obj:IsA("BasePart") then
+            obj.Transparency = 1
+            obj.CanCollide = false
+        end
+        
+        for _, child in ipairs(obj:GetChildren()) do
+            if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") then
+                child.Transparency = 1
+            elseif child:IsA("ParticleEmitter") or child:IsA("Beam") or child:IsA("Trail") then
+                child.Enabled = false
+            end
+            
+            HP(child)
+        end
+    end
+    
+    local p1 = V2:FindFirstChild("Knife")
+    local p2 = V2:FindFirstChild("Head")
+    local p3 = V2:FindFirstChild("BoyAnimeHair_Black")
+    if p1 then HP(p1) end
+    if p2 then HP(p2) end
+    if p3 then
+        local h = p3:Clone()
+        h.Parent = V2
+        HP(h)
+    end
+    
+    local leftArm = V2:FindFirstChild("Left Arm")
+    local rightArm = V2:FindFirstChild("Right Arm")
+    if leftArm then HP(leftArm) end
+    if rightArm then HP(rightArm) end
+end
+
+HS()
+
+local connection
+connection = V2.AncestryChanged:Connect(function(_, parent)
+    if not parent then
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not V2 or not V2.Parent then 
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+        return 
+    end
+
+    local function findRootPart(model)
+        local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
+        if root then 
+            return root 
+        end
+        
+        for _, child in pairs(model:GetDescendants()) do
+            if (child.Name == "HumanoidRootPart" or child.Name == "Torso") and child:IsA("BasePart") then
+                return child
+            end
+        end
+        return nil
+    end
+    
+    local root = findRootPart(V2)
+    if not root then 
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+        return
+    end
+    if V1:IsA("Model") then
+        if not V1.PrimaryPart then
+            local part = V1:FindFirstChildWhichIsA("BasePart")
+            if part then
+                V1.PrimaryPart = part
+            end
+        end
+        
+        if V1.PrimaryPart then
+            local newCFrame = CFrame.new(
+                root.CFrame.Position.X + xOffset,
+                root.CFrame.Position.Y + yOffset,
+                root.CFrame.Position.Z + zOffset
+            ) * root.CFrame.Rotation
+            V1:SetPrimaryPartCFrame(newCFrame)
+        end
+    elseif V1:IsA("BasePart") then
+        local newCFrame = CFrame.new(
+            root.CFrame.Position.X + xOffset,
+            root.CFrame.Position.Y + yOffset,
+            root.CFrame.Position.Z + zOffset
+        ) * root.CFrame.Rotation
+        V1.CFrame = newCFrame
+    end
+end)
 end
 
 function entityBehaviors.A333ONE()
@@ -6191,6 +6327,8 @@ local entityConfig = {
     ["rbxassetid://128032522960947"]  = entityBehaviors.bsrebound,
     ["rbxassetid://3007484871"]  = entityBehaviors.bsseek,
     ["rbxassetid://9046754125"]  = entityBehaviors.bsA60,
+    ["rbxassetid://80"]  = entityBehaviors.JEFFGUN2,
+    ["rbxassetid://81"]  = entityBehaviors.gunjeffkq,
     ["rbxassetid://139371088930869"]  = entityBehaviors.GUIDINGNEW
 }
 

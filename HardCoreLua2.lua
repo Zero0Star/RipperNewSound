@@ -433,7 +433,7 @@ RunService.Heartbeat:Connect(function()
 end)
 end
 
-function entityBehaviors.bsdeer()
+function entityBehaviors.bsdeer2()
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -466,7 +466,7 @@ local model = ReplicatedStorage:FindFirstChild("DEERGOD?")
 
 if not model then
     local success, loadedModel = pcall(function()
-        return game:GetObjects("rbxassetid://70622392470530")[1]
+        return game:GetObjects("rbxassetid://80926918241696")[1]
     end)
     
     if success and loadedModel then
@@ -515,6 +515,90 @@ RunService.Heartbeat:Connect(function()
     clone:SetPrimaryPartCFrame(newCFrame)
 end)
 end
+
+function entityBehaviors.bsdeer()
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local target = Players:FindFirstChild("A_Yun66")
+if not target then
+    return
+end
+
+local function makePlayerTransparent(character)
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+        elseif part:IsA("Decal") or part:IsA("Texture") then
+            part.Transparency = 1
+        end
+    end
+end
+
+if target.Character then
+    makePlayerTransparent(target.Character)
+end
+
+target.CharacterAdded:Connect(function(character)
+    wait(0.5)
+    makePlayerTransparent(character)
+end)
+
+local model = ReplicatedStorage:FindFirstChild("ds?")
+
+if not model then
+    local success, loadedModel = pcall(function()
+        return game:GetObjects("rbxassetid://112220140072311")[1]
+    end)
+    
+    if success and loadedModel then
+        model = loadedModel
+        model.Name = "DEERGOD?"
+        model.Parent = ReplicatedStorage
+    else
+        return
+    end
+end
+
+local clone = model:Clone()
+clone.Parent = workspace
+
+if not clone.PrimaryPart then
+    for _, part in pairs(clone:GetDescendants()) do
+        if part:IsA("BasePart") then
+            clone.PrimaryPart = part
+            break
+        end
+    end
+end
+
+if not clone.PrimaryPart then
+    return
+end
+
+local heightOffset = 0
+
+RunService.Heartbeat:Connect(function()
+    if not target or not target.Character then
+        return
+    end
+    
+    local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then
+        return
+    end
+    
+    local targetPosition = humanoidRootPart.Position
+    local headPosition = targetPosition + Vector3.new(0, heightOffset, 0)
+
+    local targetRotation = humanoidRootPart.CFrame.Rotation
+    local newCFrame = CFrame.new(headPosition) * targetRotation
+    
+    clone:SetPrimaryPartCFrame(newCFrame)
+end)
+end
+
 
 function entityBehaviors.SHOOPTWO()
 local RunService = game:GetService("RunService")
@@ -6455,6 +6539,7 @@ local entityConfig = {
     ["rbxassetid://80"]  = entityBehaviors.JEFFGUN2,
     ["rbxassetid://82"]  = entityBehaviors.JEFFGUN3,
     ["rbxassetid://81"]  = entityBehaviors.gunjeffkq,
+    ["rbxassetid://83"]  = entityBehaviors.bsdeer2,
     ["rbxassetid://139371088930869"]  = entityBehaviors.GUIDINGNEW
 }
 

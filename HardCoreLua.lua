@@ -381,10 +381,10 @@ if camera then
     local skyboxPart = camera:FindFirstChild("SkyboxPart")
     if skyboxPart then skyboxPart:Destroy() end
 end
-task.wait(4)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("You are not God....",true)
 task.wait(1)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).remind("But your soul is ultimately my feast", true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("What this?",true)
+task.wait(1)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).remind("???", true)
 wait(1)
 local Lighting = game:GetService("Lighting")
 local Sky = Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky", Lighting)

@@ -3935,6 +3935,199 @@ local function PlayPreloadedDeerGodSound(volume)
     return nil
 end
 
+
+function entityBehaviors.JEFFXZ()
+local workspace = game:GetService("Workspace")
+local jeff = workspace:FindFirstChild("JeffTheKiller")
+if not jeff then
+    return
+end
+local jeffPart
+if jeff:IsA("Model") and jeff.PrimaryPart then
+    jeffPart = jeff.PrimaryPart
+elseif jeff:IsA("BasePart") then
+    jeffPart = jeff
+else
+
+    for _, descendant in ipairs(jeff:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            jeffPart = descendant
+            break
+        end
+    end
+end
+
+if not jeffPart then
+
+    return
+end
+jeffPart.Anchored = true
+jeffPart.CanCollide = false
+local rotationSpeed = 20 
+local rotationAxis = Vector3.new(1, 1, 0)  
+local RunService = game:GetService("RunService")
+
+local function rotateJeff()
+    local rotationPerFrame = rotationSpeed * math.pi / 180
+
+    local rotationCFrame = CFrame.Angles(0, rotationPerFrame, 0)
+    jeffPart.CFrame = jeffPart.CFrame * rotationCFrame
+end
+local connection
+connection = RunService.Heartbeat:Connect(function(deltaTime)
+    rotateJeff()
+end)
+local function stopRotation()
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+end
+end
+
+
+function entityBehaviors.JEFFZR()
+local workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local jeff = workspace:FindFirstChild("JeffTheKiller")
+if not jeff then
+    return
+end
+local jeffPart
+if jeff:IsA("Model") and jeff.PrimaryPart then
+    jeffPart = jeff.PrimaryPart
+elseif jeff:IsA("BasePart") then
+    jeffPart = jeff
+else
+    for _, descendant in ipairs(jeff:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            jeffPart = descendant
+            break
+        end
+    end
+end
+if not jeffPart then
+
+    return
+end
+jeffPart.Anchored = false
+jeffPart.CanCollide = true
+local chaseSpeed = 25
+local detectionRange = 200 
+local stoppingDistance = 3  
+local chaseUpdateInterval = 0.1
+local currentTarget = nil
+local lastChaseTime = 0
+local function findNearestPlayer()
+    local nearestPlayer = nil
+    local nearestDistance = detectionRange
+    for _, player in ipairs(Players:GetPlayers()) do
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local distance = (character.HumanoidRootPart.Position - jeffPart.Position).Magnitude
+            if distance < nearestDistance then
+                nearestDistance = distance
+                nearestPlayer = player
+            end
+        end
+    end
+    
+    return nearestPlayer, nearestDistance
+end
+local function moveToTarget(targetPosition)
+    local direction = (targetPosition - jeffPart.Position).Unit
+    local newPosition = jeffPart.Position + (direction * chaseSpeed * chaseUpdateInterval)
+
+    jeffPart.CFrame = CFrame.new(newPosition) * jeffPart.CFrame.Rotation
+
+    local lookAtCFrame = CFrame.new(jeffPart.Position, Vector3.new(targetPosition.X, jeffPart.Position.Y, targetPosition.Z))
+    jeffPart.CFrame = CFrame.new(jeffPart.Position) * lookAtCFrame.Rotation
+end
+local connection
+connection = RunService.Heartbeat:Connect(function(deltaTime)
+    lastChaseTime = lastChaseTime + deltaTime
+    
+    if lastChaseTime >= chaseUpdateInterval then
+        lastChaseTime = 0
+
+        local targetPlayer, distance = findNearestPlayer()
+        
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            currentTarget = targetPlayer
+            local targetPosition = targetPlayer.Character.HumanoidRootPart.Position
+
+            if distance > stoppingDistance then
+
+                moveToTarget(targetPosition)
+            else
+
+            end
+        else
+            currentTarget = nil
+        end
+    end
+end)
+local function onPlayerDied(player)
+    if currentTarget == player then
+        currentTarget = nil
+    end
+end
+for _, player in ipairs(Players:GetPlayers()) do
+    player.CharacterAdded:Connect(function(character)
+        local humanoid = character:WaitForChild("Humanoid", 5)
+        if humanoid then
+            humanoid.Died:Connect(function()
+                onPlayerDied(player)
+            end)
+        end
+    end)
+    if player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.Died:Connect(function()
+                onPlayerDied(player)
+            end)
+        end
+    end
+end
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        local humanoid = character:WaitForChild("Humanoid", 5)
+        if humanoid then
+            humanoid.Died:Connect(function()
+                onPlayerDied(player)
+            end)
+        end
+    end)
+end)
+local function stopChase()
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+    currentTarget = nil
+    jeffPart.Anchored = true
+end
+local chaseController = {
+    stop = stopChase,
+    setSpeed = function(newSpeed)
+        chaseSpeed = newSpeed
+    end,
+    setRange = function(newRange)
+        detectionRange = newRange
+    end,
+    getStatus = function()
+        return {
+            isChasing = currentTarget ~= nil,
+            target = currentTarget and currentTarget.Name or "无",
+            speed = chaseSpeed,
+            range = detectionRange
+        }
+    end
+}
+end
+
 function entityBehaviors.DeerGodTWO()
     local entity = spawner.Create({
         Entity = {
@@ -4108,7 +4301,9 @@ local entityConfig = {
     ["rbxassetid://33"]  = entityBehaviors.HUNGERCUR,
     ["rbxassetid://34"]  = entityBehaviors.DEERCUR,
     ["rbxassetid://35"]  = entityBehaviors.RIPPCUR,
-    ["rbxassetid://36"]  = entityBehaviors.REBOUCUR,   
+    ["rbxassetid://36"]  = entityBehaviors.REBOUCUR,
+    ["rbxassetid://37"]  = entityBehaviors.JEFFXZ,
+    ["rbxassetid://38"]  = entityBehaviors.JEFFZR,
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

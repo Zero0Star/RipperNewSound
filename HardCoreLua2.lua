@@ -24,6 +24,81 @@ end
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entityBehaviors = {}
 
+local soundUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/BossTime.mp3?raw=true"
+local soundName = "BOSSTIME"
+local loadedSound
+
+local function DownloadSound(url, name)
+    local fullFileName = name .. ".mp3"
+    
+    local success, audioData = pcall(function()
+        return game:HttpGet(url)
+    end)
+    
+    if not success then
+        return nil
+    end
+
+    local writeSuccess = pcall(function()
+        writefile(fullFileName, audioData)
+    end)
+    
+    if not writeSuccess then
+        return nil
+    end
+
+    local assetPath
+    if getsynasset then
+        assetPath = getsynasset(fullFileName)
+    elseif getcustomasset then
+        assetPath = getcustomasset(fullFileName)
+    end
+    
+    if not assetPath then
+        return nil
+    end
+
+    local sound = Instance.new("Sound")
+    sound.SoundId = assetPath
+    sound.Name = name .. "_Preloaded"
+    sound.Parent = workspace
+    sound.Volume = 0
+    return sound
+end
+
+loadedSound = DownloadSound(soundUrl, soundName)
+
+function entityBehaviors.GrimReaper()
+    if loadedSound then
+        loadedSound.Volume = 1
+        loadedSound:Play()
+        
+        local connection
+        connection = loadedSound.Ended:Connect(function()
+            connection:Disconnect()
+            loadedSound:Stop()
+            loadedSound:Destroy()
+            
+            pcall(function()
+                delfile(soundName .. ".mp3")
+            end)
+        end)
+    end
+    
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Hello.",true)
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).titlelocation("Survive the Grim Reaper",true)
+    wait(2)
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("...",true)
+    wait(4)
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("I am very unfamiliar, right?",true)
+    wait(4)
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("You don't need to know this.",true)
+    wait(4)
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("In short, I wish you good luck.",true)
+    wait(4)
+    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Task: Survive...",true)
+end
+
 function entityBehaviors.bsrebound()
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
@@ -6554,6 +6629,7 @@ local entityConfig = {
     ["rbxassetid://82"]  = entityBehaviors.JEFFGUN3,
     ["rbxassetid://81"]  = entityBehaviors.gunjeffkq,
     ["rbxassetid://83"]  = entityBehaviors.bsdeer2,
+	["rbxassetid://84"]  = entityBehaviors.GrimReaper,
     ["rbxassetid://139371088930869"]  = entityBehaviors.GUIDINGNEW
 }
 

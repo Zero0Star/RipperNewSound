@@ -6315,29 +6315,43 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
 end
 
 function entityBehaviors.bsgay()
-local Players = game:GetService("Players")
+local entity = spawner.Create({
+Entity = {Name = "GUN",
+Asset = "70789280044418",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = false,Range = 20,Values = {1.5, 20, 0.1, 1}},
+Movement = {Speed = 1000,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},
+Damage = {Enabled = true,Range = 200,Amount = 125},
+Crucifixion = {Enabled = true,Range = 200,Resist = false,Break = true},Death = {
+Type = "Guiding",Hints = {"BRO..", "..."},Cause = "Walk Die..."}})
+entity:SetCallback("OnRebounding", function(startOfRebound)
 
-local function makeHeadBig(character)
-    local head = character:FindFirstChild("Head")
-    if head then
-        head.Size = Vector3.new(10, 10, 10)
-    end
-end
+	local entityModel = entity.Model
+	local main = entityModel:WaitForChild("Main")
+	local attachment = main:WaitForChild("Attachment")
+	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+	local sounds = {
+		footsteps = main:WaitForChild("Footsteps"),
+		playSound = main:WaitForChild("PlaySound"),
+		switch = main:WaitForChild("Switch"),
+		switchBack = main:WaitForChild("SwitchBack")
+	}
+	for _, c in attachment:GetChildren() do
+		c.Enabled = (not startOfRebound)
+	end
+	for _, c in AttachmentSwitch:GetChildren() do
+		c.Enabled = startOfRebound
+	end
 
-for _, player in pairs(Players:GetPlayers()) do
-    if player.Character then
-        makeHeadBig(player.Character)
-    end
-    player.CharacterAdded:Connect(function(character)
-        makeHeadBig(character)
-    end)
-end
-
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function(character)
-        makeHeadBig(character)
-    end)
+	if startOfRebound == true then
+		sounds.footsteps.PlaybackSpeed = 0.35
+		sounds.playSound.PlaybackSpeed = 0.25
+		sounds.switch:Play()
+	else
+		sounds.footsteps.PlaybackSpeed = 0.25
+		sounds.playSound.PlaybackSpeed = 0.16
+		sounds.switchBack:Play()
+	end
 end)
+entity:Run()
 end
 
 function entityBehaviors.bsseek()

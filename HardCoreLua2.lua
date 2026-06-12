@@ -2034,7 +2034,7 @@ function entityBehaviors.RipperSw()
     end
 
     local function ExecuteRipperPathfinding()
-        local RIPPER_MODEL_ID = "134595194793028"
+        local RIPPER_MODEL_ID = "92681623704537"
         local success, loadedAsset = pcall(function() return game:GetObjects("rbxassetid://" .. RIPPER_MODEL_ID)[1] end)
         if not success or not loadedAsset then 
             ripperAsset = nil
@@ -5979,7 +5979,7 @@ end
 PreloadReboundSounds()
 
 function entityBehaviors.REBOUNDSW()
-    local testModelId = 97302484269095
+    local testModelId = 110660957127652
 
     local function PlayPreloadedSound(soundName, volume)
         volume = volume or 1
@@ -6049,7 +6049,7 @@ function entityBehaviors.REBOUNDSW()
                 else
                     targetCFrame = targetRoom.RoomExit.CFrame
                 end
-                primaryPart.CFrame = targetCFrame + Vector3.new(0, 3.5, 0)
+                primaryPart.CFrame = targetCFrame + Vector3.new(0, 1, 0)
             end
             
             wait(2)
@@ -6067,7 +6067,7 @@ function entityBehaviors.REBOUNDSW()
 
         local v305 = 2
         local v306 = 2
-        local v307 = Vector3.new(0, 2, 0)
+        local v307 = Vector3.new(0, 1, 0)
         local v310 = workspace.CurrentRooms
 
         local detectedPlayer = false
@@ -6671,5 +6671,5 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingTwo... Doors HardCore V10 By Mr.key & HeavenNow :)"
+hint.Text = "LoadingTwo... Doors HardCore V10.1 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 2)

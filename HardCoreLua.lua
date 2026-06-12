@@ -21,7 +21,18 @@ local function CustomGitSound(soundlink, vol, filename)
     return sound
 end
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local dgmusic = "https://github.com/eoyoustme/rebouna/blob/main/HesBehindYouRUN.mp3?raw=true"
+local DG_MUSIC_URL = "https://github.com/eoyoustme/rebouna/blob/main/HesBehindYouRUN.mp3?raw=true"
+local LOCAL_FILE_NAME = "DeerGodMusic"
+local function GetCachedAudio(url, filename)
+    local filePath = filename .. ".mp3"
+    if isfile and isfile(filePath) then
+        return getcustomasset(filePath)
+    end
+    writefile(filePath, game:HttpGet(url))
+    return getcustomasset(filePath)
+end
+
+local cachedAudioAsset = GetCachedAudio(DG_MUSIC_URL, LOCAL_FILE_NAME)
 local entityBehaviors = {}
 
 function entityBehaviors.FigureXF()
@@ -2670,7 +2681,7 @@ entity:Run()
 end
 
 function entityBehaviors.Silence()
-local entity = spawner.Create({Entity = {Name = "Silence",Asset = "106570553068298",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 25,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 200,Amount = 125},Crucifixion = {Enabled = true,Range = 200,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Silence 吞噬了...", "你该学会不在寂静中消亡", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}})
+local entity = spawner.Create({Entity = {Name = "Silence",Asset = "104208930723979",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 35,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 200,Amount = 125},Crucifixion = {Enabled = true,Range = 200,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Silence 吞噬了...", "你该学会不在寂静中消亡", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 
 	local entityModel = entity.Model
@@ -2771,7 +2782,7 @@ function LoadCustomInstance(source, parent)
     return model
 end
 
-local s = LoadCustomInstance("98436457371270", workspace)
+local s = LoadCustomInstance("101548003594102", workspace)
 if not s then
     return
 end
@@ -3628,12 +3639,60 @@ function entityBehaviors.Deergod()
     local chaseConnection = nil
     local customSpeed = 20
     local activationRange = 75
-    local entity = spawner.Create({Entity = {Name = "Deer god",Asset = "94961532857273",HeightOffset = -0.8},Lights = {Flicker = {Enabled = true,Duration = 50},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 5, 0.1, 1}},Movement = {Speed = 20,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 10,Amount = 200 },Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {
+
+    local entity = spawner.Create({
+        Entity = {
+            Name = "Deer god",
+            Asset = "92755817727288",
+            HeightOffset = -0.8
+        },
+        Lights = {
+            Flicker = { Enabled = true, Duration = 50 },
+            Shatter = true,
+            Repair = false
+        },
+        Earthquake = { Enabled = false },
+        CameraShake = {
+            Enabled = true,
+            Range = 1500,
+            Values = {0.5, 5, 0.1, 1}
+        },
+        Movement = {
+            Speed = 20,
+            Delay = 2,
+            Reversed = false
+        },
+        Rebounding = {
+            Enabled = false,
+            Type = "Blitz",
+            Min = 1,
+            Max = math.random(1, 2),
+            Delay = math.random(10, 30) / 10
+        },
+        Damage = {
+            Enabled = true,
+            Range = 10,
+            Amount = 200
+        },
+        Crucifixion = {
+            Enabled = true,
+            Range = 40,
+            Resist = true,
+            Break = true
+        },
+        Death = {
+            Type = "Curious",
+            Hints = {
                 "It seems you are so unfortunate...", 
                 "You died by the Deer God", 
                 "That powerful force will drag you into the abyss.",
                 "The cross cannot guarantee your safety.",
-                "See you next time."},Cause = ""}})
+                "See you next time."
+            },
+            Cause = ""
+        }
+    })
+
     local function startChaseSystem()
         if not entityModel or not entityModel.PrimaryPart then
             return
@@ -3645,7 +3704,6 @@ function entityBehaviors.Deergod()
         end
     
         chaseConnection = RunService.Heartbeat:Connect(function(dt)
-    
             if not entityModel 
                 or not entityModel.PrimaryPart 
                 or not HumanoidRootPart 
@@ -3663,9 +3721,7 @@ function entityBehaviors.Deergod()
                 local newCFrame = CFrame.new(pos + moveVec, target)
                 entityModel:SetPrimaryPartCFrame(newCFrame)
             end
-    
         end)
-        
     end
 
     entity:SetCallback("OnSpawned", function()
@@ -3678,12 +3734,10 @@ function entityBehaviors.Deergod()
                 end
             end
         end
-    
         startChaseSystem()
     end)
     
     entity:SetCallback("OnDespawning", function()
-    
         if chaseConnection then
             chaseConnection:Disconnect()
             chaseConnection = nil
@@ -3692,17 +3746,14 @@ function entityBehaviors.Deergod()
 
     entity:SetCallback("OnDamagePlayer", function(newHealth)
         if newHealth == 0 then
-    
             if chaseConnection then
                 chaseConnection:Disconnect()
                 chaseConnection = nil
             end
-    
             if entityModel and entityModel.PrimaryPart then
                 local currentPos = entityModel.PrimaryPart.Position
                 local forwardDir = entityModel.PrimaryPart.CFrame.LookVector
                 local targetPos = currentPos + forwardDir * 10
-                
                 entityModel:SetPrimaryPartCFrame(CFrame.new(currentPos, targetPos))
             end
         end
@@ -3742,26 +3793,16 @@ function entityBehaviors.Deergod()
     end)
 
     entity:Run()
-    
-    function GitAud(soundgit, filename)
-        local url = soundgit
-        local FileName = filename
-        writefile(FileName .. ".mp3", game:HttpGet(url))
-    
-        return (getcustomasset or getsynasset)(FileName .. ".mp3")
-    end
-    
-    function CustomGitSound(soundlink, vol, filename)
-        local sound = Instance.new("Sound")
-        sound.SoundId = GitAud(soundlink, filename)
-        sound.Parent = workspace
-        sound.Name = filename or "Music"
-        sound.Volume = vol or 1
-        sound:Play()
-    end
-    local volume = 4
-    local localFileName = "DeerGod"
-    CustomGitSound(dgmusic, volume, localFileName)
+    local musicInstance = Instance.new("Sound")
+    musicInstance.SoundId = cachedAudioAsset
+    musicInstance.Volume = 4
+    musicInstance.Name = "DeerGodMusic_" .. tick()
+    musicInstance.Parent = workspace
+    musicInstance:Play()
+
+    musicInstance.Ended:Connect(function()
+        musicInstance:Destroy()
+    end)
 end
 function entityBehaviors.LightSpeed()
 local entity = spawner.Create({Entity = {Name = "LightSpeed",Asset = "87015961601567",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {90, 50, 20, 20}},Movement = {Speed = 1400,Delay = 20,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 50,Amount = 40},Crucifixion = {Enabled = true,Range = 50,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于光速", "在他来临时保证自己以最快的速度作出反应", "伴随着灯光变黄与巨大的雷电轰鸣声", "或许并不致命但总是一个威胁"},Cause = ""}})
@@ -3903,7 +3944,7 @@ Event:FireServer(
         ["Light Color"] = Color3.new(0, 0.098297834396362, 1)
     }
 )
-local entity = spawner.Create({Entity = {Name = "Cease",Asset = "96059843141781",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 100,Delay = 5,Reversed = false},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 100,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"CEASE", "你该学会辨别", "听取周围的声音", "反复进柜子躲避它"},Cause = ""}})
+local entity = spawner.Create({Entity = {Name = "Cease",Asset = "74118615017772",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 100,Delay = 5,Reversed = false},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 100,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"CEASE", "你该学会辨别", "听取周围的声音", "反复进柜子躲避它"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 
 	local entityModel = entity.Model
@@ -4484,7 +4525,7 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
 local function spawnShocker()
-    local shockerModel = game:GetObjects("rbxassetid://101816407601314")[1]
+    local shockerModel = game:GetObjects("rbxassetid://123279499986209")[1]
     local camera = Workspace.CurrentCamera
 
     local rootPart = shockerModel:FindFirstChild("HumanoidRootPart") or shockerModel:FindFirstChildWhichIsA("Part")
@@ -6247,5 +6288,5 @@ loadAudioFromGitHub()
 replaceSeekMusic()
 replaceSeekModel()
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCore V10 By Mr.key & HeavenNow :)"
+hint.Text = "Loading... Doors HardCore V10.1 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)

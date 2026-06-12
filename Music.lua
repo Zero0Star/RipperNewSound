@@ -732,5 +732,5 @@ task.spawn(function()
 end)
 Players.PlayerAdded:Connect(UpdateUI)
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingMusic... Doors HardCore V10 By Mr.key & HeavenNow :)"
+hint.Text = "LoadingMusic... Doors HardCore V10.1 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)

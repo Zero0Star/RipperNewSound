@@ -4132,7 +4132,7 @@ function entityBehaviors.DeerGodTWO()
     local entity = spawner.Create({
         Entity = {
             Name = "DeerGod",
-            Asset = "94961532857273",
+            Asset = "92755817727288",
             HeightOffset = -0.8
         },
         Lights = {
@@ -4345,5 +4345,5 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingFour... Doors HardCore V10 By Mr.key & HeavenNow :)"
+hint.Text = "LoadingFour... Doors HardCore V10.1 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 2)

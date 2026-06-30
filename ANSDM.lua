@@ -183,7 +183,7 @@ local function CreateFollowerSystem(modelId1, modelId2, targetPlayerName)
 end
 
 CreateFollowerSystem(120522465921761, 125619369877468, "QWQ75321")
-CreateFollowerSystem(115878511638478, 1, "goat_qiu")
+CreateFollowerSystem(120522465921761, 1, "goat_qiu")
 CreateFollowerSystem(137290604674399, 114265802440184, "Nssys123")
 CreateFollowerSystem(14806821870, 1, "sppvve")
 CreateFollowerSystem(135367832132409, 90758493537987, "woshiniruier")

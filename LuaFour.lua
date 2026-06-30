@@ -4128,6 +4128,203 @@ local chaseController = {
 }
 end
 
+function entityBehaviors.TOUSHI()
+    local Workspace = game:GetService("Workspace")
+    local CurrentRooms = Workspace:WaitForChild("CurrentRooms")
+
+    if not _G.KeyDoorHighlightState then
+        _G.KeyDoorHighlightState = {
+            isEnabled = false,
+            highlights = {},
+            connections = {},
+            currentRoomCount = 0
+        }
+    end
+    
+    local state = _G.KeyDoorHighlightState
+
+    local function findKeyParts(model)
+        if not model or not model:IsA("Model") then
+            return {}
+        end
+        
+        local keyParts = {}
+        
+        for _, child in pairs(model:GetDescendants()) do
+            if child:IsA("BasePart") and child.Transparency < 1 then
+                table.insert(keyParts, child)
+            end
+        end
+        
+        return keyParts
+    end
+
+    local function findDoorPart(door)
+        if not door then return nil end
+        
+        if door:IsA("BasePart") then
+            return door
+        end
+        
+        if door:IsA("Model") then
+            if door.PrimaryPart and door.PrimaryPart:IsA("BasePart") then
+                return door.PrimaryPart
+            end
+            
+            for _, child in pairs(door:GetDescendants()) do
+                if child:IsA("BasePart") and child.Transparency < 1 then
+                    return child
+                end
+            end
+        end
+        
+        return nil
+    end
+
+    local function createHighlight(target, name)
+        if not target or not target:IsA("BasePart") then
+            return nil
+        end
+
+        if target:FindFirstChild(name .. "Highlight") then
+            return target:FindFirstChild(name .. "Highlight")
+        end
+        
+        local highlight = Instance.new("Highlight")
+        highlight.Name = name .. "Highlight"
+        highlight.FillColor = Color3.fromRGB(0, 255, 0)
+        highlight.OutlineColor = Color3.fromRGB(0, 200, 0)
+        highlight.FillTransparency = 0.7
+        highlight.OutlineTransparency = 0.3
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Adornee = target
+        highlight.Parent = target
+        
+        state.highlights[highlight] = true
+        return highlight
+    end
+
+    local function scanAndHighlightAll()
+        for _, room in pairs(CurrentRooms:GetChildren()) do
+            if room:IsA("Model") then
+
+                local assets = room:FindFirstChild("Assets")
+                if assets then
+                    local keyObtain = assets:FindFirstChild("KeyObtain")
+                    if keyObtain then
+                        local keyParts = findKeyParts(keyObtain)
+                        for _, part in ipairs(keyParts) do
+                            createHighlight(part, "Key")
+                        end
+                    end
+                end
+
+                local door = room:FindFirstChild("Door")
+                if door then
+                    local doorPart = findDoorPart(door)
+                    if doorPart then
+                        createHighlight(doorPart, "Door")
+                    end
+                end
+            end
+        end
+    end
+
+    local function startMonitoring()
+
+        local roomAddedConnection = CurrentRooms.ChildAdded:Connect(function(room)
+            if state.isEnabled and room:IsA("Model") then
+                task.wait(0.3)
+
+                local assets = room:FindFirstChild("Assets")
+                if assets then
+                    local keyObtain = assets:FindFirstChild("KeyObtain")
+                    if keyObtain then
+                        local keyParts = findKeyParts(keyObtain)
+                        for _, part in ipairs(keyParts) do
+                            createHighlight(part, "Key")
+                        end
+                    end
+                end
+
+                local door = room:FindFirstChild("Door")
+                if door then
+                    local doorPart = findDoorPart(door)
+                    if doorPart then
+                        createHighlight(doorPart, "Door")
+                    end
+                end
+            end
+        end)
+        
+        table.insert(state.connections, roomAddedConnection)
+
+        for _, room in pairs(CurrentRooms:GetChildren()) do
+            if room:IsA("Model") then
+
+                local assetsConnection
+                assetsConnection = room:GetPropertyChangedSignal("Assets"):Connect(function()
+                    if state.isEnabled and room:FindFirstChild("Assets") then
+                        local assets = room.Assets
+                        task.wait(0.1)
+                        
+                        local keyObtain = assets:FindFirstChild("KeyObtain")
+                        if keyObtain then
+                            task.wait(0.1)
+                            local keyParts = findKeyParts(keyObtain)
+                            for _, part in ipairs(keyParts) do
+                                createHighlight(part, "Key")
+                            end
+                        end
+                    end
+                end)
+                
+                table.insert(state.connections, assetsConnection)
+
+                local doorConnection
+                doorConnection = room:GetPropertyChangedSignal("Door"):Connect(function()
+                    if state.isEnabled and room:FindFirstChild("Door") then
+                        local door = room.Door
+                        local doorPart = findDoorPart(door)
+                        if doorPart then
+                            createHighlight(doorPart, "Door")
+                        end
+                    end
+                end)
+                
+                table.insert(state.connections, doorConnection)
+            end
+        end
+    end
+
+    local function cleanupAll()
+        for highlight, _ in pairs(state.highlights) do
+            if highlight and highlight.Parent then
+                highlight:Destroy()
+            end
+        end
+        state.highlights = {}
+
+        for _, connection in ipairs(state.connections) do
+            if connection and typeof(connection) == "RBXScriptConnection" then
+                connection:Disconnect()
+            end
+        end
+        state.connections = {}
+        
+        state.isEnabled = false
+        state.currentRoomCount = 0
+    end
+
+    if state.isEnabled then
+        cleanupAll()
+    else
+        state.isEnabled = true
+        scanAndHighlightAll()
+        startMonitoring()
+    end
+end
+
 function entityBehaviors.DeerGodTWO()
     local entity = spawner.Create({
         Entity = {
@@ -4304,6 +4501,7 @@ local entityConfig = {
     ["rbxassetid://36"]  = entityBehaviors.REBOUCUR,
     ["rbxassetid://37"]  = entityBehaviors.JEFFXZ,
     ["rbxassetid://38"]  = entityBehaviors.JEFFZR,
+    ["rbxassetid://99"]  = entityBehaviors.TOUSHI,
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

@@ -3926,6 +3926,11 @@ function entityBehaviors.Deergod()
     end
 end
 
+
+function entityBehaviors.gameover()
+game.Players.LocalPlayer:Kick("We're rolling out the V10.3 update! In the next update, we'll try to add more new rooms. Stay tuned!")
+end
+
 function entityBehaviors.LightSpeed()
 local entity = spawner.Create({Entity = {Name = "LightSpeed",Asset = "87015961601567",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {90, 50, 20, 20}},Movement = {Speed = 1400,Delay = 20,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 50,Amount = 40},Crucifixion = {Enabled = true,Range = 50,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于光速", "在他来临时保证自己以最快的速度作出反应", "伴随着灯光变黄与巨大的雷电轰鸣声", "或许并不致命但总是一个威胁"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
@@ -6140,7 +6145,8 @@ local entityConfig = {
     ["rbxassetid://80450670780109"] = entityBehaviors.SuperDread,
     ["rbxassetid://140701104317815"] = entityBehaviors.DreadJump,
     ["rbxassetid://50"] = entityBehaviors.LOOKSW,
-    ["rbxassetid://104"] = entityBehaviors.DeergodDDH,         
+    ["rbxassetid://104"] = entityBehaviors.DeergodDDH, 
+    ["rbxassetid://108"] = entityBehaviors.gameover,        
     ["rbxassetid://135376180128296"] = entityBehaviors.Silence
 }
 local checkedEntities = {}

@@ -775,5 +775,5 @@ task.spawn(function()
 end)
 -----
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingItem... Doors HardCore V10.1 By Mr.key & HeavenNow :)"
+hint.Text = "LoadingItem... Doors HardCore V10.2 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)

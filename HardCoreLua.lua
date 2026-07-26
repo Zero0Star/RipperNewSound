@@ -2870,7 +2870,7 @@ if roomChanged then
     pcall(function() entity.AmbienceFar:Stop() end)
     
     local des = Instance.new("Sound")
-    des.SoundId = "rbxassetid://111715441853991"
+    des.SoundId = "rbxassetid://109891187801924"
     des.Looped = false
     des.Volume = 2.5
     des.Parent = s
@@ -3629,180 +3629,269 @@ end)
 entity:Run()
 end
 
+function entityBehaviors.DeergodDDH()
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "FadeTextGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local textLabel = Instance.new("TextLabel")
+textLabel.Name = "FadeText"
+textLabel.Size = UDim2.new(0, 520, 0, 58)
+textLabel.Position = UDim2.new(0.5, 0, 1, -180)
+textLabel.AnchorPoint = Vector2.new(0.5, 0)
+textLabel.BackgroundTransparency = 1
+textLabel.TextSize = 38
+textLabel.TextTransparency = 1
+textLabel.TextColor3 = Color3.fromRGB(179, 0, 255)
+textLabel.FontFace = Font.new("rbxassetid://12187367901")
+textLabel.Parent = screenGui
+
+local phrases = {
+	"Kid, why are you running away?",
+	"It's all just an illusion.",
+	"Stop walking and feel everything",
+	"Your soul will nourish my child",
+	"Do you feel guilty when you're looking at this conversation through the screen?",
+	"You're just virtual",
+	"I can hear all your voices"
+}
+
+local function playPhrase(text)
+	textLabel.Text = text
+	textLabel.TextTransparency = 1
+
+	local fadeIn = TweenService:Create(
+		textLabel,
+		TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{TextTransparency = 0}
+	)
+	local fadeOut = TweenService:Create(
+		textLabel,
+		TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{TextTransparency = 1}
+	)
+
+	fadeIn:Play()
+	fadeIn.Completed:Wait()
+	task.wait(2)
+	fadeOut:Play()
+	fadeOut.Completed:Wait()
+end
+
+local startTime = tick()
+while tick() - startTime < 29 do
+	local randomIndex = math.random(1, #phrases)
+	playPhrase(phrases[randomIndex])
+
+	if tick() - startTime >= 24 then break end
+	task.wait(5)
+end
+end
+
 function entityBehaviors.Deergod()
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local LocalPlayer = Players.LocalPlayer
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-    local entityModel
-    local chaseConnection = nil
-    local customSpeed = 20
-    local activationRange = 75
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local entityModel
+local chaseConnection = nil
+local customSpeed = 20
+local activationRange = 75
+local entity = spawner.Create({
+    Entity = {
+        Name = "Deer god",
+        Asset = "92755817727288",
+        HeightOffset = -0.8
+    },
+    Lights = {
+        Flicker = { Enabled = true, Duration = 50 },
+        Shatter = true,
+        Repair = false
+    },
+    Earthquake = { Enabled = false },
+    CameraShake = {
+        Enabled = true,
+        Range = 1500,
+        Values = {0.5, 5, 0.1, 1}
+    },
+    Movement = {
+        Speed = 20,
+        Delay = 2,
+        Reversed = false
+    },
+    Rebounding = {
+        Enabled = false,
+        Type = "Blitz",
+        Min = 1,
+        Max = math.random(1, 2),
+        Delay = math.random(10, 30) / 10
+    },
+    Damage = {
+        Enabled = true,
+        Range = 10,
+        Amount = 200
+    },
+    Crucifixion = {
+        Enabled = true,
+        Range = 40,
+        Resist = true,
+        Break = true
+    },
+    Death = {
+        Type = "Curious",
+        Hints = {
+            "看起来你真倒霉...", 
+            "你被所谓的鹿神击杀了", 
+            "那股强大的力量会把你拉入深渊",
+            "十字架不能保证你的安全",
+            "下次见"
+        },
+        Cause = ""
+    }
+})
 
-    local entity = spawner.Create({
-        Entity = {
-            Name = "Deer god",
-            Asset = "92755817727288",
-            HeightOffset = -0.8
-        },
-        Lights = {
-            Flicker = { Enabled = true, Duration = 50 },
-            Shatter = true,
-            Repair = false
-        },
-        Earthquake = { Enabled = false },
-        CameraShake = {
-            Enabled = true,
-            Range = 1500,
-            Values = {0.5, 5, 0.1, 1}
-        },
-        Movement = {
-            Speed = 20,
-            Delay = 2,
-            Reversed = false
-        },
-        Rebounding = {
-            Enabled = false,
-            Type = "Blitz",
-            Min = 1,
-            Max = math.random(1, 2),
-            Delay = math.random(10, 30) / 10
-        },
-        Damage = {
-            Enabled = true,
-            Range = 10,
-            Amount = 200
-        },
-        Crucifixion = {
-            Enabled = true,
-            Range = 40,
-            Resist = true,
-            Break = true
-        },
-        Death = {
-            Type = "Curious",
-            Hints = {
-                "It seems you are so unfortunate...", 
-                "You died by the Deer God", 
-                "That powerful force will drag you into the abyss.",
-                "The cross cannot guarantee your safety.",
-                "See you next time."
-            },
-            Cause = ""
-        }
-    })
-
-    local function startChaseSystem()
-        if not entityModel or not entityModel.PrimaryPart then
-            return
-        end
-    
-        if chaseConnection then
-            chaseConnection:Disconnect()
-            chaseConnection = nil
-        end
-    
-        chaseConnection = RunService.Heartbeat:Connect(function(dt)
-            if not entityModel 
-                or not entityModel.PrimaryPart 
-                or not HumanoidRootPart 
-                or not HumanoidRootPart.Parent 
-            then 
-                return 
-            end
-            local pos = entityModel.PrimaryPart.Position
-            local target = HumanoidRootPart.Position
-            local distance = (target - pos).Magnitude
-    
-            if distance <= activationRange then
-                local dir = (target - pos).Unit
-                local moveVec = dir * customSpeed * dt
-                local newCFrame = CFrame.new(pos + moveVec, target)
-                entityModel:SetPrimaryPartCFrame(newCFrame)
-            end
-        end)
+local function startChaseSystem()
+    if not entityModel or not entityModel.PrimaryPart then
+        return
     end
 
-    entity:SetCallback("OnSpawned", function()
-        entityModel = entity.Model
-        if entityModel then
-            if not entityModel.PrimaryPart then
-                local primaryPart = entityModel:FindFirstChild("Main") or entityModel:FindFirstChildWhichIsA("BasePart")
-                if primaryPart then
-                    entityModel.PrimaryPart = primaryPart
+    if chaseConnection then
+        chaseConnection:Disconnect()
+        chaseConnection = nil
+    end
+
+    chaseConnection = RunService.Heartbeat:Connect(function(dt)
+        if not entityModel 
+            or not entityModel.PrimaryPart 
+        then 
+            return 
+        end
+
+        local nearestPlayer = nil
+        local nearestDist = math.huge
+        local entityPos = entityModel.PrimaryPart.Position
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            local char = player.Character
+            if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                local humanoid = char.Humanoid
+                if humanoid.Health > 0 then
+                    local targetRoot = char.HumanoidRootPart
+                    local dist = (targetRoot.Position - entityPos).Magnitude
+                    if dist < nearestDist then
+                        nearestDist = dist
+                        nearestPlayer = player
+                    end
                 end
             end
         end
-        startChaseSystem()
+
+        if not nearestPlayer then return end
+
+        local targetChar = nearestPlayer.Character
+        if not targetChar then return end
+
+        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+        if not targetRoot then return end
+
+        local pos = entityModel.PrimaryPart.Position
+        local target = targetRoot.Position
+        local distance = (target - pos).Magnitude
+
+        if distance <= activationRange then
+            local dir = (target - pos).Unit
+            local moveVec = dir * customSpeed * dt
+            local newCFrame = CFrame.new(pos + moveVec, target)
+            entityModel:SetPrimaryPartCFrame(newCFrame)
+        end
     end)
-    
-    entity:SetCallback("OnDespawning", function()
+end
+
+entity:SetCallback("OnSpawned", function()
+    entityModel = entity.Model
+    if entityModel then
+        if not entityModel.PrimaryPart then
+            local primaryPart = entityModel:FindFirstChild("Main") or entityModel:FindFirstChildWhichIsA("BasePart")
+            if primaryPart then
+                entityModel.PrimaryPart = primaryPart
+            end
+        end
+    end
+    startChaseSystem()
+end)
+
+entity:SetCallback("OnDespawning", function()
+    if chaseConnection then
+        chaseConnection:Disconnect()
+        chaseConnection = nil
+    end
+end)
+
+entity:SetCallback("OnDamagePlayer", function(newHealth)
+    if newHealth == 0 then
         if chaseConnection then
             chaseConnection:Disconnect()
             chaseConnection = nil
         end
-    end)
+        if entityModel and entityModel.PrimaryPart then
+            local currentPos = entityModel.PrimaryPart.Position
+            local forwardDir = entityModel.PrimaryPart.CFrame.LookVector
+            local targetPos = currentPos + forwardDir * 10
+            entityModel:SetPrimaryPartCFrame(CFrame.new(currentPos, targetPos))
+        end
+    end
+end)
 
-    entity:SetCallback("OnDamagePlayer", function(newHealth)
-        if newHealth == 0 then
-            if chaseConnection then
-                chaseConnection:Disconnect()
-                chaseConnection = nil
-            end
-            if entityModel and entityModel.PrimaryPart then
-                local currentPos = entityModel.PrimaryPart.Position
-                local forwardDir = entityModel.PrimaryPart.CFrame.LookVector
-                local targetPos = currentPos + forwardDir * 10
-                entityModel:SetPrimaryPartCFrame(CFrame.new(currentPos, targetPos))
-            end
-        end
-    end)
+entity:SetCallback("OnRebounding", function(startOfRebound)
+    if not entityModel then return end
     
-    entity:SetCallback("OnRebounding", function(startOfRebound)
-        if not entityModel then return end
-        
-        local main = entityModel:FindFirstChild("Main")
-        if not main then return end
-        
-        local attachment = main:WaitForChild("Attachment")
-        local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
-        local sounds = {
-            footsteps = main:WaitForChild("Footsteps"),
-            playSound = main:WaitForChild("PlaySound"),
-            switch = main:WaitForChild("Switch"),
-            switchBack = main:WaitForChild("SwitchBack")
-        }
+    local main = entityModel:FindFirstChild("Main")
+    if not main then return end
     
-        for _, c in attachment:GetChildren() do
-            c.Enabled = (not startOfRebound)
-        end
-        for _, c in AttachmentSwitch:GetChildren() do
-            c.Enabled = startOfRebound
-        end
-    
-        if startOfRebound == true then
-            sounds.footsteps.PlaybackSpeed = 0.35
-            sounds.playSound.PlaybackSpeed = 0.25
-            sounds.switch:Play()
-        else
-            sounds.footsteps.PlaybackSpeed = 0.25
-            sounds.playSound.PlaybackSpeed = 0.16
-            sounds.switchBack:Play()
-        end
-    end)
+    local attachment = main:WaitForChild("Attachment")
+    local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+    local sounds = {
+        footsteps = main:WaitForChild("Footsteps"),
+        playSound = main:WaitForChild("PlaySound"),
+        switch = main:WaitForChild("Switch"),
+        switchBack = main:WaitForChild("SwitchBack")
+    }
 
-    entity:Run()
-    local musicInstance = Instance.new("Sound")
-    musicInstance.SoundId = cachedAudioAsset
-    musicInstance.Volume = 4
-    musicInstance.Name = "DeerGodMusic_" .. tick()
-    musicInstance.Parent = workspace
-    musicInstance:Play()
+    for _, c in attachment:GetChildren() do
+        c.Enabled = (not startOfRebound)
+    end
+    for _, c in AttachmentSwitch:GetChildren() do
+        c.Enabled = startOfRebound
+    end
 
-    musicInstance.Ended:Connect(function()
-        musicInstance:Destroy()
-    end)
+    if startOfRebound == true then
+        sounds.footsteps.PlaybackSpeed = 0.35
+        sounds.playSound.PlaybackSpeed = 0.25
+        sounds.switch:Play()
+    else
+        sounds.footsteps.PlaybackSpeed = 0.25
+        sounds.playSound.PlaybackSpeed = 0.16
+        sounds.switchBack:Play()
+    end
+end)
+
+entity:Run()
+local musicInstance = Instance.new("Sound")
+musicInstance.SoundId = cachedAudioAsset
+musicInstance.Volume = 4
+musicInstance.Name = "DeerGodMusic_" .. tick()
+musicInstance.Parent = workspace
+musicInstance:Play()
+
+musicInstance.Ended:Connect(function()
+    musicInstance:Destroy()
+end)
 end
 function entityBehaviors.LightSpeed()
 local entity = spawner.Create({Entity = {Name = "LightSpeed",Asset = "87015961601567",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {90, 50, 20, 20}},Movement = {Speed = 1400,Delay = 20,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 50,Amount = 40},Crucifixion = {Enabled = true,Range = 50,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于光速", "在他来临时保证自己以最快的速度作出反应", "伴随着灯光变黄与巨大的雷电轰鸣声", "或许并不致命但总是一个威胁"},Cause = ""}})
@@ -4525,7 +4614,7 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
 local function spawnShocker()
-    local shockerModel = game:GetObjects("rbxassetid://123279499986209")[1]
+    local shockerModel = game:GetObjects("rbxassetid://129658537539698")[1]
     local camera = Workspace.CurrentCamera
 
     local rootPart = shockerModel:FindFirstChild("HumanoidRootPart") or shockerModel:FindFirstChildWhichIsA("Part")
@@ -6017,7 +6106,8 @@ local entityConfig = {
     ["rbxassetid://85554051164113"] = entityBehaviors.FigureXF,
     ["rbxassetid://80450670780109"] = entityBehaviors.SuperDread,
     ["rbxassetid://140701104317815"] = entityBehaviors.DreadJump,
-    ["rbxassetid://50"] = entityBehaviors.LOOKSW,         
+    ["rbxassetid://50"] = entityBehaviors.LOOKSW,
+    ["rbxassetid://104"] = entityBehaviors.DeergodDDH,         
     ["rbxassetid://135376180128296"] = entityBehaviors.Silence
 }
 local checkedEntities = {}
@@ -6288,5 +6378,5 @@ loadAudioFromGitHub()
 replaceSeekMusic()
 replaceSeekModel()
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCore V10.1 By Mr.key & HeavenNow :)"
+hint.Text = "Loading... Doors HardCore V10.2 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)

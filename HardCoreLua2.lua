@@ -1703,43 +1703,57 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 end)
 entity:Run()
 end
-
 function GitAud(soundgit, filename)
-    local url = soundgit
     local fileName = filename or "temp_audio"
     local fullFileName = fileName .. ".mp3"
+
     local success, audioData = pcall(function()
-        return game:HttpGet(url)
+        return game:HttpGet(soundgit)
     end)
+
     if not success then
         return nil
     end
-    local writeSuccess, writeError = pcall(function()
+
+    local writeSuccess = pcall(function()
         writefile(fullFileName, audioData)
     end)
+
     if not writeSuccess then
         return nil
     end
-    local assetPath
+
     if getsynasset then
-        assetPath = getsynasset(fullFileName)
+        return getsynasset(fullFileName)
     elseif getcustomasset then
-        assetPath = getcustomasset(fullFileName)
-    else
-        return nil
+        return getcustomasset(fullFileName)
     end
-    return assetPath
+
+    return nil
 end
 
--- 预先下载并存储音效
 local githubAudioUrl = "https://github.com/Zero0Star/RipperMPSound/blob/master/RipperNewSound.mp3?raw=true"
 local explosionSoundUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/RipperDoorend.mp3?raw=true"
 
-local backgroundSoundPath = GitAud(githubAudioUrl, "RipperBackgroundSound")
-local explosionSoundPath = GitAud(explosionSoundUrl, "RipperExplosionSound")
+local backgroundSoundPath = GitAud(
+    githubAudioUrl,
+    "RipperBackgroundSound"
+)
 
--- 创建Sound对象但不播放
+local explosionSoundPath = GitAud(
+    explosionSoundUrl,
+    "RipperExplosionSound"
+)
+
 if backgroundSoundPath then
+    local oldBackgroundSound = workspace:FindFirstChild(
+        "RipperBackgroundSound"
+    )
+
+    if oldBackgroundSound then
+        oldBackgroundSound:Destroy()
+    end
+
     local backgroundSound = Instance.new("Sound")
     backgroundSound.Name = "RipperBackgroundSound"
     backgroundSound.SoundId = backgroundSoundPath
@@ -1749,6 +1763,14 @@ if backgroundSoundPath then
 end
 
 if explosionSoundPath then
+    local oldExplosionSound = workspace:FindFirstChild(
+        "RipperExplosionSound"
+    )
+
+    if oldExplosionSound then
+        oldExplosionSound:Destroy()
+    end
+
     local explosionSound = Instance.new("Sound")
     explosionSound.Name = "RipperExplosionSound"
     explosionSound.SoundId = explosionSoundPath
@@ -1758,62 +1780,127 @@ if explosionSoundPath then
 end
 
 function entityBehaviors.RipperSw()
-local TweenService = game:GetService("TweenService")
-local targetColor = Color3.fromRGB(255, 93, 93)
-local fadeDuration = 1
-local fadeInfo = TweenInfo.new(
-    fadeDuration,
-    Enum.EasingStyle.Linear,
-    Enum.EasingDirection.Out
-)
+    local backgroundSound = workspace:FindFirstChild(
+        "RipperBackgroundSound"
+    )
 
-local function createFadeTween(object)
-    if object:IsA("BasePart") or object:IsA("Light") then
-        local tween = TweenService:Create(object, fadeInfo, {Color = targetColor})
-        tween:Play()
-        return tween
+    if backgroundSound then
+        backgroundSound:Stop()
+        backgroundSound.TimePosition = 0
+        backgroundSound:Play()
     end
-    return nil
-end
 
-local function modifyObjectsWithTween()
-    local allTweens = {}
-    for _, room in pairs(workspace.CurrentRooms:GetChildren()) do
-        if room:IsA("Model") then
-            local assets = room:FindFirstChild("Assets")
-            if assets then
-                for _, chandelier in pairs(assets:GetChildren()) do
-                    if chandelier:IsA("Model") and chandelier.Name == "Chandelier" then
-                        local lightFixture = chandelier:FindFirstChild("LightFixture")
-                        if lightFixture then
-                            local pointLight = lightFixture:FindFirstChild("PointLight")
-                            if pointLight and pointLight:IsA("PointLight") then
-                                table.insert(allTweens, createFadeTween(pointLight))
-                            end
-                            local spotLight = lightFixture:FindFirstChild("SpotLight")
-                            if spotLight and spotLight:IsA("SpotLight") then
-                                table.insert(allTweens, createFadeTween(spotLight))
-                            end
-                            local neon = lightFixture:FindFirstChild("Neon")
-                            if neon and neon:IsA("BasePart") then
-                                table.insert(allTweens, createFadeTween(neon))
+    local TweenService = game:GetService("TweenService")
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+
+    local targetColor = Color3.fromRGB(255, 93, 93)
+    local fadeDuration = 1
+
+    local fadeInfo = TweenInfo.new(
+        fadeDuration,
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.Out
+    )
+
+    local function createFadeTween(object)
+        if object:IsA("BasePart") or object:IsA("Light") then
+            local tween = TweenService:Create(
+                object,
+                fadeInfo,
+                {
+                    Color = targetColor
+                }
+            )
+
+            tween:Play()
+            return tween
+        end
+
+        return nil
+    end
+
+    local function modifyObjectsWithTween()
+        local currentRooms = workspace:FindFirstChild("CurrentRooms")
+
+        if not currentRooms then
+            return
+        end
+
+        for _, room in ipairs(currentRooms:GetChildren()) do
+            if room:IsA("Model") then
+                local assets = room:FindFirstChild("Assets")
+
+                if assets then
+                    for _, chandelier in ipairs(assets:GetChildren()) do
+                        if chandelier:IsA("Model")
+                            and chandelier.Name == "Chandelier"
+                        then
+                            local lightFixture =
+                                chandelier:FindFirstChild("LightFixture")
+
+                            if lightFixture then
+                                local pointLight =
+                                    lightFixture:FindFirstChild("PointLight")
+
+                                local spotLight =
+                                    lightFixture:FindFirstChild("SpotLight")
+
+                                local neon =
+                                    lightFixture:FindFirstChild("Neon")
+
+                                if pointLight
+                                    and pointLight:IsA("PointLight")
+                                then
+                                    createFadeTween(pointLight)
+                                end
+
+                                if spotLight
+                                    and spotLight:IsA("SpotLight")
+                                then
+                                    createFadeTween(spotLight)
+                                end
+
+                                if neon and neon:IsA("BasePart") then
+                                    createFadeTween(neon)
+                                end
                             end
                         end
                     end
-                end
-                local lightFixtures = assets:FindFirstChild("Light_Fixtures")
-                if lightFixtures then
-                    for _, lightStand in pairs(lightFixtures:GetChildren()) do
-                        if lightStand:IsA("Model") and lightStand.Name == "LightStand" then
-                            local lightFixture = lightStand:FindFirstChild("LightFixture")
-                            if lightFixture then
-                                local pointLight = lightFixture:FindFirstChild("PointLight")
-                                if pointLight and pointLight:IsA("PointLight") then
-                                    table.insert(allTweens, createFadeTween(pointLight))
-                                end
-                                local neon = lightFixture:FindFirstChild("Neon")
-                                if neon and neon:IsA("BasePart") then
-                                    table.insert(allTweens, createFadeTween(neon))
+
+                    local lightFixtures =
+                        assets:FindFirstChild("Light_Fixtures")
+
+                    if lightFixtures then
+                        for _, lightStand in ipairs(
+                            lightFixtures:GetChildren()
+                        ) do
+                            if lightStand:IsA("Model")
+                                and lightStand.Name == "LightStand"
+                            then
+                                local lightFixture =
+                                    lightStand:FindFirstChild(
+                                        "LightFixture"
+                                    )
+
+                                if lightFixture then
+                                    local pointLight =
+                                        lightFixture:FindFirstChild(
+                                            "PointLight"
+                                        )
+
+                                    local neon =
+                                        lightFixture:FindFirstChild("Neon")
+
+                                    if pointLight
+                                        and pointLight:IsA("PointLight")
+                                    then
+                                        createFadeTween(pointLight)
+                                    end
+
+                                    if neon and neon:IsA("BasePart") then
+                                        createFadeTween(neon)
+                                    end
                                 end
                             end
                         end
@@ -1822,458 +1909,1070 @@ local function modifyObjectsWithTween()
             end
         end
     end
-end
 
-coroutine.wrap(function()
-    modifyObjectsWithTween()
-end)()
+    task.spawn(modifyObjectsWithTween)
 
-local TweenService = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+    local activeRipperTween = nil
+    local isJumpScaring = false
+    local ripper = nil
+    local ripperAsset = nil
 
-local activeRipperTween = nil
-local isJumpScaring = false
-local ripper = nil
-local ripperAsset = nil
-
-local function StopRipperMovement()
-    if activeRipperTween then
-        activeRipperTween:Cancel()
-        activeRipperTween = nil
+    local function StopRipperMovement()
+        if activeRipperTween then
+            activeRipperTween:Cancel()
+            activeRipperTween = nil
+        end
     end
-end
 
-local function LoadDeathModel()
-    local DEATH_MODEL_ID = "104190508011063"
-    local success, loadedModels = pcall(function()
-        return game:GetObjects("rbxassetid://" .. DEATH_MODEL_ID)
-    end)
-    
-    if success and loadedModels[1] then
-        local deathModel = loadedModels[1]
-        deathModel.Name = "Death"
-        deathModel.Parent = workspace
-        return deathModel
-    else
+    local function LoadDeathModel()
+        local DEATH_MODEL_ID = "104190508011063"
+
+        local success, loadedModels = pcall(function()
+            return game:GetObjects(
+                "rbxassetid://" .. DEATH_MODEL_ID
+            )
+        end)
+
+        if success and loadedModels and loadedModels[1] then
+            local deathModel = loadedModels[1]
+            deathModel.Name = "Death"
+            deathModel.Parent = workspace
+            return deathModel
+        end
+
         return nil
     end
-end
 
-local function TriggerRipperJumpScare(ripper, playerChar, snapshottedRipperPosition)
-    StopRipperMovement()
-    isJumpScaring = true
-
-    if ripperAsset and ripperAsset.Parent then
-        ripperAsset:Destroy()
-        ripperAsset = nil
-    end
-
-    local player = game.Players:GetPlayerFromCharacter(playerChar)
-    if not player then return end
-
-    local noiseGui = Instance.new("ScreenGui")
-    noiseGui.Name = "Noise"
-    noiseGui.Parent = player:WaitForChild("PlayerGui")
-    noiseGui.IgnoreGuiInset = true
-
-    local staticImg = Instance.new("ImageLabel")
-    staticImg.Parent = noiseGui
-    staticImg.BackgroundTransparency = 1
-    staticImg.Size = UDim2.new(1, 0, 1, 0)
-    staticImg.Image = "rbxassetid://236542974"
-    staticImg.ImageTransparency = 1
-
-    local images = {"rbxassetid://236542974", "rbxassetid://12784032030"}
-    local imgIndex = 1
-    local switchThread = task.spawn(function()
-        while staticImg and staticImg.Parent do
-            staticImg.Image = images[imgIndex]
-            imgIndex = imgIndex % #images + 1
-            task.wait(0.03)
+    local function TriggerRipperJumpScare(
+        currentRipper,
+        playerChar,
+        snapshottedRipperPosition
+    )
+        if isJumpScaring then
+            return
         end
-    end)
 
-    local deathModel = workspace:FindFirstChild("Death")
-    if not deathModel then
-        deathModel = LoadDeathModel()
-    end
-    
-    if deathModel and deathModel:FindFirstChild("Ripe") then
-        local ripClone = deathModel.Ripe:Clone()
+        StopRipperMovement()
+        isJumpScaring = true
+
+        if ripperAsset and ripperAsset.Parent then
+            ripperAsset:Destroy()
+            ripperAsset = nil
+        end
+
+        local player = Players:GetPlayerFromCharacter(playerChar)
+
+        if not player then
+            isJumpScaring = false
+            return
+        end
+
+        local playerGui = player:FindFirstChild("PlayerGui")
+
+        if not playerGui then
+            playerGui = player:WaitForChild("PlayerGui", 5)
+        end
+
+        if not playerGui then
+            isJumpScaring = false
+            return
+        end
+
+        local noiseGui = Instance.new("ScreenGui")
+        noiseGui.Name = "Noise"
+        noiseGui.IgnoreGuiInset = true
+        noiseGui.ResetOnSpawn = false
+        noiseGui.Parent = playerGui
+
+        local staticImg = Instance.new("ImageLabel")
+        staticImg.BackgroundTransparency = 1
+        staticImg.Size = UDim2.new(1, 0, 1, 0)
+        staticImg.Image = "rbxassetid://236542974"
+        staticImg.ImageTransparency = 1
+        staticImg.Parent = noiseGui
+
+        local images = {
+            "rbxassetid://236542974",
+            "rbxassetid://12784032030"
+        }
+
+        local imgIndex = 1
+
+        task.spawn(function()
+            while staticImg and staticImg.Parent do
+                staticImg.Image = images[imgIndex]
+                imgIndex = imgIndex % #images + 1
+                task.wait(0.03)
+            end
+        end)
+
+        local deathModel = workspace:FindFirstChild("Death")
+
+        if not deathModel then
+            deathModel = LoadDeathModel()
+        end
+
+        if not deathModel
+            or not deathModel:FindFirstChild("Ripe")
+        then
+            noiseGui:Destroy()
+            isJumpScaring = false
+            return
+        end
+
+        local originalRipe = deathModel:FindFirstChild("Ripe")
+        local ripClone = originalRipe:Clone()
         ripClone.Parent = workspace
-        ripClone.Position = deathModel.Ripe.Position
 
-        if ripClone:FindFirstChild("ripe") and ripClone.ripe:FindFirstChild("ParticleEmitter") then
-            ripClone.ripe.ParticleEmitter.Texture = "rbxassetid://11816152645"
+        if ripClone:IsA("BasePart") then
+            ripClone.Position = originalRipe.Position
+        elseif ripClone:IsA("Model") then
+            ripClone:PivotTo(originalRipe:GetPivot())
         end
 
-        for _, desc in pairs(ripClone:GetDescendants()) do
+        local ripeObject = ripClone:FindFirstChild("ripe")
+
+        if ripeObject then
+            local particleEmitter =
+                ripeObject:FindFirstChild("ParticleEmitter")
+
+            if particleEmitter
+                and particleEmitter:IsA("ParticleEmitter")
+            then
+                particleEmitter.Texture =
+                    "rbxassetid://11816152645"
+            end
+        end
+
+        for _, desc in ipairs(ripClone:GetDescendants()) do
             if desc:IsA("ParticleEmitter") then
                 task.spawn(function()
                     desc.Rate = 9999
-                    wait(0.25)
-                    desc.TimeScale = 0
+                    task.wait(0.25)
+
+                    if desc and desc.Parent then
+                        desc.TimeScale = 0
+                    end
                 end)
             elseif desc:IsA("Sound") then
                 desc.Volume = 0
             end
         end
-        deathModel.Ripe:Destroy()
 
-        local screamSound = Instance.new("Sound", workspace)
+        originalRipe:Destroy()
+
+        local screamSound = Instance.new("Sound")
         screamSound.SoundId = "rbxassetid://372770465"
         screamSound.Volume = 10
-        screamSound.Pitch = 0.7
+        screamSound.PlaybackSpeed = 0.7
+        screamSound.Parent = workspace
 
-        local explodeSound = Instance.new("Sound", workspace)
-        local explosionSound = workspace:FindFirstChild("RipperExplosionSound")
+        local explodeSound = Instance.new("Sound")
+        local explosionSound = workspace:FindFirstChild(
+            "RipperExplosionSound"
+        )
+
         if explosionSound then
             explodeSound.SoundId = explosionSound.SoundId
         end
+
         explodeSound.Volume = 10
-        explodeSound.Pitch = 1
+        explodeSound.PlaybackSpeed = 1
+        explodeSound.Parent = workspace
 
         local camera = workspace.CurrentCamera
+        local rootPart =
+            playerChar:FindFirstChild("HumanoidRootPart")
 
-        if playerChar:FindFirstChild("HumanoidRootPart") then
-            playerChar.HumanoidRootPart.Anchored = true
+        local humanoid =
+            playerChar:FindFirstChildWhichIsA("Humanoid")
+
+        if rootPart then
+            rootPart.Anchored = true
         end
 
         explodeSound:Play()
 
-        local explosionCameraShaker = require(game.ReplicatedStorage.CameraShaker)
-        local explosionCam = workspace.CurrentCamera
-        local explosionCamShake = explosionCameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-            explosionCam.CFrame = explosionCam.CFrame * shakeCf
-        end)
-        explosionCamShake:Start()
-        explosionCamShake:ShakeOnce(50, 400, 0.1, 0.7, 2, 1)
+        local cameraShakerModule =
+            game.ReplicatedStorage:FindFirstChild(
+                "CameraShaker"
+            )
+
+        if cameraShakerModule then
+            local explosionCameraShaker =
+                require(cameraShakerModule)
+
+            local explosionCamShake =
+                explosionCameraShaker.new(
+                    Enum.RenderPriority.Camera.Value,
+                    function(shakeCf)
+                        if camera then
+                            camera.CFrame =
+                                camera.CFrame * shakeCf
+                        end
+                    end
+                )
+
+            explosionCamShake:Start()
+            explosionCamShake:ShakeOnce(
+                50,
+                400,
+                0.1,
+                0.7,
+                2,
+                1
+            )
+        end
 
         local originalCameraType = camera.CameraType
         camera.CameraType = Enum.CameraType.Scriptable
 
-        local targetPart = Instance.new("Part", workspace)
+        local targetPart = Instance.new("Part")
         targetPart.Transparency = 1
         targetPart.CanCollide = false
         targetPart.CanTouch = false
+        targetPart.CanQuery = false
         targetPart.Anchored = true
         targetPart.Position = snapshottedRipperPosition
+        targetPart.Parent = workspace
 
         local visualDeathModel = LoadDeathModel()
+
         if visualDeathModel then
-            visualDeathModel:PivotTo(CFrame.lookAt(targetPart.Position, targetPart.Position + Vector3.new(0, 180, 0)))
+            visualDeathModel:PivotTo(
+                CFrame.lookAt(
+                    targetPart.Position,
+                    targetPart.Position
+                        + Vector3.new(0, 180, 0)
+                )
+            )
         end
 
-        local camFocus = Instance.new("Part", workspace)
+        local camFocus = Instance.new("Part")
         camFocus.Transparency = 1
         camFocus.CanCollide = false
         camFocus.CanTouch = false
+        camFocus.CanQuery = false
         camFocus.Anchored = true
         camFocus.CFrame = camera.CFrame
+        camFocus.Parent = workspace
 
         local turnTween = TweenService:Create(
             camFocus,
-            TweenInfo.new(0.69, Enum.EasingStyle.Circular, Enum.EasingDirection.InOut),
-            {CFrame = CFrame.lookAt(camFocus.Position, targetPart.Position)}
+            TweenInfo.new(
+                0.69,
+                Enum.EasingStyle.Circular,
+                Enum.EasingDirection.InOut
+            ),
+            {
+                CFrame = CFrame.lookAt(
+                    camFocus.Position,
+                    targetPart.Position
+                )
+            }
         )
 
         local renderConnection
-        renderConnection = RunService.RenderStepped:Connect(function()
-            if camFocus and camFocus.Parent then
-                camera.CFrame = camFocus.CFrame
-            else
-                renderConnection:Disconnect()
-            end
-        end)
+
+        renderConnection =
+            RunService.RenderStepped:Connect(function()
+                if camFocus
+                    and camFocus.Parent
+                    and camera
+                then
+                    camera.CFrame = camFocus.CFrame
+                elseif renderConnection then
+                    renderConnection:Disconnect()
+                end
+            end)
 
         turnTween:Play()
         turnTween.Completed:Wait()
 
-        wait(1)
-        screamSound:Play()
-        screamSound.Volume = 0
-        TweenService:Create(screamSound, TweenInfo.new(3), {Volume = 10}):Play()
-        wait(3)
-        TweenService:Create(staticImg, TweenInfo.new(2), {ImageTransparency = 0}):Play()
-        wait(2)
-        TweenService:Create(staticImg, TweenInfo.new(1), {ImageTransparency = 1}):Play()
-        TweenService:Create(screamSound, TweenInfo.new(1), {Volume = 0}):Play()
-        wait(1)
+        task.wait(1)
 
-        if playerChar:FindFirstChild("HumanoidRootPart") then
-            playerChar.HumanoidRootPart.Anchored = false
+        screamSound.Volume = 0
+        screamSound:Play()
+
+        TweenService:Create(
+            screamSound,
+            TweenInfo.new(3),
+            {
+                Volume = 10
+            }
+        ):Play()
+
+        task.wait(3)
+
+        TweenService:Create(
+            staticImg,
+            TweenInfo.new(2),
+            {
+                ImageTransparency = 0
+            }
+        ):Play()
+
+        task.wait(2)
+
+        TweenService:Create(
+            staticImg,
+            TweenInfo.new(1),
+            {
+                ImageTransparency = 1
+            }
+        ):Play()
+
+        TweenService:Create(
+            screamSound,
+            TweenInfo.new(1),
+            {
+                Volume = 0
+            }
+        ):Play()
+
+        task.wait(1)
+
+        if rootPart and rootPart.Parent then
+            rootPart.Anchored = false
         end
 
-        playerChar:FindFirstChildWhichIsA("Humanoid"):TakeDamage(100)
+        if humanoid and humanoid.Parent then
+            humanoid:TakeDamage(100)
+        end
 
-        if renderConnection then renderConnection:Disconnect() end
-        camera.CameraType = originalCameraType
+        if renderConnection then
+            renderConnection:Disconnect()
+        end
 
-        noiseGui:Destroy()
-        targetPart:Destroy()
-        camFocus:Destroy()
-        ripClone:Destroy()
-        screamSound:Destroy()
-        explodeSound:Destroy()
-        if deathModel then deathModel:Destroy() end
-        if visualDeathModel then visualDeathModel:Destroy() end
+        if camera then
+            camera.CameraType = originalCameraType
+        end
 
-        if ripper and ripper.Parent then
+        if noiseGui then
+            noiseGui:Destroy()
+        end
+
+        if targetPart then
+            targetPart:Destroy()
+        end
+
+        if camFocus then
+            camFocus:Destroy()
+        end
+
+        if ripClone then
+            ripClone:Destroy()
+        end
+
+        if screamSound then
+            screamSound:Destroy()
+        end
+
+        if explodeSound then
+            explodeSound:Destroy()
+        end
+
+        if deathModel then
+            deathModel:Destroy()
+        end
+
+        if visualDeathModel then
+            visualDeathModel:Destroy()
+        end
+
+        if currentRipper and currentRipper.Parent then
+            currentRipper:Destroy()
+        end
+
+        ripper = nil
+
+        local remotesFolder =
+            game.ReplicatedStorage:FindFirstChild(
+                "RemotesFolder"
+            )
+
+        if remotesFolder then
+            local deathHint =
+                remotesFolder:FindFirstChild("DeathHint")
+
+            if deathHint then
+                firesignal(
+                    deathHint.OnClientEvent,
+                    {
+                        "你死于所谓的开膛手...",
+                        "伴随极大的吼叫声后他就会出现.",
+                        "它这么做时躲起来,他会检查所有的躲藏点!"
+                    },
+                    "Blue"
+                )
+            end
+        end
+
+        local gameStats =
+            game.ReplicatedStorage:FindFirstChild(
+                "GameStats"
+            )
+
+        if gameStats then
+            local playerStat = gameStats:FindFirstChild(
+                "Player_" .. player.Name
+            )
+
+            if playerStat then
+                local total =
+                    playerStat:FindFirstChild("Total")
+
+                if total then
+                    local deathCause =
+                        total:FindFirstChild("DeathCause")
+
+                    if deathCause then
+                        deathCause.Value = "Ripper"
+                    end
+                end
+            end
+        end
+    end
+
+    local function getOrderedRooms()
+        local currentRooms =
+            workspace:FindFirstChild("CurrentRooms")
+
+        local orderedRooms = {}
+
+        if not currentRooms then
+            return orderedRooms
+        end
+
+        for _, room in ipairs(currentRooms:GetChildren()) do
+            if room:IsA("Model") then
+                local roomNumber = tonumber(room.Name)
+
+                if roomNumber then
+                    table.insert(
+                        orderedRooms,
+                        {
+                            Number = roomNumber,
+                            Room = room
+                        }
+                    )
+                end
+            end
+        end
+
+        table.sort(
+            orderedRooms,
+            function(a, b)
+                return a.Number < b.Number
+            end
+        )
+
+        return orderedRooms
+    end
+
+    local function getOrderedNodes(pathfindNodes)
+        local orderedNodes = {}
+
+        for _, node in ipairs(
+            pathfindNodes:GetChildren()
+        ) do
+            if node:IsA("BasePart") then
+                table.insert(orderedNodes, node)
+            end
+        end
+
+        table.sort(
+            orderedNodes,
+            function(a, b)
+                local numberA = tonumber(a.Name)
+                local numberB = tonumber(b.Name)
+
+                if numberA and numberB then
+                    return numberA < numberB
+                elseif numberA then
+                    return true
+                elseif numberB then
+                    return false
+                end
+
+                return a.Name < b.Name
+            end
+        )
+
+        return orderedNodes
+    end
+
+    local function moveRipperTo(
+        targetCFrame,
+        speedFactor
+    )
+        if isJumpScaring
+            or not ripper
+            or not ripper.Parent
+        then
+            return false
+        end
+
+        local distance = (
+            ripper.Position - targetCFrame.Position
+        ).Magnitude
+
+        local duration =
+            math.max(distance / speedFactor, 0.01)
+
+        local tween = TweenService:Create(
+            ripper,
+            TweenInfo.new(
+                duration,
+                Enum.EasingStyle.Linear,
+                Enum.EasingDirection.InOut
+            ),
+            {
+                CFrame = targetCFrame
+            }
+        )
+
+        activeRipperTween = tween
+        tween:Play()
+
+        local playbackState =
+            tween.Completed:Wait()
+
+        if activeRipperTween == tween then
+            activeRipperTween = nil
+        end
+
+        return playbackState
+                == Enum.PlaybackState.Completed
+            and not isJumpScaring
+            and ripper
+            and ripper.Parent ~= nil
+    end
+
+    local function ExecuteRipperPathfinding()
+        local RIPPER_MODEL_ID = "92681623704537"
+
+        local success, loadedAsset = pcall(function()
+            return game:GetObjects(
+                "rbxassetid://" .. RIPPER_MODEL_ID
+            )[1]
+        end)
+
+        if not success or not loadedAsset then
+            ripperAsset = nil
+            return
+        end
+
+        ripperAsset = loadedAsset
+
+        local basePart =
+            ripperAsset:FindFirstChildWhichIsA(
+                "BasePart",
+                true
+            )
+
+        if not basePart then
+            ripperAsset:Destroy()
+            ripperAsset = nil
+            return
+        end
+
+        ripper = basePart:Clone()
+        ripper.Anchored = true
+        ripper.Parent = workspace
+
+        local orderedRooms = getOrderedRooms()
+
+        if #orderedRooms == 0 then
             ripper:Destroy()
             ripper = nil
+            ripperAsset:Destroy()
+            ripperAsset = nil
+            return
         end
 
-        if game.ReplicatedStorage:FindFirstChild("RemotesFolder") and game.ReplicatedStorage.RemotesFolder:FindFirstChild("DeathHint") then
-            firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
-                "你死于所谓的开膛手...",
-                "伴随极大的吼叫声后他就会出现.",
-                "它这么做时躲起来,他会检查所有的躲藏点!"
-            }, "Blue")
+        local startRoom = orderedRooms[1].Room
+        local startNode = nil
+        local startPathfindNodes =
+            startRoom:FindFirstChild("PathfindNodes")
+
+        if startPathfindNodes then
+            local startNodes =
+                getOrderedNodes(startPathfindNodes)
+
+            startNode = startNodes[1]
         end
 
-        if game.ReplicatedStorage:FindFirstChild("GameStats") then
-            local playerStat = game.ReplicatedStorage.GameStats:FindFirstChild("Player_" .. player.Name)
-            if playerStat and playerStat.Total:FindFirstChild("DeathCause") then
-                playerStat.Total.DeathCause.Value = "Ripper"
+        if not startNode then
+            startNode =
+                startRoom:FindFirstChild("RoomExit")
+        end
+
+        if not startNode
+            or not startNode:IsA("BasePart")
+        then
+            ripper:Destroy()
+            ripper = nil
+            ripperAsset:Destroy()
+            ripperAsset = nil
+            return
+        end
+
+        local heightOffset = Vector3.new(0, 2, 0)
+        local speedFactor = 89
+
+        ripper.CFrame =
+            startNode.CFrame + heightOffset
+
+        local cameraShaker = nil
+        local cameraShakerModule =
+            game.ReplicatedStorage:FindFirstChild(
+                "CameraShaker"
+            )
+
+        if cameraShakerModule then
+            local CameraShakerModule =
+                require(cameraShakerModule)
+
+            local camera = workspace.CurrentCamera
+
+            cameraShaker = CameraShakerModule.new(
+                Enum.RenderPriority.Camera.Value,
+                function(shakerTransform)
+                    if camera then
+                        camera.CFrame =
+                            camera.CFrame
+                            * shakerTransform
+                    end
+                end
+            )
+
+            cameraShaker:Start()
+        end
+
+        local hasShaken = false
+
+        task.spawn(function()
+            while ripper
+                and ripper.Parent
+                and not isJumpScaring
+            do
+                RunService.RenderStepped:Wait()
+
+                local player = Players.LocalPlayer
+
+                if player and player.Character then
+                    local character = player.Character
+
+                    local humanoid =
+                        character:FindFirstChildWhichIsA(
+                            "Humanoid"
+                        )
+
+                    local rootPart =
+                        character:FindFirstChild(
+                            "HumanoidRootPart"
+                        )
+
+                    if humanoid
+                        and rootPart
+                        and humanoid.Health > 0
+                        and not character:GetAttribute(
+                            "Hiding"
+                        )
+                    then
+                        local origin = ripper.Position
+                        local target = rootPart.Position
+
+                        local distance = (
+                            origin - target
+                        ).Magnitude
+
+                        if distance < 213
+                            and cameraShaker
+                        then
+                            if not hasShaken then
+                                local amplitude =
+                                    math.max(
+                                        0,
+                                        21
+                                            * (
+                                                1
+                                                - distance
+                                                    / 152
+                                            )
+                                    )
+
+                                cameraShaker:ShakeOnce(
+                                    amplitude,
+                                    14,
+                                    5,
+                                    1,
+                                    1,
+                                    6
+                                )
+
+                                hasShaken = true
+                            end
+                        else
+                            hasShaken = false
+                        end
+
+                        local difference =
+                            target - origin
+
+                        if difference.Magnitude > 0 then
+                            local raycastParams =
+                                RaycastParams.new()
+
+                            raycastParams.FilterType =
+                                Enum.RaycastFilterType.Exclude
+
+                            raycastParams.FilterDescendantsInstances =
+                                {
+                                    ripper
+                                }
+
+                            local raycastResult =
+                                workspace:Raycast(
+                                    origin,
+                                    difference.Unit * 66,
+                                    raycastParams
+                                )
+
+                            if raycastResult
+                                and raycastResult.Instance
+                                and raycastResult.Instance:IsDescendantOf(
+                                    character
+                                )
+                            then
+                                TriggerRipperJumpScare(
+                                    ripper,
+                                    character,
+                                    ripper.Position
+                                )
+                            end
+                        end
+                    end
+                end
             end
-        end
-    end
-end
-
-local function ExecuteRipperPathfinding()
-    local RIPPER_MODEL_ID = "92681623704537"
-    local success, loadedAsset = pcall(function() return game:GetObjects("rbxassetid://" .. RIPPER_MODEL_ID)[1] end)
-    if not success or not loadedAsset then 
-        ripperAsset = nil
-        return 
-    end
-
-    ripperAsset = loadedAsset
-    local basePart = ripperAsset:FindFirstChildWhichIsA("BasePart") or ripperAsset:GetChildren()[1]
-    if not basePart then
-        ripperAsset = nil
-        return
-    end
-    
-    ripper = basePart:Clone()
-    ripper.Parent = workspace
-
-    local currentRooms = workspace.CurrentRooms
-
-    local allRooms = {}
-    local minRoomNumber = math.huge
-    local maxRoomNumber = -math.huge
-
-    for _, room in pairs(currentRooms:GetChildren()) do
-        if room:IsA("Model") then
-            local roomNumber = tonumber(room.Name)
-            if roomNumber then
-                allRooms[roomNumber] = room
-                if roomNumber < minRoomNumber then minRoomNumber = roomNumber end
-                if roomNumber > maxRoomNumber then maxRoomNumber = roomNumber end
-            end
-        end
-    end
-
-    local minRoom = allRooms[minRoomNumber]
-    if not minRoom then
-        minRoom = currentRooms:GetChildren()[1]
-    end
-
-    if not minRoom then 
-        ripper = nil
-        ripperAsset = nil
-        return 
-    end
-
-    local startNode
-    if minRoom:FindFirstChild("PathfindNodes") and minRoom.PathfindNodes:FindFirstChild("1") then
-        startNode = minRoom.PathfindNodes["1"]
-    elseif minRoom:FindFirstChild("RoomExit") then
-        startNode = minRoom.RoomExit
-    end
-    
-    if not startNode then 
-        ripper = nil
-        ripperAsset = nil
-        return 
-    end
-
-    ripper.CFrame = startNode.CFrame + Vector3.new(0, 2, 0)
-
-    local speedFactor = 89
-    local heightOffset = Vector3.new(0, 2, 0)
-
-    local cameraShaker = nil
-    if game.ReplicatedStorage:FindFirstChild("CameraShaker") then
-        local CameraShakerModule = require(game.ReplicatedStorage.CameraShaker)
-        local camera = workspace.CurrentCamera
-        cameraShaker = CameraShakerModule.new(Enum.RenderPriority.Camera.Value, function(shakerTransform)
-            camera.CFrame = camera.CFrame * shakerTransform
         end)
-        cameraShaker:Start()
+
+        local targetRoomIndex =
+            math.max(1, #orderedRooms - 1)
+
+        local reachedFinalRoom = false
+        local completedRoomIndex = 0
+
+        for roomIndex = 1, targetRoomIndex do
+            if isJumpScaring
+                or not ripper
+                or not ripper.Parent
+            then
+                break
+            end
+
+            local roomData =
+                orderedRooms[roomIndex]
+
+            local room =
+                roomData and roomData.Room
+
+            if not room or not room.Parent then
+                local refreshDeadline =
+                    os.clock() + 5
+
+                repeat
+                    task.wait(0.1)
+
+                    orderedRooms =
+                        getOrderedRooms()
+
+                    roomData =
+                        orderedRooms[roomIndex]
+
+                    room =
+                        roomData and roomData.Room
+                until room
+                    or os.clock()
+                        >= refreshDeadline
+                    or isJumpScaring
+                    or not ripper
+                    or not ripper.Parent
+            end
+
+            if not room or not room.Parent then
+                break
+            end
+
+            local roomCompleted = false
+            local pathfindNodes =
+                room:FindFirstChild(
+                    "PathfindNodes"
+                )
+
+            if pathfindNodes then
+                local orderedNodes =
+                    getOrderedNodes(
+                        pathfindNodes
+                    )
+
+                if #orderedNodes > 0 then
+                    roomCompleted = true
+
+                    for _, node in ipairs(
+                        orderedNodes
+                    ) do
+                        if isJumpScaring
+                            or not ripper
+                            or not ripper.Parent
+                        then
+                            roomCompleted = false
+                            break
+                        end
+
+                        local moved =
+                            moveRipperTo(
+                                node.CFrame
+                                    + heightOffset,
+                                speedFactor
+                            )
+
+                        if not moved then
+                            roomCompleted = false
+                            break
+                        end
+                    end
+                end
+            end
+
+            if not roomCompleted then
+                local roomExit =
+                    room:FindFirstChild(
+                        "RoomExit"
+                    )
+
+                if roomExit
+                    and roomExit:IsA(
+                        "BasePart"
+                    )
+                then
+                    roomCompleted =
+                        moveRipperTo(
+                            roomExit.CFrame
+                                + heightOffset,
+                            speedFactor
+                        )
+                end
+            end
+
+            if not roomCompleted then
+                break
+            end
+
+            completedRoomIndex = roomIndex
+
+            if roomIndex
+                == targetRoomIndex
+            then
+                reachedFinalRoom = true
+            end
+        end
+
+        activeRipperTween = nil
+
+        if isJumpScaring
+            or not ripper
+            or not ripper.Parent
+        then
+            ripper = nil
+            ripperAsset = nil
+            return
+        end
+
+        if not reachedFinalRoom
+            or completedRoomIndex
+                < targetRoomIndex
+        then
+            if ripper and ripper.Parent then
+                ripper:Destroy()
+            end
+
+            if ripperAsset
+                and ripperAsset.Parent
+            then
+                ripperAsset:Destroy()
+            end
+
+            ripper = nil
+            ripperAsset = nil
+            return
+        end
+
+        local explodeSound =
+            Instance.new("Sound")
+
+        local explosionSound =
+            workspace:FindFirstChild(
+                "RipperExplosionSound"
+            )
+
+        if explosionSound then
+            explodeSound.SoundId =
+                explosionSound.SoundId
+        end
+
+        explodeSound.Volume = 5
+        explodeSound.Parent = ripper
+        explodeSound:Play()
+
+        if cameraShakerModule then
+            local endExplosionCameraShaker =
+                require(cameraShakerModule)
+
+            local endExplosionCam =
+                workspace.CurrentCamera
+
+            local endExplosionCamShake =
+                endExplosionCameraShaker.new(
+                    Enum.RenderPriority.Camera.Value,
+                    function(shakeCf)
+                        if endExplosionCam then
+                            endExplosionCam.CFrame =
+                                endExplosionCam.CFrame
+                                * shakeCf
+                        end
+                    end
+                )
+
+            endExplosionCamShake:Start()
+
+            endExplosionCamShake:ShakeOnce(
+                300,
+                400,
+                0.1,
+                0.7,
+                2,
+                1
+            )
+        end
+
+        task.wait(1)
+
+        local finalRipperPosition = nil
+
+        if ripper and ripper.Parent then
+            finalRipperPosition =
+                ripper.Position
+
+            ripper.Anchored = false
+            ripper.CanCollide = false
+            ripper.CanTouch = false
+            ripper.CanQuery = false
+        end
+
+        if ripperAsset
+            and ripperAsset.Parent
+        then
+            ripperAsset:Destroy()
+            ripperAsset = nil
+        end
+
+        if isJumpScaring
+            or not ripper
+            or not ripper.Parent
+        then
+            ripper = nil
+            return
+        end
+
+        local player = Players.LocalPlayer
+
+        if player and player.Character then
+            local character = player.Character
+
+            local humanoid =
+                character:FindFirstChildWhichIsA(
+                    "Humanoid"
+                )
+
+            if humanoid
+                and humanoid.Health > 0
+                and not character:GetAttribute(
+                    "Hiding"
+                )
+                and finalRipperPosition
+            then
+                TriggerRipperJumpScare(
+                    ripper,
+                    character,
+                    finalRipperPosition
+                )
+
+                return
+            end
+        end
+
+        local fallingRipper = ripper
+
+        ripper = nil
+        ripperAsset = nil
+
+        task.delay(10, function()
+            if fallingRipper
+                and fallingRipper.Parent
+            then
+                fallingRipper:Destroy()
+            end
+        end)
     end
-    local hasShaken = false
 
     task.spawn(function()
-        while ripper and ripper.Parent and not isJumpScaring do
-            RunService.RenderStepped:Wait()
-            local player = Players.LocalPlayer
-            if player and player.Character then
-                local humanoid = player.Character:FindFirstChildWhichIsA("Humanoid")
-                if humanoid and humanoid.Health > 0 and not player.Character:GetAttribute("Hiding") then
-                    local origin = ripper.Position
-                    local target = player.Character.HumanoidRootPart.Position
-                    local dist = (origin - target).Magnitude
-
-                    if dist < 213 and cameraShaker and not isJumpScaring then
-                        if not hasShaken then
-                            local amplitude = 21 * (1 - dist/152)
-                            cameraShaker:ShakeOnce(amplitude, 14, 5, 1, 1, 6)
-                            hasShaken = true
-                        end
-                    else
-                        hasShaken = false
-                    end
-
-                    local direction = (target - origin).Unit * 66
-                    local ray = Ray.new(origin, direction)
-                    local hit = workspace:FindPartOnRay(ray, ripper)
-                    
-                    if hit and hit:IsDescendantOf(player.Character) then
-                        local triggerPosition = ripper.Position
-                        TriggerRipperJumpScare(ripper, player.Character, triggerPosition)
-                    end
-                end
-            end
-        end
+        task.wait(7)
+        ExecuteRipperPathfinding()
     end)
 
-    local targetRoomNumber = math.max(minRoomNumber, maxRoomNumber - 1)
-    for roomNum = minRoomNumber, targetRoomNumber do
-        if isJumpScaring then break end
-        if not ripper or not ripper.Parent then break end
-        local room = allRooms[roomNum]
-        if not room then break end
-        
-        if room:FindFirstChild("PathfindNodes") then
-            for _, node in pairs(room.PathfindNodes:GetChildren()) do
-                if isJumpScaring then break end
-                if not ripper or not ripper.Parent then break end
-                local dist = (ripper.Position - node.Position).Magnitude
-                local tween = TweenService:Create(ripper, TweenInfo.new(dist / speedFactor, Enum.EasingStyle.Linear), {
-                    CFrame = node.CFrame + heightOffset
-                })
-                activeRipperTween = tween
-                tween:Play()
-                tween.Completed:Wait()
-            end
-        else
-            if room:FindFirstChild("RoomExit") then
-                if isJumpScaring then break end
-                if not ripper or not ripper.Parent then break end
-                local dist = (ripper.Position - room.RoomExit.Position).Magnitude
-                local tween = TweenService:Create(ripper, TweenInfo.new(dist / speedFactor, Enum.EasingStyle.Linear), {
-                    CFrame = room.RoomExit.CFrame + heightOffset
-                })
-                activeRipperTween = tween
-                tween:Play()
-                tween.Completed:Wait()
-            end
+    local function runFinalCameraShake()
+        local cameraShakerModule =
+            game.ReplicatedStorage:FindFirstChild(
+                "CameraShaker"
+            )
+
+        if not cameraShakerModule then
+            return
         end
-    end
 
-    if isJumpScaring or not ripper or not ripper.Parent then
-        ripper = nil
-        ripperAsset = nil
-        return
-    end
+        local CameraShaker =
+            require(cameraShakerModule)
 
-    local lastRoom = allRooms[targetRoomNumber] or currentRooms:GetChildren()[#currentRooms:GetChildren()]
-    if lastRoom and lastRoom:FindFirstChild("Door") then
-        lastRoom.Door.ClientOpen:FireServer()
-    end
+        local camera =
+            workspace.CurrentCamera
 
-    if not ripper or not ripper.Parent then
-        ripper = nil
-        ripperAsset = nil
-        return
-    end
-
-    local explodeSound = Instance.new("Sound", ripper)
-    local explosionSound = workspace:FindFirstChild("RipperExplosionSound")
-    if explosionSound then
-        explodeSound.SoundId = explosionSound.SoundId
-    end
-    explodeSound.Volume = 5
-    explodeSound:Play()
-    
-    local endExplosionCameraShaker = require(game.ReplicatedStorage.CameraShaker)
-    local endExplosionCam = workspace.CurrentCamera
-    local endExplosionCamShake = endExplosionCameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-        endExplosionCam.CFrame = endExplosionCam.CFrame * shakeCf
-    end)
-    endExplosionCamShake:Start()
-    endExplosionCamShake:ShakeOnce(300, 400, 0.1, 0.7, 2, 1)
-    
-    wait(1)
-    if ripper and ripper.Parent then
-        ripper.Anchored = false
-        ripper.CanCollide = false
-    end
-    
-    local finalRipperPosition
-    if ripper and ripper.Parent then
-        finalRipperPosition = ripper.Position
-    end
-    
-    if ripperAsset and ripperAsset.Parent then
-        ripperAsset:Destroy()
-    end
-
-    if isJumpScaring or not ripper or not ripper.Parent then
-        ripper = nil
-        ripperAsset = nil
-        return
-    end
-
-    if not isJumpScaring then
-        local player = Players.LocalPlayer
-        if player and player.Character then
-            local humanoid = player.Character:FindFirstChildWhichIsA("Humanoid")
-            if humanoid and humanoid.Health > 0 then
-                if not player.Character:GetAttribute("Hiding") then
-                    isJumpScaring = true
-                    if finalRipperPosition then
-                        TriggerRipperJumpScare(ripper, player.Character, finalRipperPosition)
+        local camShake =
+            CameraShaker.new(
+                Enum.RenderPriority.Camera.Value,
+                function(shakeCf)
+                    if camera then
+                        camera.CFrame =
+                            camera.CFrame
+                            * shakeCf
                     end
                 end
-            end
-        end
+            )
+
+        camShake:Start()
+
+        camShake:ShakeOnce(
+            10,
+            200,
+            0.1,
+            6,
+            2,
+            0.5
+        )
     end
-    
-    ripper = nil
-    ripperAsset = nil
-end
 
-task.spawn(function()
-    wait(7)
-    ExecuteRipperPathfinding()
-end)
-
-local function runFinalCameraShake()
-    local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
-    local camara = game.Workspace.CurrentCamera
-    local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-        camara.CFrame = camara.CFrame * shakeCf
-    end)
-    camShake:Start()
-    camShake:ShakeOnce(10, 200, 0.1, 6, 2, 0.5)
-end
-
-runFinalCameraShake()
+    runFinalCameraShake()
 end
 
 function entityBehaviors.GodEgg()
@@ -6719,5 +7418,159 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingTwo... Doors HardCore V10.2 By Mr.key & HeavenNow :)"
+hint.Text = "LoadingTwo... Doors HardCore V10.3 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 2)
+local parts = workspace.CurrentRooms["0"].Parts
+for _, v in pairs(parts:GetChildren()) do
+    if v.Name == "VoidCollision" then v:Destroy() end
+end
+
+local window = workspace.CurrentRooms["0"].Assets.Window
+local skybox = window:FindFirstChild("Skybox")
+if skybox then skybox:Destroy() end
+
+local glass = window:FindFirstChild("Glass")
+if glass then glass:Destroy() end
+
+local particles = window:FindFirstChild("Particles")
+if particles then
+    local pe = particles:FindFirstChild("ParticleEmitter")
+    if pe then pe:Destroy() end
+    local rp = particles:FindFirstChild("RainParticle")
+    if rp then rp:Destroy() end
+end
+
+local ASSET_ID = 135111736002829
+local ROOM_OFFSET = CFrame.new(-182, 8.2, 18)
+local ROTATION_Y = math.rad(90)
+local DELETE_SCRIPTS = true
+
+local function GetRoom()
+    local latestRoomName = game.ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom").Value
+    return game.Workspace:WaitForChild("CurrentRooms"):FindFirstChild(latestRoomName)
+end
+
+local function LoadCustomInstance(source)
+    if not tonumber(source) then
+        return nil
+    end
+    local success, result = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+    end)
+    if not success or not result then
+        return nil
+    end
+    local model = result
+    model.Parent = workspace
+    if DELETE_SCRIPTS then
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            end
+        end
+    end
+    return model
+end
+
+local function FindFirstBasePartRecursive(instance)
+    if instance:IsA("BasePart") then
+        return instance
+    end
+    for _, child in ipairs(instance:GetChildren()) do
+        local found = FindFirstBasePartRecursive(child)
+        if found then
+            return found
+        end
+    end
+    return nil
+end
+
+local function EnsurePrimaryPart(model)
+    if model:IsA("Model") then
+        if model.PrimaryPart and model.PrimaryPart:IsDescendantOf(model) then
+            return true
+        end
+        local primary = FindFirstBasePartRecursive(model)
+        if primary then
+            model.PrimaryPart = primary
+            return true
+        end
+        return false
+    end
+    return true
+end
+
+local function SafeMoveModel(model, targetCFrame)
+    local allParts = {}
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            table.insert(allParts, descendant)
+        end
+    end
+    if model:IsA("BasePart") then
+        table.insert(allParts, model)
+    end
+    local anchoredStates = {}
+    for i, part in ipairs(allParts) do
+        anchoredStates[i] = part.Anchored
+        part.Anchored = false
+    end
+    if model:IsA("Model") then
+        model:PivotTo(targetCFrame)
+    elseif model:IsA("BasePart") then
+        model.CFrame = targetCFrame
+    end
+    for i, part in ipairs(allParts) do
+        part.Anchored = anchoredStates[i]
+    end
+end
+
+local function Damage(Amount)
+    local Players = game:GetService("Players")
+    local Player = Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    local Humanoid = Character:WaitForChild("Humanoid")
+    local DamageAmount = (Amount / 100) * Humanoid.MaxHealth
+    local NewHealth = Humanoid.Health - DamageAmount
+    if NewHealth <= 0 then
+        Player:SetAttribute("Alive", false)
+        replicatesignal(Player.Kill)
+    else
+        Humanoid.Health = NewHealth
+    end
+end
+
+local s = LoadCustomInstance(ASSET_ID)
+if not s then
+    return
+end
+
+s.Name = "LEVEL0"
+
+if not EnsurePrimaryPart(s) then
+    return
+end
+task.wait()
+local room
+local attempts = 0
+repeat
+    room = GetRoom()
+    attempts = attempts + 1
+    if not room then
+        task.wait(0.5)
+    end
+until room or attempts > 10
+if not room then
+    return
+end
+local roomEntrance = room:WaitForChild("RoomEntrance", 10)
+if not roomEntrance then
+    return
+end
+local targetCFrame = roomEntrance.CFrame * ROOM_OFFSET * CFrame.Angles(0, ROTATION_Y, 0)
+SafeMoveModel(s, targetCFrame)
+
+game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+print("HardCore By Mr.key")
+game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+workspace.LEVEL0:Destroy()

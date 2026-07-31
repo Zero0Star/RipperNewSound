@@ -40,7 +40,7 @@ OS.Thickness = 6
 OS.Parent = MC
 local TL = Instance.new("TextLabel")
 TL.Name = "Title"
-TL.Text = "HardCore V10.1"
+TL.Text = "HardCore V10.3"
 TL.FontFace = CF
 TL.TextSize = 32
 TL.TextColor3 = Color3.fromRGB(255, 240, 230)
@@ -211,7 +211,7 @@ local function KJ1()
     local totalPadding = (buttonCount - 1) * UIListLayout.Padding.Offset + UIPadding.PaddingTop.Offset + UIPadding.PaddingBottom.Offset
     local availableHeight = containerHeight - totalPadding
     local buttonHeight = availableHeight / buttonCount
-    return math.min(math.floor(buttonHeight * 0.3), 30)  -- 增加了文本大小
+    return math.min(math.floor(buttonHeight * 0.3), 30)
 end
 
 local function updateButtonSizes()

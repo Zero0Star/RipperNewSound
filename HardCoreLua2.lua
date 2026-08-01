@@ -6683,7 +6683,7 @@ end
 PreloadReboundSounds()
 
 function entityBehaviors.REBOUNDSW()
-    local testModelId = 110660957127652
+    local testModelId = 90731910259298
 
     local function PlayPreloadedSound(soundName, volume)
         volume = volume or 1
@@ -7094,10 +7094,10 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
 end
 
 function entityBehaviors.REBOUNDrebound()
-local entity = spawner.Create({Entity = {Name = "Rebound",Asset = "128215243399530",HeightOffset = 2
+local entity = spawner.Create({Entity = {Name = "Rebound",Asset = "108529386798441",HeightOffset = 2
 },Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},
 Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {0.5, 50, 0.1, 1}},
-Movement = {Speed = 100,Delay = 0,Reversed = false},Rebounding = {
+Movement = {Speed = 140,Delay = 0,Reversed = false},Rebounding = {
 Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},
 Damage = {Enabled = true,Range = 100,Amount = 125},Crucifixion = {Enabled = true,
 Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",

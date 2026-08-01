@@ -2681,7 +2681,7 @@ entity:Run()
 end
 
 function entityBehaviors.Silence()
-local entity = spawner.Create({Entity = {Name = "Silence",Asset = "104208930723979",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 35,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 200,Amount = 125},Crucifixion = {Enabled = true,Range = 200,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Silence 吞噬了...", "你该学会不在寂静中消亡", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}})
+local entity = spawner.Create({Entity = {Name = "Silence",Asset = "115741296805200",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 35,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 200,Amount = 125},Crucifixion = {Enabled = true,Range = 200,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Silence 吞噬了...", "你该学会不在寂静中消亡", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 
 	local entityModel = entity.Model
@@ -2782,7 +2782,7 @@ function LoadCustomInstance(source, parent)
     return model
 end
 
-local s = LoadCustomInstance("101548003594102", workspace)
+local s = LoadCustomInstance("100688033027569", workspace)
 if not s then
     return
 end
@@ -2932,6 +2932,8 @@ task.spawn(function()
     dmg = false
 end)
 
+game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+print("1")
 game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 dmg = false
 roomChanged = true
@@ -3924,11 +3926,6 @@ function entityBehaviors.Deergod()
             musicInstance:Destroy()
         end)
     end
-end
-
-
-function entityBehaviors.gameover()
-game.Players.LocalPlayer:Kick("We're rolling out the V10.3 update! In the next update, we'll try to add more new rooms. Stay tuned!")
 end
 
 function entityBehaviors.LightSpeed()
@@ -6145,8 +6142,7 @@ local entityConfig = {
     ["rbxassetid://80450670780109"] = entityBehaviors.SuperDread,
     ["rbxassetid://140701104317815"] = entityBehaviors.DreadJump,
     ["rbxassetid://50"] = entityBehaviors.LOOKSW,
-    ["rbxassetid://104"] = entityBehaviors.DeergodDDH, 
-    ["rbxassetid://108"] = entityBehaviors.gameover,        
+    ["rbxassetid://104"] = entityBehaviors.DeergodDDH,      
     ["rbxassetid://135376180128296"] = entityBehaviors.Silence
 }
 local checkedEntities = {}

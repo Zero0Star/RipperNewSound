@@ -4694,8 +4694,5 @@ if not roomEntrance then
 end
 local targetCFrame = roomEntrance.CFrame * ROOM_OFFSET * CFrame.Angles(0, ROTATION_Y, 0)
 SafeMoveModel(s, targetCFrame)
-
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-print("HardCore By Mr.key")
 game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 workspace.LEVEL0:Destroy()

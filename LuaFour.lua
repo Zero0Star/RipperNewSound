@@ -3368,12 +3368,40 @@ EnhancedBeamEffect()
 end
 
 function entityBehaviors.burgermunci()
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("在这次试炼中，你表现出了巨大的勇气。",true)
+wait(5)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("请原谅我，这可能有点突然。",true)
+wait(5)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("为了表达歉意。",true)
+wait(2)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("我将送你一个礼物。",true)
+wait(5)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("我非常理解你的心情，我已记录你在这场试炼的表现。",true)
+wait(5)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("我们在城堡后见。",true)
+wait(5)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("再见。",true)
+wait(3)
 achievementGiver({
-    Title = "Black Shadow",
-    Desc = "I am getting faster! but. I want to eat burger more!!!",
-    Reason = "Survive the Angry Munci.",
-    Image = "rbxassetid://12405576774"
+    Title = "A Mission Letter",
+    Desc = "This task was pretty long, but you made it through, right?",
+    Reason = "Surviving The Reaper.",
+    Image = "rbxassetid://63594681"
 })
+
+local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
+
+achievementFrame.Revives.Text = "200"
+achievementFrame.Stardust.Text = "0"
+achievementFrame.Knobs.Text = "23,000"
+achievementFrame.Knobs.Visible = true
+achievementFrame.Revives.Visible = true
+achievementFrame.KnobsIcon.Visible = true
+achievementFrame.StardustIcon.Visible = true
+achievementFrame.RevivesIcon.Visible = true
+achievementFrame.Visible = true
+achievementFrame.Stardust.Visible = true
 end
 
 function entityBehaviors.v6cj()

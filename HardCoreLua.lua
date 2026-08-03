@@ -2050,55 +2050,31 @@ spawn(function()
     end
 end)
 end
-
-local targetAudioUrl = "https://github.com/Zero0Star/RipperMPSound/blob/master/A500Moving.mp3?raw=true"
-local volume = 2
-local localFileName = "A500MUSIC"
-
-local function preloadSound()
-    local existing = workspace:FindFirstChild(localFileName)
-    if existing then
-        existing:Destroy()
-    end
-    local fullFileName = localFileName .. ".mp3"
-    writefile(fullFileName, game:HttpGet(targetAudioUrl))
-    local assetPath
-    if getsynasset then
-        assetPath = getsynasset(fullFileName)
-    elseif getcustomasset then
-        assetPath = getcustomasset(fullFileName)
-    else
-        return nil
-    end
+function entityBehaviors.A500RUN()
+function GitAud(soundgit, filename)
+    local url = soundgit
+    local FileName = filename
+    writefile(FileName .. ".mp3", game:HttpGet(url))
+    return (getcustomasset or getsynasset)(FileName .. ".mp3")
+end
+function CustomGitSound(soundlink, vol, filename)
     local sound = Instance.new("Sound")
-    sound.SoundId = assetPath
-    sound.Volume = volume
-    sound.Name = localFileName
+    sound.SoundId = GitAud(soundlink, filename)
     sound.Parent = workspace
+    sound.Name = filename or "A500MUSIC"
+    sound.Volume = vol or 1
     return sound
 end
-
-preloadSound()
-
-function entityBehaviors.A500RUN()
+local function main()
+    local targetAudioUrl = "https://github.com/Zero0Star/RipperMPSound/blob/master/A500Moving.mp3?raw=true"
+    local volume = 2
+    local localFileName = "A500MUSIC"
+    local sound = CustomGitSound(targetAudioUrl, volume, localFileName)
     game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-    local sound = workspace:FindFirstChild(localFileName)
-    if sound then
-        sound:Stop()
-        sound.TimePosition = 0
-        sound:Play()
-    end
-    local entity = spawner.Create({
-        Entity = {Name = "A500", Asset = "129540089908463", HeightOffset = 0.3},
-        Lights = {Flicker = {Enabled = false, Duration = 10}, Shatter = false, Repair = false},
-        Earthquake = {Enabled = false},
-        CameraShake = {Enabled = true, Range = 200, Values = {1.5, 20, 0.1, 1}},
-        Movement = {Speed = 90, Delay = 25, Reversed = false},
-        Rebounding = {Enabled = true, Type = "ambush", Min = 30, Max = 30, Delay = math.random(2, 2) / 2},
-        Damage = {Enabled = true, Range = 50, Amount = 50},
-        Crucifixion = {Enabled = false, Range = 20, Resist = false, Break = true},
-        Death = {Type = "Guiding", Hints = {"你死于A500", "这是很坏的结局", "你需要不停的跑!", "保证自己在两分钟内不被追上"}, Cause = "Diverse Monsters"}
-    })
+    sound:Play()
+local entity = spawner.Create({
+Entity = {Name = "A500", Asset = "129540089908463",HeightOffset = 0.3 },Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false },CameraShake = { Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1} },
+Movement = {Speed = 90,Delay = 25,Reversed = false},Rebounding = {Enabled = true,Type = "ambush",Min = 30,Max = 30,Delay = math.random(2, 2) / 2},Damage = {Enabled = true,Range = 50,Amount = 50},Crucifixion = {Enabled = false,Range = 20,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于A500", "这是很坏的结局", "你需要不停的跑!", "保证自己在两分钟内不被追上"},Cause = ""}})
     entity:SetCallback("OnRebounding", function(startOfRebound)
         local entityModel = entity.Model
         local main = entityModel:WaitForChild("Main")
@@ -2110,12 +2086,14 @@ function entityBehaviors.A500RUN()
             switch = main:WaitForChild("Switch"),
             switchBack = main:WaitForChild("SwitchBack")
         }
+        
         for _, c in attachment:GetChildren() do
             c.Enabled = (not startOfRebound)
         end
         for _, c in AttachmentSwitch:GetChildren() do
             c.Enabled = startOfRebound
         end
+        
         if startOfRebound == true then
             sounds.footsteps.PlaybackSpeed = 0.35
             sounds.playSound.PlaybackSpeed = 0.25
@@ -2126,7 +2104,9 @@ function entityBehaviors.A500RUN()
             sounds.switchBack:Play()
         end
     end)
+    
     entity:Run()
+    
     local face = workspace:WaitForChild("A500"):WaitForChild("RushNew"):WaitForChild("Main"):WaitForChild("Face")
     if face and face:IsA("ParticleEmitter") then
         task.spawn(function()
@@ -2145,17 +2125,20 @@ function entityBehaviors.A500RUN()
             end
         end)
     end
-    if sound and sound.IsPlaying then
+ if sound and sound.IsPlaying then
         sound.Ended:Wait()
     end
     local a500Model = workspace:FindFirstChild("A500")
     if a500Model then
         a500Model:Destroy()
     end
+    if sound then
+        sound:Destroy()
+    end
 end
-
-local success, err = pcall(entityBehaviors.A500RUN)
+local success, err = pcall(main)
 if not success then
+end
 end
 
 function entityBehaviors.XBramble()

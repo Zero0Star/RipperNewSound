@@ -2781,7 +2781,7 @@ function LoadCustomInstance(source, parent)
     return model
 end
 
-local s = LoadCustomInstance("138857520867775", workspace)
+local s = LoadCustomInstance("91600860859120", workspace)
 if not s then
     return
 end

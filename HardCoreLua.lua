@@ -2932,8 +2932,7 @@ task.spawn(function()
 end)
 
 game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-print("1")
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
 dmg = false
 roomChanged = true
 

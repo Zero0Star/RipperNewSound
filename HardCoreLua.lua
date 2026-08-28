@@ -3630,7 +3630,7 @@ function GitAud(soundgit, filename)
     return assetPath
 end
 
-local deerGodMusicUrl = "https://github.com/eoyoustme/rebouna/blob/main/HesBehindYouRUN.mp3?raw=true"
+local deerGodMusicUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true"
 local cachedAudioAsset = GitAud(deerGodMusicUrl, "DeerGodMusic")
 function entityBehaviors.Deergod()
     local Players = game:GetService("Players")

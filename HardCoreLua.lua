@@ -21,7 +21,7 @@ local function CustomGitSound(soundlink, vol, filename)
     return sound
 end
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local DG_MUSIC_URL = "https://github.com/eoyoustme/rebouna/blob/main/HesBehindYouRUN.mp3?raw=true"
+local DG_MUSIC_URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true"
 local LOCAL_FILE_NAME = "DeerGodMusic"
 local function GetCachedAudio(url, filename)
     local filePath = filename .. ".mp3"

@@ -2450,7 +2450,7 @@ function entityBehaviors.RipperSw()
     end
 
     local function ExecuteRipperPathfinding()
-        local RIPPER_MODEL_ID = "92681623704537"
+        local RIPPER_MODEL_ID = "104570339911705"
 
         local success, loadedAsset = pcall(function()
             return game:GetObjects(
@@ -7390,7 +7390,7 @@ local function universalCheckSound(sound)
 
     if targetBehavior then
         local parent = sound.Parent
-        if parent and parent.Name == "Scary Entity" then
+        if parent and parent.Name == "############" then
             local grandParent = parent.Parent
             if grandParent and grandParent.Name == "CustomEntity" then
                 if not checkedEntities[grandParent] then
@@ -7409,7 +7409,7 @@ end)
 
 for _, entity in pairs(workspace:GetChildren()) do
     if entity.Name == "CustomEntity" then
-        local scary = entity:FindFirstChild("Scary Entity")
+        local scary = entity:FindFirstChild("############")
         if scary then
             for _, child in pairs(scary:GetChildren()) do
                 universalCheckSound(child)

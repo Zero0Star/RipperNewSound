@@ -4354,6 +4354,72 @@ function entityBehaviors.TOUSHI()
 end
 
 function entityBehaviors.DeerGodTWO()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local ids = {"rbxassetid://8116159092","rbxassetid://435812828","rbxassetid://860440643"}
+
+local gui = Instance.new("ScreenGui",player:WaitForChild("PlayerGui"))
+gui.Name = "SnowGlitchEnhanced"
+gui.IgnoreGuiInset = true
+
+local mainImg = Instance.new("ImageLabel",gui)
+mainImg.Size = UDim2.new(1,0,1,0)
+mainImg.BackgroundTransparency = 1
+mainImg.ImageTransparency = 0.88
+mainImg.Image = ids[math.random(#ids)]
+mainImg.ScaleType = Enum.ScaleType.Tile
+mainImg.TileSize = UDim2.new(0,64,0,64)
+
+local flashFrame = Instance.new("Frame",gui)
+flashFrame.Size = UDim2.new(1,0,1,0)
+flashFrame.BackgroundColor3 = Color3.new(1,1,1)
+flashFrame.BackgroundTransparency = 1
+flashFrame.BorderSizePixel = 0
+
+local start = tick()
+local lastFlash = tick()
+local flashInterval = 0.15
+local flashDuration = 0.05
+
+local conn = RunService.RenderStepped:Connect(function()
+    local elapsed = tick() - start
+    if elapsed >= 60 then
+        conn:Disconnect()
+        gui:Destroy()
+        return
+    end
+    
+    mainImg.Image = ids[math.random(#ids)]
+    mainImg.ImageTransparency = 0.78 + math.random()*0.18
+    local sz = 48 + math.random(0,32)
+    mainImg.TileSize = UDim2.new(0,sz,0,sz)
+    local r = math.random(80,120)/100
+    local g = math.random(70,110)/100
+    local b = math.random(90,130)/100
+    mainImg.ImageColor3 = Color3.new(r,g,b)
+    
+    if tick() - lastFlash >= flashInterval then
+        flashFrame.BackgroundTransparency = 0.65 + math.random()*0.25
+        lastFlash = tick()
+    else
+        flashFrame.BackgroundTransparency = 1
+    end
+    
+    if math.random() < 0.03 then
+        local x = math.random(0,800)
+        local y = math.random(0,600)
+        local w = math.random(20,80)
+        local h = math.random(10,40)
+        local highlight = Instance.new("Frame",gui)
+        highlight.Size = UDim2.new(0,w,0,h)
+        highlight.Position = UDim2.new(0,x,0,y)
+        highlight.BackgroundColor3 = Color3.new(1,1,1)
+        highlight.BackgroundTransparency = 0.5 + math.random()*0.3
+        highlight.BorderSizePixel = 0
+        game:GetService("Debris"):AddItem(highlight,0.06)
+    end
+end)
     local entity = spawner.Create({
         Entity = {
             Name = "DeerGod",
@@ -4571,154 +4637,5 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingFour... Doors HardCore V10.3 By Mr.key & HeavenNow :)"
+hint.Text = "LoadingFour... Doors HardCore V10.4 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 2)
-local parts = workspace.CurrentRooms["0"].Parts
-for _, v in pairs(parts:GetChildren()) do
-    if v.Name == "VoidCollision" then v:Destroy() end
-end
-
-local window = workspace.CurrentRooms["0"].Assets.Window
-local skybox = window:FindFirstChild("Skybox")
-if skybox then skybox:Destroy() end
-
-local glass = window:FindFirstChild("Glass")
-if glass then glass:Destroy() end
-
-local particles = window:FindFirstChild("Particles")
-if particles then
-    local pe = particles:FindFirstChild("ParticleEmitter")
-    if pe then pe:Destroy() end
-    local rp = particles:FindFirstChild("RainParticle")
-    if rp then rp:Destroy() end
-end
-
-local ASSET_ID = 135111736002829
-local ROOM_OFFSET = CFrame.new(-182, 8.2, 18)
-local ROTATION_Y = math.rad(90)
-local DELETE_SCRIPTS = true
-
-local function GetRoom()
-    local latestRoomName = game.ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom").Value
-    return game.Workspace:WaitForChild("CurrentRooms"):FindFirstChild(latestRoomName)
-end
-
-local function LoadCustomInstance(source)
-    if not tonumber(source) then
-        return nil
-    end
-    local success, result = pcall(function()
-        return game:GetObjects("rbxassetid://" .. tostring(source))[1]
-    end)
-    if not success or not result then
-        return nil
-    end
-    local model = result
-    model.Parent = workspace
-    if DELETE_SCRIPTS then
-        for _, obj in ipairs(model:GetDescendants()) do
-            if obj:IsA("Script") or obj:IsA("LocalScript") then
-                obj:Destroy()
-            end
-        end
-    end
-    return model
-end
-
-local function FindFirstBasePartRecursive(instance)
-    if instance:IsA("BasePart") then
-        return instance
-    end
-    for _, child in ipairs(instance:GetChildren()) do
-        local found = FindFirstBasePartRecursive(child)
-        if found then
-            return found
-        end
-    end
-    return nil
-end
-
-local function EnsurePrimaryPart(model)
-    if model:IsA("Model") then
-        if model.PrimaryPart and model.PrimaryPart:IsDescendantOf(model) then
-            return true
-        end
-        local primary = FindFirstBasePartRecursive(model)
-        if primary then
-            model.PrimaryPart = primary
-            return true
-        end
-        return false
-    end
-    return true
-end
-
-local function SafeMoveModel(model, targetCFrame)
-    local allParts = {}
-    for _, descendant in ipairs(model:GetDescendants()) do
-        if descendant:IsA("BasePart") then
-            table.insert(allParts, descendant)
-        end
-    end
-    if model:IsA("BasePart") then
-        table.insert(allParts, model)
-    end
-    local anchoredStates = {}
-    for i, part in ipairs(allParts) do
-        anchoredStates[i] = part.Anchored
-        part.Anchored = false
-    end
-    if model:IsA("Model") then
-        model:PivotTo(targetCFrame)
-    elseif model:IsA("BasePart") then
-        model.CFrame = targetCFrame
-    end
-    for i, part in ipairs(allParts) do
-        part.Anchored = anchoredStates[i]
-    end
-end
-
-local function Damage(Amount)
-    local Players = game:GetService("Players")
-    local Player = Players.LocalPlayer
-    local Character = Player.Character or Player.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
-    local DamageAmount = (Amount / 100) * Humanoid.MaxHealth
-    local NewHealth = Humanoid.Health - DamageAmount
-    if NewHealth <= 0 then
-        Player:SetAttribute("Alive", false)
-        replicatesignal(Player.Kill)
-    else
-        Humanoid.Health = NewHealth
-    end
-end
-
-local s = LoadCustomInstance(ASSET_ID)
-if not s then
-    return
-end
-
-s.Name = "LEVEL0"
-
-if not EnsurePrimaryPart(s) then
-    return
-end
-task.wait()
-local room
-local attempts = 0
-repeat
-    room = GetRoom()
-    attempts = attempts + 1
-    if not room then
-        task.wait(0.5)
-    end
-until room or attempts > 10
-if not room then
-    return
-end
-local roomEntrance = room:WaitForChild("RoomEntrance", 10)
-if not roomEntrance then
-    return
-end
-local targetCFrame = roomEntrance.CFrame * ROOM_OFFSET * CFrame.Angles(0, ROTATION_Y, 0)
-SafeMoveModel(s, targetCFrame)

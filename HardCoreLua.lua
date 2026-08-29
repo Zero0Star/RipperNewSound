@@ -3642,6 +3642,72 @@ function entityBehaviors.Deergod()
     local chaseConnection = nil
     local customSpeed = 20
     local activationRange = 75
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local ids = {"rbxassetid://8116159092","rbxassetid://435812828","rbxassetid://860440643"}
+
+local gui = Instance.new("ScreenGui",player:WaitForChild("PlayerGui"))
+gui.Name = "SnowGlitchEnhanced"
+gui.IgnoreGuiInset = true
+
+local mainImg = Instance.new("ImageLabel",gui)
+mainImg.Size = UDim2.new(1,0,1,0)
+mainImg.BackgroundTransparency = 1
+mainImg.ImageTransparency = 0.88
+mainImg.Image = ids[math.random(#ids)]
+mainImg.ScaleType = Enum.ScaleType.Tile
+mainImg.TileSize = UDim2.new(0,64,0,64)
+
+local flashFrame = Instance.new("Frame",gui)
+flashFrame.Size = UDim2.new(1,0,1,0)
+flashFrame.BackgroundColor3 = Color3.new(1,1,1)
+flashFrame.BackgroundTransparency = 1
+flashFrame.BorderSizePixel = 0
+
+local start = tick()
+local lastFlash = tick()
+local flashInterval = 0.15
+local flashDuration = 0.05
+
+local conn = RunService.RenderStepped:Connect(function()
+    local elapsed = tick() - start
+    if elapsed >= 60 then
+        conn:Disconnect()
+        gui:Destroy()
+        return
+    end
+    
+    mainImg.Image = ids[math.random(#ids)]
+    mainImg.ImageTransparency = 0.78 + math.random()*0.18
+    local sz = 48 + math.random(0,32)
+    mainImg.TileSize = UDim2.new(0,sz,0,sz)
+    local r = math.random(80,120)/100
+    local g = math.random(70,110)/100
+    local b = math.random(90,130)/100
+    mainImg.ImageColor3 = Color3.new(r,g,b)
+    
+    if tick() - lastFlash >= flashInterval then
+        flashFrame.BackgroundTransparency = 0.65 + math.random()*0.25
+        lastFlash = tick()
+    else
+        flashFrame.BackgroundTransparency = 1
+    end
+    
+    if math.random() < 0.03 then
+        local x = math.random(0,800)
+        local y = math.random(0,600)
+        local w = math.random(20,80)
+        local h = math.random(10,40)
+        local highlight = Instance.new("Frame",gui)
+        highlight.Size = UDim2.new(0,w,0,h)
+        highlight.Position = UDim2.new(0,x,0,y)
+        highlight.BackgroundColor3 = Color3.new(1,1,1)
+        highlight.BackgroundTransparency = 0.5 + math.random()*0.3
+        highlight.BorderSizePixel = 0
+        game:GetService("Debris"):AddItem(highlight,0.06)
+    end
+end)
     local entity = spawner.Create({
         Entity = {
             Name = "Deer god",
@@ -6321,5 +6387,5 @@ loadAudioFromGitHub()
 replaceSeekMusic()
 replaceSeekModel()
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCore V10.3 By Mr.key & HeavenNow :)"
+hint.Text = "Loading... Doors HardCore V10.4 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)

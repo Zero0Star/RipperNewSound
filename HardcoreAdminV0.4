@@ -457,6 +457,10 @@ local function addDexButton(name, text, onClick)
     return button
 end
 
+addDexButton("TUMN", "Enable Stamina Bar", function()
+loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/Sprint.lua?raw=true"))()
+end)
+
 addDexButton("GODMODE", "God Mode", function()
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer

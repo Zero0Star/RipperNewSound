@@ -758,7 +758,7 @@ function LoadCustomInstance(source, parent)
     return model
 end
 
-local s = LoadCustomInstance(115317486253045, workspace)
+local s = LoadCustomInstance(74266815655733, workspace)
 if not s then
     warn("Failed to load Frost entity.")
     return
@@ -1322,6 +1322,30 @@ addMonsterButton("Surge", "Surge", function()
     local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
     Event:FireServer(
         "Surge",
+        {}
+    )
+end)
+
+addMonsterButton("Teller", "Teller", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+    Event:FireServer(
+        "Teller",
+        {}
+    )
+end)
+
+addMonsterButton("Scribbles", "Scribbles", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+    Event:FireServer(
+        "Scribbles",
+        {}
+    )
+end)
+
+addMonsterButton("Bash", "Bash", function()
+    local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+    Event:FireServer(
+        "Bash",
         {}
     )
 end)

@@ -7135,6 +7135,79 @@ end)
 entity:Run()
 end
 
+
+function entityBehaviors.A60OLD()
+local entity = spawner.Create({Entity = {Name = "A-60",Asset = "17056708725",HeightOffset = 1},Lights = {Flicker = {Enabled = false,
+Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 140,Values = {1.5, 50, 0.1, 1}},Movement = {Speed = 170,Delay = 5,Reversed = false},
+Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 120,Amount = 100},
+Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",
+Hints = {"你死于A-60", "它是谁?", "被遗忘的财产", "下次见"},Cause = "A-60"}})
+entity:SetCallback("OnRebounding", function(startOfRebound)
+	local entityModel = entity.Model
+	local main = entityModel:WaitForChild("Main")
+	local attachment = main:WaitForChild("Attachment")
+	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+	local sounds = {
+		footsteps = main:WaitForChild("Footsteps"),
+		playSound = main:WaitForChild("PlaySound"),
+		switch = main:WaitForChild("Switch"),
+		switchBack = main:WaitForChild("SwitchBack")
+	}
+	for _, c in attachment:GetChildren() do
+		c.Enabled = (not startOfRebound)
+	end
+	for _, c in AttachmentSwitch:GetChildren() do
+		c.Enabled = startOfRebound
+	end
+	if startOfRebound == true then
+		sounds.footsteps.PlaybackSpeed = 0.35
+		sounds.playSound.PlaybackSpeed = 0.25
+		sounds.switch:Play()
+	else
+		sounds.footsteps.PlaybackSpeed = 0.25
+		sounds.playSound.PlaybackSpeed = 0.16
+		sounds.switchBack:Play()
+	end
+	
+end)
+entity:Run()
+end
+
+function entityBehaviors.A120()
+local entity = spawner.Create({Entity = {Name = "A-120",Asset = "12761009640",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = flase,
+Range = 0,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 70,Delay = 5,Reversed = true},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},
+Damage = {Enabled = true,Range = 100,Amount = 100},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于A-120", "它是谁?", "被遗忘的财产", "."},Cause = "A-120"}})
+entity:SetCallback("OnRebounding", function(startOfRebound)
+	local entityModel = entity.Model
+	local main = entityModel:WaitForChild("Main")
+	local attachment = main:WaitForChild("Attachment")
+	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+	local sounds = {
+		footsteps = main:WaitForChild("Footsteps"),
+		playSound = main:WaitForChild("PlaySound"),
+		switch = main:WaitForChild("Switch"),
+		switchBack = main:WaitForChild("SwitchBack")
+	}
+	for _, c in attachment:GetChildren() do
+		c.Enabled = (not startOfRebound)
+	end
+	for _, c in AttachmentSwitch:GetChildren() do
+		c.Enabled = startOfRebound
+	end
+	if startOfRebound == true then
+		sounds.footsteps.PlaybackSpeed = 0.35
+		sounds.playSound.PlaybackSpeed = 0.25
+		sounds.switch:Play()
+	else
+		sounds.footsteps.PlaybackSpeed = 0.25
+		sounds.playSound.PlaybackSpeed = 0.16
+		sounds.switchBack:Play()
+	end
+	
+end)
+entity:Run()
+end
+
 function entityBehaviors.bsgay()
 local entity = spawner.Create({
 Entity = {Name = "GUN",
@@ -7377,6 +7450,8 @@ local entityConfig = {
     ["rbxassetid://83"]  = entityBehaviors.bsdeer2,
     ["rbxassetid://84"]  = entityBehaviors.GrimReaper,
     ["rbxassetid://103"]  = entityBehaviors.REBOUNDrebound,
+    ["rbxassetid://608"]  = entityBehaviors.A60OLD,
+    ["rbxassetid://1201"]  = entityBehaviors.A120,
     ["rbxassetid://139371088930869"]  = entityBehaviors.GUIDINGNEW
 }
 

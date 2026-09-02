@@ -20,11 +20,9 @@ local function CustomGitSound(soundlink, vol, filename)
     sound:Play()
     return sound
 end
-local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local dgmusic = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true"
 local entityBehaviors = {}
-
 function entityBehaviors.SA90()
 local MainUI = game:GetObjects("rbxassetid://95819908379371")[1]
 MainUI.Parent = game.Players.LocalPlayer.PlayerGui
@@ -145,7 +143,6 @@ Jumpscare_A90.Visible = false
 wait(2)
 MainUI:Destroy()
 end
-
 function entityBehaviors.WH1T3()
 local entity = spawner.Create({Entity = {Name = "WH1T3",
 Asset = "91653443213214",HeightOffset = 5},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = false,Range = 200,Values = {1.5, 20, 0.1, 1}},
@@ -494,43 +491,6 @@ local function MainExecution()
     end)
 end
 MainExecution()
-end
-
-function entityBehaviors.A60OLD()
-local entity = spawner.Create({Entity = {Name = "A-60",Asset = "17056708725",HeightOffset = 1},Lights = {Flicker = {Enabled = false,
-Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 140,Values = {1.5, 50, 0.1, 1}},Movement = {Speed = 170,Delay = 5,Reversed = false},
-Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 120,Amount = 100},
-Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",
-Hints = {"你死于A-60", "它是谁?", "被遗忘的财产", "下次见"},Cause = "A-60"}})
-entity:SetCallback("OnRebounding", function(startOfRebound)
-	local entityModel = entity.Model
-	local main = entityModel:WaitForChild("Main")
-	local attachment = main:WaitForChild("Attachment")
-	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
-	local sounds = {
-		footsteps = main:WaitForChild("Footsteps"),
-		playSound = main:WaitForChild("PlaySound"),
-		switch = main:WaitForChild("Switch"),
-		switchBack = main:WaitForChild("SwitchBack")
-	}
-	for _, c in attachment:GetChildren() do
-		c.Enabled = (not startOfRebound)
-	end
-	for _, c in AttachmentSwitch:GetChildren() do
-		c.Enabled = startOfRebound
-	end
-	if startOfRebound == true then
-		sounds.footsteps.PlaybackSpeed = 0.35
-		sounds.playSound.PlaybackSpeed = 0.25
-		sounds.switch:Play()
-	else
-		sounds.footsteps.PlaybackSpeed = 0.25
-		sounds.playSound.PlaybackSpeed = 0.16
-		sounds.switchBack:Play()
-	end
-	
-end)
-entity:Run()
 end
 function entityBehaviors.OSAB()
 local Players = game:GetService("Players")
@@ -2892,51 +2852,6 @@ end
 wait(2)
 end
 
-function entityBehaviors.FlusterCJS()
-achievementGiver({
-Title = "Very Infatuated",Desc = "I think I definitely attracted YOU!!.",Reason = "Survive the Fluster.",Image = "rbxassetid://14133894525"
-})
-end
-
-function entityBehaviors.MufflerCJ()
-achievementGiver({
-    Title = "Multiverse Monster",
-    Desc = "An incredibly powerful monster...",
-    Reason = "Defeat Muffler.",
-    Image = "rbxassetid://131767322927740"
-})
-local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
-achievementFrame.Revives.Text = "100"
-achievementFrame.Stardust.Text = "20"
-achievementFrame.Knobs.Text = "5000"
-achievementFrame.Knobs.Visible = true
-achievementFrame.Revives.Visible = true
-achievementFrame.KnobsIcon.Visible = true
-achievementFrame.StardustIcon.Visible = true
-achievementFrame.RevivesIcon.Visible = true
-achievementFrame.Visible = true
-achievementFrame.Stardust.Visible = true
-end
-
-function entityBehaviors.KITTYCJS()
-achievementGiver({
-    Title = "It In The Dark",
-    Desc = "I will keep watching you...",
-    Reason = "Survive the Kitty.",
-    Image = "rbxassetid://718694537"
-})
-end
-
-function entityBehaviors.bseyes()
-achievementGiver({
-    Title = "Hard to Describe",
-    Desc = "Why don't you look at me?",
-    Reason = "Survive the Broken Eyes.",
-    Image = "rbxassetid://9794814895"
-})
-end
-
 function entityBehaviors.Muffler1()
 function GetRoom()
     return workspace.CurrentRooms:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
@@ -3417,126 +3332,6 @@ wait(5)
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("我们在城堡后见。",true)
 wait(5)
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("再见。",true)
-wait(3)
-achievementGiver({
-    Title = "A Mission Letter",
-    Desc = "This task was pretty long, but you made it through, right?",
-    Reason = "Surviving The Reaper.",
-    Image = "rbxassetid://63594681"
-})
-
-local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
-
-achievementFrame.Revives.Text = "200"
-achievementFrame.Stardust.Text = "0"
-achievementFrame.Knobs.Text = "23,000"
-achievementFrame.Knobs.Visible = true
-achievementFrame.Revives.Visible = true
-achievementFrame.KnobsIcon.Visible = true
-achievementFrame.StardustIcon.Visible = true
-achievementFrame.RevivesIcon.Visible = true
-achievementFrame.Visible = true
-achievementFrame.Stardust.Visible = true
-end
-
-function entityBehaviors.v6cj()
-achievementGiver({
-    Title = "Challenge Hero",
-    Desc = "It's really a crazy place.",
-    Reason = "Escape The Challenge HardCore.",
-    Image = "rbxassetid://251435889"
-})
-local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
-achievementFrame.Revives.Text = "500"
-achievementFrame.Stardust.Text = "10"
-achievementFrame.Knobs.Text = "2,0000"
-achievementFrame.Knobs.Visible = true
-achievementFrame.Revives.Visible = true
-achievementFrame.KnobsIcon.Visible = true
-achievementFrame.StardustIcon.Visible = true
-achievementFrame.RevivesIcon.Visible = true
-achievementFrame.Visible = true
-achievementFrame.Stardust.Visible = true
-end
-
-function entityBehaviors.cldread()
-achievementGiver({
-    Title = "Exhaust Time",
-    Desc = "You'd better hide.",
-    Reason = "Survive the Clock Dread.",
-    Image = "rbxassetid://109096782093778"
-})
-end
-
-function entityBehaviors.HUNGERCJ()
-achievementGiver({
-    Title = "Very Hungry",
-    Desc = "Where is my food?",
-    Reason = "Survive the Hunger.",
-    Image = "rbxassetid://10969362005"
-})
-end
-
-function entityBehaviors.ThreatTIME()
-achievementGiver({
-    Title = "This My field",
-    Desc = "Why are you running?",
-    Reason = "Survive the Threat.",
-    Image = "rbxassetid://7140092710"
-})
-end
-
-function entityBehaviors.horrorhotel()
-achievementGiver({
-    Title = "Horror Time of Fear",
-    Desc = "Week 2...",
-    Reason = "Escape the Darkness Hotel.",
-    Image = "rbxassetid://11059000854"
-})
-local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
-achievementFrame.Revives.Text = "500"
-achievementFrame.Stardust.Text = "0"
-achievementFrame.Knobs.Text = "23,000"
-achievementFrame.Knobs.Visible = true
-achievementFrame.Revives.Visible = true
-achievementFrame.KnobsIcon.Visible = true
-achievementFrame.StardustIcon.Visible = false
-achievementFrame.RevivesIcon.Visible = true
-achievementFrame.Visible = true
-achievementFrame.Stardust.Visible = false
-end
-
-function entityBehaviors.osb()
-achievementGiver({
-    Title = "Secret admirer",
-    Desc = "U seem to be very obsessed with me",
-    Reason = "Survive the Obsession.",
-    Image = "rbxassetid://12671476495"
-})
-end
-
-function entityBehaviors.WINCJ()
-achievementGiver({
-    Title = "Radiance The Land",
-    Desc = "Where are we going next?",
-    Reason = "Escape The HardCore Hotel.",
-    Image = "rbxassetid://17412983060"
-})
-local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-local achievementFrame = playerGui.GlobalUI.AchievementsHolder.Achievement.Frame.Prize
-achievementFrame.Revives.Text = "1,000"
-achievementFrame.Stardust.Text = "0"
-achievementFrame.Knobs.Text = "43,000"
-achievementFrame.Knobs.Visible = true
-achievementFrame.Revives.Visible = true
-achievementFrame.KnobsIcon.Visible = true
-achievementFrame.StardustIcon.Visible = false
-achievementFrame.RevivesIcon.Visible = true
-achievementFrame.Visible = true
-achievementFrame.Stardust.Visible = false
 end
 
 function entityBehaviors.SILENCECUR()
@@ -4389,41 +4184,6 @@ function entityBehaviors.TOUSHI()
     end
 end
 
-function entityBehaviors.A120()
-local entity = spawner.Create({Entity = {Name = "A-120",Asset = "12761009640",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = flase,
-Range = 0,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 70,Delay = 5,Reversed = true},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},
-Damage = {Enabled = true,Range = 100,Amount = 100},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于A-120", "它是谁?", "被遗忘的财产", "."},Cause = "A-120"}})
-entity:SetCallback("OnRebounding", function(startOfRebound)
-	local entityModel = entity.Model
-	local main = entityModel:WaitForChild("Main")
-	local attachment = main:WaitForChild("Attachment")
-	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
-	local sounds = {
-		footsteps = main:WaitForChild("Footsteps"),
-		playSound = main:WaitForChild("PlaySound"),
-		switch = main:WaitForChild("Switch"),
-		switchBack = main:WaitForChild("SwitchBack")
-	}
-	for _, c in attachment:GetChildren() do
-		c.Enabled = (not startOfRebound)
-	end
-	for _, c in AttachmentSwitch:GetChildren() do
-		c.Enabled = startOfRebound
-	end
-	if startOfRebound == true then
-		sounds.footsteps.PlaybackSpeed = 0.35
-		sounds.playSound.PlaybackSpeed = 0.25
-		sounds.switch:Play()
-	else
-		sounds.footsteps.PlaybackSpeed = 0.25
-		sounds.playSound.PlaybackSpeed = 0.16
-		sounds.switchBack:Play()
-	end
-	
-end)
-entity:Run()
-end
-
 function entityBehaviors.DeerGodTWO()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -4643,21 +4403,10 @@ local entityConfig = {
     ["rbxassetid://15"]  = entityBehaviors.MOVERS,
     ["rbxassetid://16"]  = entityBehaviors.SMILEWH,
     ["rbxassetid://17"]  = entityBehaviors.SMILEWH2,
-    ["rbxassetid://18"]  = entityBehaviors.FlusterCJS,
-    ["rbxassetid://19"]  = entityBehaviors.MufflerCJ,
-    ["rbxassetid://20"]  = entityBehaviors.KITTYCJS,
-    ["rbxassetid://21"]  = entityBehaviors.bseyes,
     ["rbxassetid://22"]  = entityBehaviors.Muffler1,
     ["rbxassetid://32"]  = entityBehaviors.Muffler2,
     ["rbxassetid://33"]  = entityBehaviors.Muffler3,
     ["rbxassetid://23"]  = entityBehaviors.burgermunci,
-    ["rbxassetid://24"]  = entityBehaviors.v6cj,
-    ["rbxassetid://25"]  = entityBehaviors.cldread,
-    ["rbxassetid://26"]  = entityBehaviors.HUNGERCJ,
-    ["rbxassetid://27"]  = entityBehaviors.ThreatTIME,
-    ["rbxassetid://28"]  = entityBehaviors.horrorhotel,
-    ["rbxassetid://29"]  = entityBehaviors.osb,
-    ["rbxassetid://30"]  = entityBehaviors.WINCJ,
     ["rbxassetid://31"]  = entityBehaviors.DeerGodTWO,
     ["rbxassetid://32"]  = entityBehaviors.SILENCECUR,
     ["rbxassetid://33"]  = entityBehaviors.HUNGERCUR,
@@ -4667,8 +4416,6 @@ local entityConfig = {
     ["rbxassetid://37"]  = entityBehaviors.JEFFXZ,
     ["rbxassetid://38"]  = entityBehaviors.JEFFZR,
     ["rbxassetid://99"]  = entityBehaviors.TOUSHI,
-    ["rbxassetid://608"]  = entityBehaviors.A60OLD,
-    ["rbxassetid://1201"]  = entityBehaviors.A120,
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

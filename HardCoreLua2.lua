@@ -5407,12 +5407,9 @@ local function prepareHatredMusic()
         end
     end
 
-    -- Some executors need one scheduler step before a newly written file can
-    -- be registered as a custom asset.
     task.wait()
     local assetOk, assetId = pcall(getAsset, HATRED_MUSIC_FILE)
     if not assetOk or type(assetId) ~= "string" or assetId == "" then
-        warn("[Hatred] Could not register the downloaded music asset:", assetId)
         return false
     end
 
@@ -5445,8 +5442,6 @@ local function createPreparedHatredSound()
 end
 
 do
-    -- Runtime loading downloads/registers the file and immediately stages an
-    -- unplayed Sound in Roblox workspace. HATRED only starts that Sound later.
     if prepareHatredMusic() then
         createPreparedHatredSound()
     end
@@ -5471,14 +5466,13 @@ if not player then
     return
 end
 
--- Stop an older copy cleanly before starting a new one.
 if type(_G.HatredBossController) == "table"
     and type(_G.HatredBossController.Stop) == "function" then
     pcall(_G.HatredBossController.Stop)
 end
 
 local CONFIG = {
-    ModelId = 128445565656639,
+    ModelId = 102706413212788,
     MusicVolume = 0.8,
 
     StartDistance = 120,
@@ -5497,6 +5491,15 @@ local CONFIG = {
     BluePenalty = 3,
     PhaseTransitionSoundId = 102844356541414,
     PhaseTransitionDelay = 2.2,
+
+    FailureFadeDuration = 5,
+    FailureStormDuration = 13,
+    FailureVoidDuration = 2.5,
+    FaceSwapDuration = 0.1,
+    FaceSwapMinDelay = 1.4,
+    FaceSwapMaxDelay = 3.2,
+    FailureSoundId = 139866863795650,
+    FailureSoundVolume = 4,
 }
 
 local COLORS = {
@@ -5528,6 +5531,7 @@ local State = {
 
     music = nil,
     phaseSound = nil,
+    failureSound = nil,
     boss = nil,
     blur = nil,
     gui = nil,
@@ -5611,9 +5615,6 @@ local function getCharacterParts(timeout)
 end
 
 local function startRoomFlicker()
-    -- Module_Events.flicker may yield for its entire duration in some game
-    -- versions. Keep it off the encounter's startup thread so music and the
-    -- boss are never delayed by the lighting effect.
     task.spawn(function()
         pcall(function()
             local gameData = ReplicatedStorage:FindFirstChild("GameData")
@@ -5667,8 +5668,6 @@ end
 
 local function loadBossMusic()
     if not HATRED_MUSIC_ASSET then
-        -- Do not redownload during the encounter. Only retry registering a
-        -- file that the runtime preparation already wrote successfully.
         local getAsset = getcustomasset or getsynasset
         local hasFile = type(isfile) == "function" and isfile(HATRED_MUSIC_FILE)
         if type(getAsset) == "function" and hasFile then
@@ -5680,7 +5679,6 @@ local function loadBossMusic()
     end
 
     if not HATRED_MUSIC_ASSET then
-        warn("[Hatred] Music was not prepared; continuing the boss event without audio.")
         return nil
     end
 
@@ -5692,7 +5690,6 @@ local function loadBossMusic()
         sound = createPreparedHatredSound()
     end
     if not sound then
-        warn("[Hatred] Prepared Sound could not be created; continuing without audio.")
         return nil
     end
 
@@ -5776,7 +5773,7 @@ local function startBossMovement(root, token)
         return false
     end
 
-    model.Name = "DistantModel"
+    model.Name = "HatRed"
     model.Parent = Workspace
     State.boss = model
 
@@ -5891,6 +5888,73 @@ local function startBossMovement(root, token)
     return true
 end
 
+local FACE_NORMAL_ID = 92470122721520
+local FACE_GLITCH_IDS = {
+    130581413102559,
+    94635282583639,
+    16804066476,
+    16595430194,
+}
+
+local function findReboundFace()
+    local hatRed = State.boss
+    if not hatRed or not hatRed.Parent then
+        hatRed = Workspace:FindFirstChild("HatRed")
+    end
+    if not hatRed then
+        return nil
+    end
+
+    local face = hatRed:FindFirstChild("FACE", true)
+    local attachment = face and face:FindFirstChild("Attachment", true)
+    return attachment and attachment:FindFirstChild("Rebound Face", true) or nil
+end
+
+local function setFaceTexture(faceObject, assetId)
+    if not faceObject or not faceObject.Parent then
+        return false
+    end
+
+    local asset = "rbxassetid://" .. tostring(assetId)
+    local property
+    if faceObject:IsA("ImageLabel") or faceObject:IsA("ImageButton") then
+        property = "Image"
+    elseif faceObject:IsA("MeshPart") then
+        property = "TextureID"
+    else
+        property = "Texture"
+    end
+
+    return pcall(function()
+        faceObject[property] = asset
+    end)
+end
+
+local function startFaceChanging(token)
+    task.spawn(function()
+        while alive(token) and State.boss and State.boss.Parent do
+            local delaySeconds = CONFIG.FaceSwapMinDelay
+                + math.random() * (CONFIG.FaceSwapMaxDelay - CONFIG.FaceSwapMinDelay)
+            if not waitCancelable(delaySeconds, token) then
+                return
+            end
+
+            local faceObject = findReboundFace()
+            if faceObject then
+                local randomId = FACE_GLITCH_IDS[math.random(1, #FACE_GLITCH_IDS)]
+                setFaceTexture(faceObject, randomId)
+                if not waitCancelable(CONFIG.FaceSwapDuration, token) then
+                    return
+                end
+                setFaceTexture(faceObject, FACE_NORMAL_ID)
+            else
+                -- The asset may still be finishing its hierarchy setup.
+                task.wait(0.2)
+            end
+        end
+    end)
+end
+
 local function hideInventory()
     local playerGui = player:FindFirstChild("PlayerGui")
     if not playerGui then
@@ -5920,7 +5984,6 @@ local function startMouseOverride(token)
     State.originalMouseBehavior = UserInputService.MouseBehavior
     State.originalMouseIconEnabled = UserInputService.MouseIconEnabled
 
-    -- A number of games set LockCenter every frame. Run after camera/input updates.
     State.mouseConnection = addConnection(RunService.RenderStepped:Connect(function()
         if alive(token) and State.phase > 0 then
             UserInputService.MouseBehavior = Enum.MouseBehavior.Default
@@ -5968,7 +6031,6 @@ local function makeTarget(parent, name, color, diameter)
     local button = Instance.new("TextButton")
     button.Name = name
     button.AnchorPoint = Vector2.new(0.5, 0.5)
-    -- The transparent hitbox is slightly larger than the visible orb.
     button.Size = UDim2.fromOffset(diameter + 12, diameter + 12)
     button.Position = UDim2.fromScale(0.5, 0.5)
     button.BackgroundTransparency = 1
@@ -6147,7 +6209,7 @@ local function createUI()
     blueTarget1.Visible = false
     blueTarget2.Visible = false
 
-    local footer = makeLabel(panel, "Footer", "蓝色目标会扣除 3 秒", UDim2.new(0.92, 0, 0, 26), UDim2.new(0.04, 0, 1, -34), Enum.Font.Gotham, COLORS.Muted, 12)
+    local footer = makeLabel(panel, "Footer", "Blue -3s", UDim2.new(0.92, 0, 0, 26), UDim2.new(0.04, 0, 1, -34), Enum.Font.Gotham, COLORS.Muted, 12)
 
     local phaseSound = Instance.new("Sound")
     phaseSound.Name = "HatredPhaseTransition"
@@ -6245,13 +6307,13 @@ local function updateHUD()
 
     if State.phase == 1 then
         ui.Phase.TextColor3 = COLORS.Gold
-        ui.Instruction.Text = "点击红色目标完成第一阶段"
+        ui.Instruction.Text = "Click the red one!"
     elseif State.phase == 2 then
         ui.Phase.TextColor3 = Color3.fromRGB(217, 112, 255)
-        ui.Instruction.Text = "只点红色目标，避开蓝色陷阱"
+        ui.Instruction.Text = "Click the red one, Dodge the blue"
     else
         ui.Phase.TextColor3 = COLORS.Red
-        ui.Instruction.Text = "最终阶段：两个蓝色陷阱"
+        ui.Instruction.Text = "END：Dodge the blue."
     end
 end
 
@@ -6350,6 +6412,8 @@ local function cleanup(immediate)
     fadeMusic(immediate and 0.05 or 0.9)
     destroy(State.phaseSound)
     State.phaseSound = nil
+    destroy(State.failureSound)
+    State.failureSound = nil
     destroy(State.boss)
     State.boss = nil
     destroy(State.blur)
@@ -6379,6 +6443,236 @@ local function defeatPlayer()
     end
 end
 
+local FAILURE_TEXTURE_IDS = {
+    88894221959954,
+    12293713542,
+    6214195404,
+}
+
+local function createFailureOverlay()
+    local gui = State.gui
+    if not gui or not gui.Parent then
+        return nil
+    end
+
+    local old = gui:FindFirstChild("FailureOverlay")
+    destroy(old)
+
+    local overlay = Instance.new("Frame")
+    overlay.Name = "FailureOverlay"
+    overlay.Size = UDim2.fromScale(1, 1)
+    overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+    overlay.BackgroundTransparency = 1
+    overlay.BorderSizePixel = 0
+    overlay.ClipsDescendants = true
+    overlay.ZIndex = 500
+    overlay.Parent = gui
+
+    local textLayer = Instance.new("Frame")
+    textLayer.Name = "LoserTextLayer"
+    textLayer.Size = UDim2.fromScale(1, 1)
+    textLayer.BackgroundTransparency = 1
+    textLayer.BorderSizePixel = 0
+    textLayer.ZIndex = 510
+    textLayer.Parent = overlay
+
+    local glitchBars = {}
+    for index = 1, 18 do
+        local bar = Instance.new("Frame")
+        bar.Name = "EdgeError" .. index
+        bar.BackgroundColor3 = COLORS.Red
+        bar.BackgroundTransparency = 1
+        bar.BorderSizePixel = 0
+        bar.ZIndex = 505
+        bar.Parent = overlay
+        table.insert(glitchBars, bar)
+    end
+
+    local glitchImages = {}
+    for index = 1, 12 do
+        local image = Instance.new("ImageLabel")
+        image.Name = "ErrorTexture" .. index
+        image.AnchorPoint = Vector2.new(0.5, 0.5)
+        image.BackgroundTransparency = 1
+        image.BorderSizePixel = 0
+        image.Image = "rbxassetid://" .. tostring(FAILURE_TEXTURE_IDS[((index - 1) % #FAILURE_TEXTURE_IDS) + 1])
+        image.ImageTransparency = 1
+        image.ScaleType = Enum.ScaleType.Stretch
+        image.Visible = false
+        image.ZIndex = 508 + (index % 3)
+        image.Parent = overlay
+        table.insert(glitchImages, image)
+    end
+
+    destroy(State.failureSound)
+    local failureSound = Instance.new("Sound")
+    failureSound.Name = "HatredLoserGlitch"
+    failureSound.SoundId = "rbxassetid://" .. tostring(CONFIG.FailureSoundId)
+    failureSound.Volume = CONFIG.FailureSoundVolume
+    failureSound.Parent = SoundService
+    State.failureSound = failureSound
+
+    return overlay, textLayer, glitchBars, glitchImages
+end
+
+local function updateFailureGlitch(textLayer, glitchBars, glitchImages, intensity)
+    if textLayer and textLayer.Parent then
+        local jitter = math.floor(2 + intensity * 12)
+        textLayer.Position = UDim2.fromOffset(math.random(-jitter, jitter), math.random(-jitter, jitter))
+    end
+
+    for index, bar in ipairs(glitchBars) do
+        if not bar.Parent then
+            continue
+        end
+
+        local side = ((index - 1) % 4) + 1
+        local thickness = math.random(2, math.floor(5 + intensity * 25))
+        local length = math.random(8, math.floor(20 + intensity * 70)) / 100
+        if side == 1 then
+            bar.Size = UDim2.new(length, 0, 0, thickness)
+            bar.Position = UDim2.new(math.random(), 0, 0, math.random(0, 22))
+        elseif side == 2 then
+            bar.AnchorPoint = Vector2.new(0, 1)
+            bar.Size = UDim2.new(length, 0, 0, thickness)
+            bar.Position = UDim2.new(math.random(), 0, 1, -math.random(0, 22))
+        elseif side == 3 then
+            bar.Size = UDim2.new(0, thickness, length, 0)
+            bar.Position = UDim2.new(0, math.random(0, 22), math.random(), 0)
+        else
+            bar.AnchorPoint = Vector2.new(1, 0)
+            bar.Size = UDim2.new(0, thickness, length, 0)
+            bar.Position = UDim2.new(1, -math.random(0, 22), math.random(), 0)
+        end
+
+        local colorRoll = math.random(1, 5)
+        bar.BackgroundColor3 = colorRoll == 1 and Color3.new(1, 1, 1)
+            or (colorRoll == 2 and Color3.fromRGB(30, 0, 0) or COLORS.Red)
+        bar.BackgroundTransparency = math.random(5, math.floor(35 + (1 - intensity) * 50)) / 100
+        bar.Visible = math.random() < (0.35 + intensity * 0.65)
+    end
+
+    for _, image in ipairs(glitchImages) do
+        if image.Parent then
+            local width = math.random(18, math.floor(35 + intensity * 55)) / 100
+            local height = math.random(12, math.floor(25 + intensity * 50)) / 100
+            image.Size = UDim2.fromScale(width, height)
+            image.Position = UDim2.fromScale(math.random(), math.random())
+            image.Rotation = math.random(-12, 12)
+            image.Image = "rbxassetid://" .. tostring(FAILURE_TEXTURE_IDS[math.random(1, #FAILURE_TEXTURE_IDS)])
+            image.ImageColor3 = math.random() < 0.25 and Color3.new(1, 1, 1)
+                or Color3.fromRGB(255, math.random(15, 75), math.random(15, 75))
+            image.ImageTransparency = math.random(8, math.floor(35 + (1 - intensity) * 45)) / 100
+            image.Visible = math.random() < (0.2 + intensity * 0.72)
+        end
+    end
+end
+
+local function spawnLoserText(textLayer, intensity, isFirst)
+    if not textLayer or not textLayer.Parent then
+        return
+    end
+
+    local failureSound = State.failureSound
+    if failureSound and failureSound.Parent then
+        pcall(function()
+            failureSound.TimePosition = 0
+            failureSound:Play()
+        end)
+    end
+
+    local label = Instance.new("TextLabel")
+    label.Name = "YOUR_LOSER"
+    label.AnchorPoint = Vector2.new(0.5, 0.5)
+    label.Size = isFirst and UDim2.fromOffset(420, 100)
+        or UDim2.fromOffset(math.random(150, 430), math.random(45, 115))
+    label.Position = isFirst and UDim2.fromScale(0.5, 0.5)
+        or UDim2.fromScale(math.random(), math.random())
+    label.BackgroundTransparency = 1
+    label.BorderSizePixel = 0
+    label.Font = math.random() < 0.35 and Enum.Font.Code or Enum.Font.GothamBlack
+    label.Text = "YOUR LOSER"
+    label.TextColor3 = math.random() < 0.18 and Color3.new(1, 1, 1) or COLORS.Red
+    label.TextStrokeColor3 = Color3.new(0, 0, 0)
+    label.TextStrokeTransparency = math.max(0, 0.5 - intensity * 0.45)
+    label.TextTransparency = isFirst and 0 or math.random(0, 25) / 100
+    label.TextScaled = true
+    label.Rotation = isFirst and 0 or math.random(-18, 18)
+    label.ZIndex = 520 + math.random(0, 5)
+    label.Parent = textLayer
+
+    local scale = Instance.new("UIScale")
+    scale.Scale = isFirst and 0.15 or math.random(35, 85) / 100
+    scale.Parent = label
+    playTween(
+        scale,
+        TweenInfo.new(isFirst and 0.55 or math.max(0.04, 0.18 - intensity * 0.12), Enum.EasingStyle.Back),
+        {Scale = isFirst and 1 or math.random(90, 150) / 100}
+    )
+end
+
+local function playFailureSequence(token)
+    local overlay, textLayer, glitchBars, glitchImages = createFailureOverlay()
+    if not overlay then
+        return false
+    end
+
+    playTween(
+        overlay,
+        TweenInfo.new(CONFIG.FailureFadeDuration, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+        {BackgroundTransparency = 0}
+    )
+
+    if not waitCancelable(1.4, token) then
+        return false
+    end
+
+    spawnLoserText(textLayer, 0, true)
+    if not waitCancelable(1.1, token) then
+        return false
+    end
+    local stormStart = os.clock()
+    local spawned = 1
+
+    while alive(token) do
+        local elapsed = os.clock() - stormStart
+        local progress = math.clamp(elapsed / CONFIG.FailureStormDuration, 0, 1)
+        if progress >= 1 then
+            break
+        end
+
+        updateFailureGlitch(textLayer, glitchBars, glitchImages, progress)
+        local burst = 1 + math.floor(progress * 4)
+        for _ = 1, burst do
+            if spawned >= 240 then
+                break
+            end
+            spawnLoserText(textLayer, progress, false)
+            spawned = spawned + 1
+        end
+
+        local interval = 0.92 * ((1 - progress) ^ 2) + 0.045
+        if not waitCancelable(interval, token) then
+            return false
+        end
+    end
+
+    if textLayer and textLayer.Parent then
+        textLayer:Destroy()
+    end
+    for _, bar in ipairs(glitchBars) do
+        destroy(bar)
+    end
+    for _, image in ipairs(glitchImages) do
+        destroy(image)
+    end
+    destroy(State.failureSound)
+    State.failureSound = nil
+    overlay.BackgroundTransparency = 0
+
+    return waitCancelable(CONFIG.FailureVoidDuration, token)
+end
+
 local function finish(result, token)
     if State.ending or not alive(token) then
         return
@@ -6392,7 +6686,7 @@ local function finish(result, token)
         ui.Blue2.Visible = false
         ui.Timer.Text = result == "victory" and "CLEAR" or "FAILED"
         ui.Timer.TextColor3 = result == "victory" and COLORS.Green or COLORS.Red
-        ui.Instruction.Text = result == "victory" and "挑战完成" or "时间耗尽"
+        ui.Instruction.Text = result == "victory" and "存活于憎恨" or "YOUR LOSER"
         ui.Instruction.TextColor3 = result == "victory" and COLORS.Green or COLORS.Red
     end
 
@@ -6404,18 +6698,8 @@ local function finish(result, token)
         waitCancelable(1.3, token)
         cleanup(false)
     else
-        fadeMusic(2.2)
-        if ui and ui.Dim.Parent then
-            playTween(ui.Dim, TweenInfo.new(1.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 0})
-        end
-        waitCancelable(1.3, token)
-        safeCaption("It seems you have lost to me once again.")
-        waitCancelable(2.3, token)
-        safeCaption("Well then, how should I deal with you?")
-        waitCancelable(2.3, token)
-        safeCaption("I think I should do this.")
-        waitCancelable(1.6, token)
-        if alive(token) then
+        fadeMusic(4)
+        if playFailureSequence(token) and alive(token) then
             defeatPlayer()
         end
         cleanup(true)
@@ -6456,8 +6740,8 @@ local function startMiniGame(token)
             ui.Timer.Text = "READY"
             ui.Timer.TextColor3 = COLORS.Gold
             ui.Instruction.Text = nextPhase == 3
-                and "第二阶段完成！即将进入最终阶段"
-                or "第一阶段完成！即将进入第二阶段"
+                and "存活第二阶段"
+                or "存活第一阶段"
             ui.Instruction.TextColor3 = COLORS.Gold
             if State.phaseSound then
                 State.phaseSound.TimePosition = 0
@@ -6480,7 +6764,7 @@ local function startMiniGame(token)
         end
         State.deadline = State.deadline - CONFIG.BluePenalty
         targetPulse(target, COLORS.Red)
-        flashMessage("-3 秒！避开蓝色目标", COLORS.Red, 0.75, token)
+        flashMessage("-3s 躲避蓝色", COLORS.Red, 0.75, token)
         moveTarget(target, 0.16)
     end
 
@@ -6560,6 +6844,7 @@ local function runEvent()
         if not startBossMovement(root, token) then
             error("Original boss model could not be loaded")
         end
+        startFaceChanging(token)
 
         if not waitCancelable(CONFIG.ApproachDuration, token) then
             return

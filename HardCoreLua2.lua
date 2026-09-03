@@ -421,7 +421,7 @@ end)
 end
 
 function entityBehaviors.bsripper()
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("你的十字架得到了好奇之光的庇护",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Survive the Four Gods to get achievement rewards",true)
 
 end
 

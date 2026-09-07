@@ -1,1 +1,1 @@
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Do you need me to turn on the light for you?",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("You'll get something good in the next room",true)

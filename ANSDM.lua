@@ -1,6 +1,12 @@
+if workspace:FindFirstChild("HardcoreC") then
+    return
+end
+local marker = Instance.new("BoolValue")
+marker.Name = "HardcoreC"
+marker.Value = true
+marker.Parent = workspace
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-
 local function CreateFollowerSystem(modelId1, modelId2, targetPlayerName)
     local mainModel, accessoryModel, char, humanoid, rootPart
     local targetChar, targetHum, targetRoot

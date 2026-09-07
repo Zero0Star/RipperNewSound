@@ -1,1 +1,1 @@
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("This is A60, he doesn't have a very good temper.You'll have really good luck in your next few rooms!",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Do you want a meal?",true)

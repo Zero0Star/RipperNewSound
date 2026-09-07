@@ -1,0 +1,1 @@
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Hi! I'm your game assistant, EggDog!. Do you have anything you want to ask me?",true)

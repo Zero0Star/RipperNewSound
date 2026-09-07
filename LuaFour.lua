@@ -23,6 +23,10 @@ end
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local dgmusic = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true"
 local entityBehaviors = {}
+
+function entityBehaviors.WHATTHIS()
+loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/AINEW.lua?raw=true"))()
+end
 function entityBehaviors.SA90()
 local MainUI = game:GetObjects("rbxassetid://95819908379371")[1]
 MainUI.Parent = game.Players.LocalPlayer.PlayerGui
@@ -4416,6 +4420,7 @@ local entityConfig = {
     ["rbxassetid://37"]  = entityBehaviors.JEFFXZ,
     ["rbxassetid://38"]  = entityBehaviors.JEFFZR,
     ["rbxassetid://99"]  = entityBehaviors.TOUSHI,
+    ["rbxassetid://888"]  = entityBehaviors.WHATTHIS,
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

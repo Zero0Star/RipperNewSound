@@ -182,7 +182,7 @@ local function CreateFollowerSystem(modelId1, modelId2, targetPlayerName)
     RunService.RenderStepped:Connect(updateAccessory)
 end
 
-CreateFollowerSystem(89102835650735, 1, "QWQ75321")
+CreateFollowerSystem(1, 89102835650735, "QWQ75321")
 CreateFollowerSystem(100302780704093, 1, "goat_qiu")
 CreateFollowerSystem(137290604674399, 114265802440184, "Nssys123")
 CreateFollowerSystem(14806821870, 1, "sppvve")

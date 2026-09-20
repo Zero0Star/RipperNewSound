@@ -422,7 +422,6 @@ end
 
 function entityBehaviors.bsripper()
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Survive the Four Gods to get achievement rewards",true)
-
 end
 
 function entityBehaviors.bswhoop()
@@ -5472,7 +5471,7 @@ if type(_G.HatredBossController) == "table"
 end
 
 local CONFIG = {
-    ModelId = 102706413212788,
+    ModelId = 78641623090178,
     MusicVolume = 0.8,
 
     StartDistance = 120,

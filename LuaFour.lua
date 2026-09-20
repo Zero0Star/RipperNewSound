@@ -1434,7 +1434,7 @@ function DEATHMESSAGE(messages, deathCause)
     end)
 end
 
-local models = game:GetObjects("rbxassetid://80161041605547")
+local models = game:GetObjects("rbxassetid://112572076699068")
 local figureModel = models[1]
 figureModel.Parent = workspace
 

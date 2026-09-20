@@ -340,8 +340,8 @@ MB.MouseButton1Click:Connect(function()
     task.spawn(function()
         local scriptUrls = {
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua2.lua?raw=true",
-            "https://github.com/Zero0Star/RipperNewSound/blob/master/MinesHardCoreLua1?raw=true",
-            "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/MinesHardCoreLua1.lua?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardcoreMineLua.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/MineItem.lua?raw=true"
         }

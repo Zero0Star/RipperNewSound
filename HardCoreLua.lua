@@ -2742,7 +2742,7 @@ sound:Play()
 local frost = Instance.new("ColorCorrectionEffect")
 frost.Parent = game.Lighting
 tweenservice:Create(frost, TweenInfo.new(10), {
-    TintColor = Color3.fromRGB(0, 0, 255),
+    TintColor = Color3.fromRGB(217, 250, 255),
     Saturation = -0.7,
     Contrast = 0.2
 }):Play()

@@ -305,10 +305,10 @@ MB.MouseButton1Click:Connect(function()
             
             pcall(function()
                 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-                    .caption("HardCoreMines Loading: " .. count .. "/5", true)
+                    .caption("HardCoreMines Loading: " .. count .. "/6", true)
             end)
             
-            if count == 5 then
+            if count == 6 then
                 isDone = true
                 if connection then
                     connection:Disconnect()
@@ -340,6 +340,8 @@ MB.MouseButton1Click:Connect(function()
     task.spawn(function()
         local scriptUrls = {
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua2.lua?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/MinesHardCoreLua1?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardcoreMineLua.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/MinesMusic.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/MineItem.lua?raw=true"

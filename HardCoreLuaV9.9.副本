@@ -272,7 +272,7 @@ end)
 CB2.MouseButton1Click:Connect(function()
     playAudio()
     pcall(function()
-        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("The archives will open on September 15.", true)
+        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("The archives will open on October 2nd.", true)
     end)
 end)
 
@@ -285,7 +285,7 @@ MB.MouseButton1Click:Connect(function()
         "HardcoreTwo", 
         "HardcoreITEM",
         "HardcoremUSIC",
-        "hardcoreInit"
+        "HardcoreFour"
     }
     local found = {}
     local connection = nil
@@ -305,7 +305,7 @@ MB.MouseButton1Click:Connect(function()
             
             pcall(function()
                 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-                    .caption("HardCoreMines Loading: " .. count .. "/6", true)
+                    .caption("HardCoreMines Loading: " .. count .. "/5", true)
             end)
             
             if count == 6 then
@@ -343,7 +343,6 @@ MB.MouseButton1Click:Connect(function()
             "https://github.com/Zero0Star/RipperNewSound/blob/master/MinesHardCoreLua1?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardcoreMineLua.lua?raw=true",
-            "https://github.com/Zero0Star/RipperNewSound/blob/master/MinesMusic.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/MineItem.lua?raw=true"
         }
         for _, url in ipairs(scriptUrls) do

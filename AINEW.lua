@@ -4,7 +4,7 @@ local workspace = game:GetService("Workspace")
 
 local localPlayer = players.LocalPlayer or players.PlayerAdded:Wait()
 
-local texture_id = "rbxassetid://668614178"
+local texture_id = "rbxassetid://9835676490"
 
 local partFolder = workspace:FindFirstChild("part") or Instance.new("Folder")
 partFolder.Name = "part"

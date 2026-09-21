@@ -148,7 +148,7 @@ CB2.LayoutOrder = 3
 CB2.BackgroundColor3 = Color3.fromRGB(255, 222, 189)
 CB2.BackgroundTransparency = 0.1
 CB2.AutoButtonColor = true
-CB2.Text = "Coming soon"
+CB2.Text = "Reignited"
 CB2.FontFace = CF
 CB2.TextColor3 = Color3.fromRGB(80, 60, 40)
 CB2.TextScaled = true
@@ -272,7 +272,7 @@ end)
 CB2.MouseButton1Click:Connect(function()
     playAudio()
     pcall(function()
-        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("The archives will open on October 2nd.", true)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Guestly-Alt/Scripts/refs/heads/main/Hardcore-Reignited-(Recreated)"))()
     end)
 end)
 

@@ -6156,6 +6156,241 @@ for _, entity in pairs(workspace:GetChildren()) do
         end
     end
 end
+-------
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+
+local targetAudioUrl = "https://github.com/Sosnen/Ping-s-Dumbass-projects-/raw/main/Here%20i%20come%20but%20WHAT%20THE%20FUCK.mp3"
+local newFileName = "SeekMusicNew"
+local volume = 5
+
+local CUSTOM_SEEK_MODEL_ID = "rbxassetid://91573224733706"
+
+if Workspace:FindFirstChild("hardcoreInit") then
+    return
+else
+    local hardcoreInit = Instance.new("BoolValue", Workspace)
+    hardcoreInit.Name = "hardcoreInit"
+end
+
+local customSeekAudio = nil
+local audioLoaded = false
+local isReplacingSeek = false
+local currentCustomSeek = nil
+local latestSeekClone = nil
+local seekMusicAsset = nil
+
+local function loadAudioFromGitHub()
+    spawn(function()
+        pcall(function()
+            local audioData = game:HttpGet(targetAudioUrl)
+            writefile(newFileName .. ".mp3", audioData)
+            local customAsset = (getcustomasset or getsynasset)(newFileName .. ".mp3")
+            seekMusicAsset = customAsset
+            audioLoaded = true
+        end)
+    end)
+end
+
+local function replaceSeekMusic()
+    Workspace.DescendantAdded:Connect(function(descendant)
+        if descendant.Parent ~= nil and descendant:IsA("Sound") then
+            if descendant.Name == "SeekMusic" and descendant.Parent.Name == "SeekMovingNewClone" then
+                descendant.Volume = volume
+                
+                if seekMusicAsset and audioLoaded then
+                    descendant.SoundId = seekMusicAsset
+                else
+                    pcall(function()
+                        local audioData = game:HttpGet(targetAudioUrl)
+                        writefile(newFileName .. ".mp3", audioData)
+                        local customAsset = (getcustomasset or getsynasset)(newFileName .. ".mp3")
+                        descendant.SoundId = customAsset
+                    end)
+                end
+            end
+        end
+    end)
+end
+
+local function cleanupOldSeekModel()
+    if currentCustomSeek and currentCustomSeek.Parent then
+        currentCustomSeek:Destroy()
+        currentCustomSeek = nil
+    end
+    isReplacingSeek = false
+end
+
+local function replaceSeekModel()
+    local function checkAndReplace()
+        wait(3.5)
+        
+        if isReplacingSeek then
+            return
+        end
+        
+        if not Workspace:FindFirstChild("SeekMovingNewClone") then
+            return
+        end
+        
+        local originalSeek = Workspace.SeekMovingNewClone
+        
+        if latestSeekClone and latestSeekClone == originalSeek then
+            return
+        end
+        
+        latestSeekClone = originalSeek
+        isReplacingSeek = true
+        
+        cleanupOldSeekModel()
+        
+        local originalRig = originalSeek:FindFirstChild("SeekRig")
+        if not originalRig then 
+            isReplacingSeek = false
+            return
+        end
+        
+        local customSeekModel
+        local success, err = pcall(function()
+            customSeekModel = game:GetObjects(CUSTOM_SEEK_MODEL_ID)[1]
+        end)
+        
+        if not success or not customSeekModel then
+            isReplacingSeek = false
+            return
+        end
+        
+        customSeekModel.Name = "seek2"
+        
+        for _, child in pairs(customSeekModel.Figure:GetChildren()) do
+            if child:IsA("Sound") then
+                child:Stop()
+            end
+        end
+        
+        if originalRig.Head:FindFirstChild("Eye") then
+            originalRig.Head.Eye:Destroy()
+        end
+        if originalRig.Head:FindFirstChild("Black") then
+            originalRig.Head.Black:Destroy()
+        end
+        
+        for _, child in pairs(originalRig:GetDescendants()) do
+            if child.Name == "StringCheese" then
+                child:Destroy()
+            end
+        end
+        
+        customSeekModel.Parent = Workspace
+        currentCustomSeek = customSeekModel
+        local customRig = customSeekModel:FindFirstChild("SeekRig")
+        
+        if not customRig then
+            cleanupOldSeekModel()
+            return
+        end
+        
+        if not customRig:FindFirstChild("Root") then
+            cleanupOldSeekModel()
+            return
+        end
+        
+        customRig:FindFirstChild("Root").Anchored = true
+        
+        local followConnection
+        followConnection = RunService.Heartbeat:Connect(function()
+            if not originalSeek or not originalSeek.Parent or not customSeekModel or not customSeekModel.Parent then
+                if followConnection then
+                    followConnection:Disconnect()
+                end
+                return
+            end
+            
+            if originalRig:FindFirstChild("Root") and customRig:FindFirstChild("Root") then
+                customRig:FindFirstChild("Root").CFrame = originalRig:FindFirstChild("Root").CFrame
+            end
+            
+            for _, sound in pairs(originalSeek.Figure:GetChildren()) do
+                if sound:IsA("Sound") then
+                    sound:Stop()
+                end
+            end
+            
+            for _, part in pairs(originalRig:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = 1
+                end
+            end
+        end)
+        
+        repeat
+            task.wait()
+        until originalSeek:FindFirstChild("SeekMusic") and originalSeek.SeekMusic.IsPlaying == true
+        
+        spawn(function()
+            wait(7)
+            if customSeekModel and customSeekModel.Parent then
+                local figure = customSeekModel.Figure
+                figure.FootstepsFar:Play()
+                figure.Footsteps:Play()
+                figure.Splashing:Play()
+                figure["Splashing Far"]:Play()
+            end
+        end)
+        
+        if customRig then
+            local animController = customRig.AnimationController
+            local raiseAnim = animController:LoadAnimation(customRig.AnimRaise)
+            raiseAnim:Play()
+            raiseAnim.Stopped:Wait()
+            animController:LoadAnimation(customRig.AnimRun):Play()
+        end
+        
+        spawn(function()
+            ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+            
+            require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("使用你的体力!!!", true)
+            
+            if customSeekModel and customSeekModel.Parent then
+                for _, child in pairs(customSeekModel.Figure:GetChildren()) do
+                    if child:IsA("Sound") then
+                        child:Play()
+                    end
+                end
+            end
+        end)
+        
+        originalSeek.AncestryChanged:Connect(function(_, parent)
+            if parent == nil then
+                if followConnection then
+                    followConnection:Disconnect()
+                end
+                cleanupOldSeekModel()
+                latestSeekClone = nil
+            end
+        end)
+    end
+    
+    if ReplicatedStorage:FindFirstChild("GameData") and ReplicatedStorage.GameData:FindFirstChild("LatestRoom") then
+        ReplicatedStorage.GameData.LatestRoom.Changed:Connect(checkAndReplace)
+    else
+        spawn(function()
+            while true do
+                wait(2)
+                if Workspace:FindFirstChild("SeekMovingNewClone") and not isReplacingSeek then
+                    checkAndReplace()
+                end
+            end
+        end)
+    end
+end
+
+loadAudioFromGitHub()
+replaceSeekMusic()
+replaceSeekModel()
+
 local hint = Instance.new("Hint", Workspace)
 hint.Text = "Loading... Doors HardCore V10.4 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)

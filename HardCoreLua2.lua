@@ -5704,7 +5704,7 @@ if type(_G.HatredBossController) == "table"
 end
 
 local CONFIG = {
-    ModelId = 78641623090178,
+    ModelId = 94520721608869,
     MusicVolume = 0.8,
 
     StartDistance = 120,

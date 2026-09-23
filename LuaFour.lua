@@ -254,7 +254,7 @@ local function MainExecution()
         return
     end
     local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    entityPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, 0, 20)
+    entityPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, 0, 40)
     local function ColorEnvironment()
         local player = game.Players.LocalPlayer
         local character = player.Character

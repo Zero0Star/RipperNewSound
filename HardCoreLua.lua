@@ -89,295 +89,1504 @@ attractToHead()
 end
 
 function entityBehaviors.FigureSpawn()
- local RunService = game:GetService("RunService")
-local figure1 = nil
-local isSetup = false
-local currentAnimation = nil
-local currentTrack = nil
-local currentServerTrack = nil
-local walkSoundLoop = nil
-local lastWalkTime = 0
-local isSoundPlaying = false
-local currentSound = nil
-local lastMoveCheck = 0
-local moveCheckInterval = 0.5
-local lastPosition = nil
-local movementThreshold = 1.0
-local lastSpeedCheck = 0
-local speedCheckInterval = 0.1
-local figureRigConnections = {}
-local ANIMATIONS = {
-    idle = "18540813605",
-    walk = "18570699250", 
-    run = "18570706208",
-    crucifix = "18583455040",
-    new_anim = "18542418459"
+local RunService = game:GetService("RunService")
+local ContentProvider = game:GetService("ContentProvider")
+
+local FIGURE_ASSET_ID = "rbxassetid://96598945864381"
+
+local KNOWN_ANIMATIONS = {
+	idle = "18540813605",
+	walk = "18570699250",
+	run = "18570706208",
+	crucifix = "18583455040",
+	new_anim = "18542418459",
 }
-local objects = game:GetObjects("rbxassetid://96598945864381")
-if #objects > 0 then
-    figure1 = objects[1]:Clone()
-    figure1.Name = "Figure1"
-    figure1.Parent = workspace
+
+local RECONCILE_INTERVAL = 0.05
+local TIME_DRIFT_LIMIT = 0.08
+
+local dead = false
+local firstFigureLocked = false
+
+local currentRooms = nil
+
+local figureSource = nil
+local figure1 = nil
+local originalFigure = nil
+
+local renderConnection = nil
+
+local waitingConnections = {}
+local figureConnections = {}
+
+local soundController = nil
+local animationController = nil
+
+local function disconnectList(list)
+	for _, connection in ipairs(list) do
+		if connection then
+			pcall(function()
+				connection:Disconnect()
+			end)
+		end
+	end
+
+	table.clear(list)
 end
 
-if not figure1 then
-    return
-end
-local function setupFigureRigListener(room, figureRig)
-    if not room or not figureRig then return end
-    
-    local connection = room.ChildRemoved:Connect(function(child)
-        if child == figureRig then
-            if figure1 then
-                figure1:Destroy()
-                figure1 = nil
-            end
-        end
-    end)
-    
-    table.insert(figureRigConnections, connection)
-    return connection
+local function addWaitingConnection(connection)
+	table.insert(waitingConnections, connection)
+	return connection
 end
 
-local function getAnimator(model)
-    local humanoid = model:FindFirstChildOfClass("Humanoid")
-    if not humanoid then
-        humanoid = Instance.new("Humanoid")
-        humanoid.Parent = model
-    end
-    
-    local animator = humanoid:FindFirstChildOfClass("Animator")
-    if not animator then
-        animator = Instance.new("Animator")
-        animator.Parent = humanoid
-    end
-    
-    return animator
+local function addFigureConnection(connection)
+	table.insert(figureConnections, connection)
+	return connection
 end
 
-local function playAnimation(animId, animName, serverTrack)
-    if not figure1 or not animId then return end
-    
-    local figure1Animator = getAnimator(figure1)
-    if not figure1Animator then return end
+local function getAnimationId(track)
+	if not track then
+		return nil
+	end
 
-    if currentTrack and currentTrack.IsPlaying then
-        currentTrack:Stop()
-        currentTrack = nil
-    end
+	local animation = track.Animation
 
-    if walkSoundLoop and animName ~= "walk" then
-        walkSoundLoop:Disconnect()
-        walkSoundLoop = nil
-        isSoundPlaying = false
-        if currentSound then
-            currentSound:Stop()
-            currentSound = nil
-        end
-    end
+	if not animation then
+		return nil
+	end
 
-    local anim = Instance.new("Animation")
-    anim.AnimationId = "rbxassetid://" .. animId
-    anim.Name = animName
-    
-    local track = figure1Animator:LoadAnimation(anim)
-    track:Play()
+	local fullId = animation.AnimationId
 
-    if serverTrack then
-        track.TimePosition = serverTrack.TimePosition
+	if not fullId then
+		return nil
+	end
 
-        if serverTrack.Speed then
-            track:AdjustSpeed(serverTrack.Speed)
-        end
-
-        track.Looped = serverTrack.Looped
-    end
-    
-    currentTrack = track
-    currentAnimation = animId
-    currentServerTrack = serverTrack
-    return track
-end
-local function playRandomWalkSound()
-    if isSoundPlaying then return end
-    local head = figure1:FindFirstChild("Head")
-    if not head then return end
-    local click = head:FindFirstChild("Click")
-    local clickLow = head:FindFirstChild("ClickLow")
-    if not click or not clickLow then return end
-    local sound = math.random(1, 2) == 1 and click or clickLow
-    if sound and sound:IsA("Sound") then
-        isSoundPlaying = true
-        currentSound = sound
-        sound:Play()
-        
-        sound.Ended:Connect(function()
-            isSoundPlaying = false
-            currentSound = nil
-        end)
-    end
-end
-local function checkMovement(figureRig)
-    local now = tick()
-    if now - lastMoveCheck < moveCheckInterval then
-        return false
-    end
-    lastMoveCheck = now
-    local currentPos = figureRig:GetPivot().Position
-    local currentX = math.floor(currentPos.X + 0.5)
-    local currentZ = math.floor(currentPos.Z + 0.5)
-    if lastPosition then
-        local lastX = math.floor(lastPosition.X + 0.5)
-        local lastZ = math.floor(lastPosition.Z + 0.5)
-        
-        local xChanged = math.abs(currentX - lastX) > movementThreshold
-        local zChanged = math.abs(currentZ - lastZ) > movementThreshold
-        
-        lastPosition = currentPos
-        
-        if not xChanged and not zChanged then
-            return false
-        end
-    end
-    lastPosition = currentPos
-    return true
+	return fullId:match("%d+")
 end
 
-local function setupSystem()
-    if isSetup then return end
-    
-    local currentRooms = workspace:FindFirstChild("CurrentRooms")
-    if not currentRooms then
-        return
-    end
-    
-    for _, room in ipairs(currentRooms:GetChildren()) do
-        if room:IsA("Model") or room:IsA("Folder") then
-            local figureRig = room:FindFirstChild("FigureRig")
-            if figureRig then
+local function findOriginalAnimator(model)
+	if not model then
+		return nil
+	end
 
-                setupFigureRigListener(room, figureRig)
+	local humanoid =
+		model:FindFirstChild("Figurenoid")
+		or model:FindFirstChildOfClass("Humanoid")
 
-                for _, part in ipairs(figureRig:GetDescendants()) do
-                    if part:IsA("BasePart") or part:IsA("MeshPart") then
-                        part.Transparency = 1
-                    end
-                end
+	if not humanoid then
+		return nil
+	end
 
-                local rigHead = figureRig:FindFirstChild("Head")
-                if rigHead then
-                    for _, sound in ipairs(rigHead:GetDescendants()) do
-                        if sound:IsA("Sound") then
-                            sound.Volume = 0
-                        end
-                    end
-                end
-                local rigHumanoid = figureRig:FindFirstChild("Figurenoid") or figureRig:FindFirstChildOfClass("Humanoid")
-                if not rigHumanoid then break end
-                
-                local rigAnimator = rigHumanoid:FindFirstChildOfClass("Animator")
-                if not rigAnimator then
-                    rigAnimator = Instance.new("Animator")
-                    rigAnimator.Parent = rigHumanoid
-                end
-                rigAnimator.AnimationPlayed:Connect(function(serverTrack)
-                    local animId = serverTrack.Animation.AnimationId
-                    local idNumber = animId:match("%d+")
-                    
-                    if not idNumber then return end
+	local animator =
+		humanoid:FindFirstChildOfClass("Animator")
 
-                    if currentAnimation == idNumber and currentTrack and currentTrack.IsPlaying then
-                        currentServerTrack = serverTrack
-                        return
-                    end
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
 
-                    local animName
-                    for name, id in pairs(ANIMATIONS) do
-                        if id == idNumber then
-                            animName = name
-                            break
-                        end
-                    end
-                    
-                    if not animName then return end
-
-                    playAnimation(idNumber, animName, serverTrack)
-
-                    if animName == "walk" then
-                        if walkSoundLoop then
-                            walkSoundLoop:Disconnect()
-                        end
-                        
-                        walkSoundLoop = RunService.Heartbeat:Connect(function()
-                            local now = tick()
-                            if now - lastWalkTime >= math.random(5, 10) then
-                                lastWalkTime = now
-                                playRandomWalkSound()
-                            end
-                        end)
-                    elseif animName == "run" then
-                        local head = figure1:FindFirstChild("Head")
-                        if head then
-                            local growl = head:FindFirstChild("Growl")
-                            if growl and growl:IsA("Sound") then
-                                growl.PlaybackSpeed = 1
-                                growl.Volume = 1
-                                growl:Play()
-                            end
-                        end
-                    end
-                end)
-                
-                isSetup = true
-            end
-        end
-    end
+	return animator
 end
-task.wait(2)
-setupSystem()
-local lastIdleCheck = 0
-local idleCheckInterval = 1.0
-RunService.RenderStepped:Connect(function()
-    if not figure1 then return end
-    local currentRooms = workspace:FindFirstChild("CurrentRooms")
-    if not currentRooms then return end
-    
-    for _, room in ipairs(currentRooms:GetChildren()) do
-        if room:IsA("Model") or room:IsA("Folder") then
-            local figureRig = room:FindFirstChild("FigureRig")
-            if figureRig then
-                figure1:PivotTo(figureRig:GetPivot())
-                if currentTrack and currentTrack.IsPlaying and currentServerTrack then
-                    if currentServerTrack.IsPlaying then
-                        currentTrack.TimePosition = currentServerTrack.TimePosition
-                    end
-                    local now = tick()
-                    if now - lastSpeedCheck >= speedCheckInterval then
-                        lastSpeedCheck = now
-                        if currentServerTrack.Speed and currentServerTrack.Speed ~= 1 then
-                            currentTrack:AdjustSpeed(currentServerTrack.Speed)
-                        end
-                    end
-                end
-                local isMoving = checkMovement(figureRig)
-                local now = tick()
-                if now - lastIdleCheck >= idleCheckInterval then
-                    lastIdleCheck = now
-                    if not isMoving and not currentAnimation and not currentTrack then
-                        playAnimation(ANIMATIONS.idle, "idle", nil)
-                    elseif isMoving and currentAnimation == ANIMATIONS.idle then
-                        if currentTrack then
-                            currentTrack:Stop()
-                            currentTrack = nil
-                            currentAnimation = nil
-                            currentServerTrack = nil
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
+
+local function getCustomAnimator(model)
+	if not model then
+		return nil
+	end
+
+	local humanoid =
+		model:FindFirstChild("Figurenoid")
+		or model:FindFirstChildOfClass("Humanoid")
+
+	if not humanoid then
+		humanoid = Instance.new("Humanoid")
+		humanoid.Name = "Humanoid"
+		humanoid.Parent = model
+	end
+
+	local animator =
+		humanoid:FindFirstChildOfClass("Animator")
+
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
+
+	return animator
+end
+
+local function hideOriginalObject(object)
+	if object:IsA("BasePart")
+		or object:IsA("Decal")
+		or object:IsA("Texture") then
+
+		object.Transparency = 1
+	end
+end
+
+local function hideOriginalFigure(figureRig)
+	for _, object in ipairs(figureRig:GetDescendants()) do
+		hideOriginalObject(object)
+	end
+
+	local head = figureRig:FindFirstChild("Head")
+
+	if head then
+		for _, object in ipairs(head:GetDescendants()) do
+			if object:IsA("Sound") then
+				object.Volume = 0
+			end
+		end
+	end
+end
+
+local SoundController = {}
+SoundController.__index = SoundController
+
+function SoundController.new(model)
+	local self = setmetatable({}, SoundController)
+
+	self.model = model
+	self.mode = nil
+
+	self.walkTimer = 0
+	self.walkDelay = math.random(5, 10)
+
+	self.currentClick = nil
+	self.clickEndedConnection = nil
+
+	return self
+end
+
+function SoundController:_stopClick()
+	if self.clickEndedConnection then
+		self.clickEndedConnection:Disconnect()
+		self.clickEndedConnection = nil
+	end
+
+	if self.currentClick then
+		pcall(function()
+			self.currentClick:Stop()
+			self.currentClick.TimePosition = 0
+		end)
+	end
+
+	self.currentClick = nil
+end
+
+function SoundController:_playRandomClick()
+	if dead then
+		return
+	end
+
+	if not self.model then
+		return
+	end
+
+	if self.currentClick then
+		return
+	end
+
+	local head = self.model:FindFirstChild("Head")
+
+	if not head then
+		return
+	end
+
+	local click =
+		head:FindFirstChild("Click", true)
+
+	local clickLow =
+		head:FindFirstChild("ClickLow", true)
+
+	local sounds = {}
+
+	if click and click:IsA("Sound") then
+		table.insert(sounds, click)
+	end
+
+	if clickLow and clickLow:IsA("Sound") then
+		table.insert(sounds, clickLow)
+	end
+
+	if #sounds == 0 then
+		return
+	end
+
+	local sound =
+		sounds[math.random(1, #sounds)]
+
+	self.currentClick = sound
+
+	pcall(function()
+		sound.TimePosition = 0
+		sound:Play()
+	end)
+
+	self.clickEndedConnection =
+		sound.Ended:Connect(function()
+
+			if self.currentClick == sound then
+				self.currentClick = nil
+			end
+
+			if self.clickEndedConnection then
+				self.clickEndedConnection:Disconnect()
+				self.clickEndedConnection = nil
+			end
+
+		end)
+end
+
+function SoundController:_playGrowl()
+	if not self.model then
+		return
+	end
+
+	local head = self.model:FindFirstChild("Head")
+
+	if not head then
+		return
+	end
+
+	local growl =
+		head:FindFirstChild("Growl", true)
+
+	if not growl or not growl:IsA("Sound") then
+		return
+	end
+
+	pcall(function()
+		growl.TimePosition = 0
+		growl.PlaybackSpeed = 1
+		growl.Volume = 1
+		growl:Play()
+	end)
+end
+
+function SoundController:SetAnimation(animationId)
+	local newMode = nil
+
+	if animationId == KNOWN_ANIMATIONS.walk then
+		newMode = "walk"
+
+	elseif animationId == KNOWN_ANIMATIONS.run then
+		newMode = "run"
+	end
+
+	if self.mode == newMode then
+		return
+	end
+
+	self:_stopClick()
+
+	self.mode = newMode
+
+	if newMode == "walk" then
+
+		self:_playRandomClick()
+
+		self.walkTimer = 0
+		self.walkDelay = math.random(5, 10)
+
+	elseif newMode == "run" then
+
+		self:_playGrowl()
+
+	end
+end
+
+function SoundController:Step(dt)
+	if self.mode ~= "walk" then
+		return
+	end
+
+	self.walkTimer += dt
+
+	if self.walkTimer >= self.walkDelay then
+		self.walkTimer = 0
+		self.walkDelay = math.random(5, 10)
+
+		self:_playRandomClick()
+	end
+end
+
+function SoundController:Destroy()
+	self:_stopClick()
+
+	if self.model then
+		for _, object in ipairs(self.model:GetDescendants()) do
+			if object:IsA("Sound") then
+				pcall(function()
+					object:Stop()
+				end)
+			end
+		end
+	end
+
+	self.mode = nil
+	self.model = nil
+end
+
+local AnimationController = {}
+AnimationController.__index = AnimationController
+
+function AnimationController.new(
+	serverAnimator,
+	mirrorAnimator,
+	controller
+)
+	local self =
+		setmetatable({}, AnimationController)
+
+	self.serverAnimator = serverAnimator
+	self.mirrorAnimator = mirrorAnimator
+	self.soundController = controller
+
+	self.registry = {}
+	self.sequence = 0
+
+	self.mirrorCache = {}
+
+	self.activeServerTrack = nil
+	self.activeMirrorTrack = nil
+	self.activeAnimationId = nil
+
+	self.animationPlayedConnection = nil
+
+	self.reconcileTimer = 0
+	self.destroyed = false
+
+	return self
+end
+
+function AnimationController:_getPriority(track)
+	local value = 0
+
+	pcall(function()
+		value = track.Priority.Value
+	end)
+
+	return value
+end
+
+function AnimationController:_getWeight(track)
+	local weight = 0
+
+	pcall(function()
+		weight = track.WeightCurrent
+	end)
+
+	return weight
+end
+
+function AnimationController:_getSequence(track)
+	local info = self.registry[track]
+
+	if info then
+		return info.sequence
+	end
+
+	return 0
+end
+
+function AnimationController:_getKnownStateRank(track)
+	local id = getAnimationId(track)
+
+	if id == KNOWN_ANIMATIONS.run then
+		return 30
+
+	elseif id == KNOWN_ANIMATIONS.walk then
+		return 20
+
+	elseif id == KNOWN_ANIMATIONS.idle then
+		return 10
+	end
+
+	return 0
+end
+
+function AnimationController:_pickDominant(tracks)
+	local best = nil
+
+	local bestPriority = -math.huge
+	local bestWeight = -math.huge
+	local bestSequence = -math.huge
+	local bestStateRank = -math.huge
+
+	for _, track in ipairs(tracks) do
+
+		if track
+			and track.IsPlaying
+			and track.Animation then
+
+			local animationId =
+				getAnimationId(track)
+
+			if animationId then
+
+				local priority =
+					self:_getPriority(track)
+
+				local weight =
+					self:_getWeight(track)
+
+				local sequence =
+					self:_getSequence(track)
+
+				local stateRank =
+					self:_getKnownStateRank(track)
+
+				local better = false
+
+				if priority > bestPriority then
+
+					better = true
+
+				elseif priority == bestPriority then
+
+					if weight > bestWeight + 0.01 then
+
+						better = true
+
+					elseif
+						math.abs(weight - bestWeight)
+						<= 0.01 then
+
+						if sequence > bestSequence then
+
+							better = true
+
+						elseif sequence == bestSequence then
+
+							if stateRank > bestStateRank then
+								better = true
+							end
+
+						end
+					end
+				end
+
+				if better then
+					best = track
+
+					bestPriority = priority
+					bestWeight = weight
+					bestSequence = sequence
+					bestStateRank = stateRank
+				end
+			end
+		end
+	end
+
+	return best
+end
+
+function AnimationController:_getMirrorTrack(serverTrack)
+	local animation = serverTrack.Animation
+
+	if not animation then
+		return nil
+	end
+
+	local animationId =
+		getAnimationId(serverTrack)
+
+	if not animationId then
+		return nil
+	end
+
+	local cached =
+		self.mirrorCache[animationId]
+
+	if cached then
+		return cached
+	end
+
+	local animationObject =
+		Instance.new("Animation")
+
+	animationObject.AnimationId =
+		animation.AnimationId
+
+	animationObject.Name =
+		animation.Name
+
+	local success, mirrorTrack =
+		pcall(function()
+
+			return self.mirrorAnimator:
+				LoadAnimation(animationObject)
+
+		end)
+
+	animationObject:Destroy()
+
+	if not success or not mirrorTrack then
+		return nil
+	end
+
+	self.mirrorCache[animationId] =
+		mirrorTrack
+
+	return mirrorTrack
+end
+
+function AnimationController:_activate(serverTrack)
+	if self.destroyed then
+		return
+	end
+
+	if not serverTrack then
+		return
+	end
+
+	if not serverTrack.Animation then
+		return
+	end
+
+	local animationId =
+		getAnimationId(serverTrack)
+
+	if not animationId then
+		return
+	end
+
+	local mirrorTrack =
+		self:_getMirrorTrack(serverTrack)
+
+	if not mirrorTrack then
+		return
+	end
+
+	if self.activeServerTrack == serverTrack
+		and self.activeMirrorTrack == mirrorTrack
+		and mirrorTrack.IsPlaying then
+
+		return
+	end
+
+	if self.activeMirrorTrack then
+		pcall(function()
+			self.activeMirrorTrack:Stop(0)
+		end)
+	end
+
+	pcall(function()
+		mirrorTrack:Stop(0)
+	end)
+
+	pcall(function()
+		mirrorTrack.Looped =
+			serverTrack.Looped
+	end)
+
+	pcall(function()
+		mirrorTrack.Priority =
+			serverTrack.Priority
+	end)
+
+	local speed = 1
+
+	pcall(function()
+		speed = serverTrack.Speed
+	end)
+
+	pcall(function()
+		mirrorTrack:Play(
+			0,
+			1,
+			speed
+		)
+	end)
+
+	pcall(function()
+		mirrorTrack.TimePosition =
+			serverTrack.TimePosition
+	end)
+
+	self.activeServerTrack =
+		serverTrack
+
+	self.activeMirrorTrack =
+		mirrorTrack
+
+	self.activeAnimationId =
+		animationId
+
+	if self.soundController then
+		self.soundController:SetAnimation(
+			animationId
+		)
+	end
+
+	local capturedServer =
+		serverTrack
+
+	local capturedMirror =
+		mirrorTrack
+
+	task.defer(function()
+
+		if self.destroyed then
+			return
+		end
+
+		if self.activeServerTrack
+			~= capturedServer then
+
+			return
+		end
+
+		if self.activeMirrorTrack
+			~= capturedMirror then
+
+			return
+		end
+
+		if not capturedServer.IsPlaying then
+			return
+		end
+
+		pcall(function()
+
+			capturedMirror.TimePosition =
+				capturedServer.TimePosition
+
+		end)
+
+	end)
+end
+
+function AnimationController:_unregister(track)
+	local info = self.registry[track]
+
+	if not info then
+		return
+	end
+
+	if info.stoppedConnection then
+		info.stoppedConnection:Disconnect()
+	end
+
+	self.registry[track] = nil
+end
+
+function AnimationController:_onTrackStopped(track)
+	if self.destroyed then
+		return
+	end
+
+	self:_unregister(track)
+
+	if self.activeServerTrack ~= track then
+		return
+	end
+
+	self.activeServerTrack = nil
+
+	local success, tracks =
+		pcall(function()
+
+			return self.serverAnimator:
+				GetPlayingAnimationTracks()
+
+		end)
+
+	if not success then
+		return
+	end
+
+	for _, otherTrack in ipairs(tracks) do
+
+		if otherTrack.IsPlaying
+			and not self.registry[otherTrack] then
+
+			self:_registerTrack(
+				otherTrack,
+				false
+			)
+		end
+	end
+
+	local fallback =
+		self:_pickDominant(tracks)
+
+	if fallback then
+
+		self:_activate(fallback)
+
+	else
+
+		if self.activeMirrorTrack then
+			pcall(function()
+				self.activeMirrorTrack:Stop(0)
+			end)
+		end
+
+		self.activeMirrorTrack = nil
+		self.activeAnimationId = nil
+
+		if self.soundController then
+			self.soundController:SetAnimation(nil)
+		end
+	end
+end
+
+function AnimationController:_registerTrack(
+	track,
+	treatAsNew
+)
+	if self.destroyed then
+		return
+	end
+
+	if not track or not track.Animation then
+		return
+	end
+
+	if self.registry[track] then
+
+		if treatAsNew then
+			self:_activate(track)
+		end
+
+		return
+	end
+
+	local animationId =
+		getAnimationId(track)
+
+	if not animationId then
+		return
+	end
+
+	self.sequence += 1
+
+	local info = {
+		sequence = self.sequence,
+		stoppedConnection = nil,
+	}
+
+	self.registry[track] = info
+
+	info.stoppedConnection =
+		track.Stopped:Connect(function()
+
+			self:_onTrackStopped(track)
+
+		end)
+
+	if treatAsNew then
+		self:_activate(track)
+	end
+end
+
+function AnimationController:Start()
+	if self.destroyed then
+		return
+	end
+
+	self.animationPlayedConnection =
+		self.serverAnimator.AnimationPlayed:
+			Connect(function(track)
+
+				if self.destroyed then
+					return
+				end
+
+				self:_registerTrack(
+					track,
+					true
+				)
+
+			end)
+
+	local success, tracks =
+		pcall(function()
+
+			return self.serverAnimator:
+				GetPlayingAnimationTracks()
+
+		end)
+
+	if not success then
+		return
+	end
+
+	for _, track in ipairs(tracks) do
+		if track.IsPlaying
+			and not self.registry[track] then
+
+			self:_registerTrack(
+				track,
+				false
+			)
+		end
+	end
+
+	if self.activeServerTrack then
+		return
+	end
+
+	local initial =
+		self:_pickDominant(tracks)
+
+	if initial then
+		self:_activate(initial)
+	end
+end
+
+function AnimationController:_reconcile()
+	if self.destroyed then
+		return
+	end
+
+	local success, tracks =
+		pcall(function()
+
+			return self.serverAnimator:
+				GetPlayingAnimationTracks()
+
+		end)
+
+	if not success then
+		return
+	end
+
+	local alive = {}
+
+	for _, track in ipairs(tracks) do
+
+		if track.IsPlaying then
+
+			alive[track] = true
+
+			if not self.registry[track] then
+
+				self:_registerTrack(
+					track,
+					true
+				)
+
+			end
+		end
+	end
+
+	local toRemove = {}
+
+	for track in pairs(self.registry) do
+
+		if not alive[track]
+			and not track.IsPlaying then
+
+			table.insert(
+				toRemove,
+				track
+			)
+		end
+	end
+
+	for _, track in ipairs(toRemove) do
+
+		local wasActive =
+			self.activeServerTrack == track
+
+		self:_unregister(track)
+
+		if wasActive then
+			self.activeServerTrack = nil
+		end
+	end
+
+	if self.activeServerTrack
+		and not self.activeServerTrack.IsPlaying then
+
+		self.activeServerTrack = nil
+	end
+
+	if not self.activeServerTrack then
+
+		local fallback =
+			self:_pickDominant(tracks)
+
+		if fallback then
+
+			self:_activate(fallback)
+
+		elseif self.activeMirrorTrack then
+
+			pcall(function()
+				self.activeMirrorTrack:Stop(0)
+			end)
+
+			self.activeMirrorTrack = nil
+			self.activeAnimationId = nil
+
+			if self.soundController then
+				self.soundController:
+					SetAnimation(nil)
+			end
+		end
+	end
+end
+
+function AnimationController:_syncActive()
+	local serverTrack =
+		self.activeServerTrack
+
+	local mirrorTrack =
+		self.activeMirrorTrack
+
+	if not serverTrack
+		or not mirrorTrack then
+
+		return
+	end
+
+	if not serverTrack.IsPlaying then
+		return
+	end
+
+	local serverSpeed = 1
+
+	pcall(function()
+		serverSpeed =
+			serverTrack.Speed
+	end)
+
+	pcall(function()
+
+		if math.abs(
+			mirrorTrack.Speed
+				- serverSpeed
+		) > 0.01 then
+
+			mirrorTrack:
+				AdjustSpeed(serverSpeed)
+		end
+
+	end)
+
+	pcall(function()
+
+		if mirrorTrack.Looped
+			~= serverTrack.Looped then
+
+			mirrorTrack.Looped =
+				serverTrack.Looped
+		end
+
+	end)
+
+	pcall(function()
+
+		if mirrorTrack.Priority
+			~= serverTrack.Priority then
+
+			mirrorTrack.Priority =
+				serverTrack.Priority
+		end
+
+	end)
+
+	local serverTime =
+		serverTrack.TimePosition
+
+	local mirrorTime =
+		mirrorTrack.TimePosition
+
+	if math.abs(
+		serverTime - mirrorTime
+	) >= TIME_DRIFT_LIMIT then
+
+		pcall(function()
+
+			mirrorTrack.TimePosition =
+				serverTime
+
+		end)
+
+	end
+end
+
+function AnimationController:Step(dt)
+	if self.destroyed then
+		return
+	end
+
+	self:_syncActive()
+
+	self.reconcileTimer += dt
+
+	if self.reconcileTimer
+		>= RECONCILE_INTERVAL then
+
+		self.reconcileTimer = 0
+
+		self:_reconcile()
+	end
+end
+
+function AnimationController:Destroy()
+	if self.destroyed then
+		return
+	end
+
+	self.destroyed = true
+
+	if self.animationPlayedConnection then
+		self.animationPlayedConnection:
+			Disconnect()
+
+		self.animationPlayedConnection = nil
+	end
+
+	for track, info in pairs(self.registry) do
+
+		if info.stoppedConnection then
+			info.stoppedConnection:
+				Disconnect()
+		end
+
+		self.registry[track] = nil
+	end
+
+	for _, track in pairs(
+		self.mirrorCache
+	) do
+
+		pcall(function()
+			track:Stop(0)
+		end)
+
+		pcall(function()
+			track:Destroy()
+		end)
+	end
+
+	table.clear(self.mirrorCache)
+
+	self.activeServerTrack = nil
+	self.activeMirrorTrack = nil
+	self.activeAnimationId = nil
+
+	self.serverAnimator = nil
+	self.mirrorAnimator = nil
+	self.soundController = nil
+end
+
+local shuttingDown = false
+
+local function shutdown()
+	if dead or shuttingDown then
+		return
+	end
+
+	shuttingDown = true
+	dead = true
+
+	disconnectList(waitingConnections)
+	disconnectList(figureConnections)
+
+	if renderConnection then
+		renderConnection:Disconnect()
+		renderConnection = nil
+	end
+
+	if animationController then
+		animationController:Destroy()
+		animationController = nil
+	end
+
+	if soundController then
+		soundController:Destroy()
+		soundController = nil
+	end
+
+	if figure1 then
+
+		local oldFigure =
+			figure1
+
+		figure1 = nil
+
+		pcall(function()
+			oldFigure:Destroy()
+		end)
+	end
+
+	if figureSource then
+
+		local oldSource =
+			figureSource
+
+		figureSource = nil
+
+		pcall(function()
+			oldSource:Destroy()
+		end)
+	end
+
+	originalFigure = nil
+	currentRooms = nil
+
+	task.defer(function()
+
+		pcall(function()
+
+			if typeof(script) == "Instance"
+				and script:IsA(
+					"LuaSourceContainer"
+				) then
+
+				script:Destroy()
+			end
+
+		end)
+
+	end)
+
+	shuttingDown = false
+end
+
+local function createReplacement()
+	if not figureSource then
+		return false
+	end
+
+	figure1 = figureSource:Clone()
+
+	figure1.Name = "Figure1"
+	figure1.Parent = workspace
+
+	figureSource:Destroy()
+	figureSource = nil
+
+	return true
+end
+
+local function bindFirstFigure(figureRig)
+	if dead then
+		return
+	end
+
+	if firstFigureLocked then
+		return
+	end
+
+	firstFigureLocked = true
+	originalFigure = figureRig
+
+	disconnectList(waitingConnections)
+
+	local serverAnimator =
+		findOriginalAnimator(figureRig)
+
+	if not serverAnimator then
+		shutdown()
+		return
+	end
+
+	if not createReplacement() then
+		shutdown()
+		return
+	end
+
+	local mirrorAnimator =
+		getCustomAnimator(figure1)
+
+	if not mirrorAnimator then
+		shutdown()
+		return
+	end
+
+	hideOriginalFigure(figureRig)
+
+	addFigureConnection(
+
+		figureRig.DescendantAdded:
+			Connect(function(object)
+
+				if dead then
+					return
+				end
+
+				hideOriginalObject(object)
+
+				local head =
+					figureRig:
+						FindFirstChild("Head")
+
+				if head
+					and object:IsA("Sound")
+					and object:
+						IsDescendantOf(head) then
+
+					object.Volume = 0
+				end
+
+			end)
+
+	)
+
+	figure1:PivotTo(
+		figureRig:GetPivot()
+	)
+
+	soundController =
+		SoundController.new(figure1)
+
+	animationController =
+		AnimationController.new(
+			serverAnimator,
+			mirrorAnimator,
+			soundController
+		)
+
+	animationController:Start()
+
+	addFigureConnection(
+
+		figureRig.Destroying:
+			Connect(function()
+
+				if originalFigure
+					== figureRig then
+
+					shutdown()
+				end
+
+			end)
+
+	)
+
+	addFigureConnection(
+
+		figureRig.AncestryChanged:
+			Connect(function()
+
+				if dead then
+					return
+				end
+
+				if originalFigure
+					~= figureRig then
+
+					return
+				end
+
+				if not figureRig:
+					IsDescendantOf(workspace) then
+
+					shutdown()
+				end
+
+			end)
+
+	)
+
+	local parent =
+		figureRig.Parent
+
+	if parent then
+
+		addFigureConnection(
+
+			parent.ChildRemoved:
+				Connect(function(child)
+
+					if child == figureRig
+						and originalFigure
+						== figureRig then
+
+						shutdown()
+					end
+
+				end)
+
+		)
+	end
+
+	renderConnection =
+		RunService.RenderStepped:
+			Connect(function(dt)
+
+				if dead then
+					return
+				end
+
+				if not originalFigure
+					or not originalFigure.Parent then
+
+					shutdown()
+					return
+				end
+
+				if not figure1
+					or not figure1.Parent then
+
+					shutdown()
+					return
+				end
+
+				figure1:PivotTo(
+					originalFigure:GetPivot()
+				)
+
+				if animationController then
+					animationController:
+						Step(dt)
+				end
+
+				if soundController then
+					soundController:
+						Step(dt)
+				end
+
+			end)
+end
+
+local function loadFigureSource()
+	local success, objects =
+		pcall(function()
+
+			return game:GetObjects(
+				FIGURE_ASSET_ID
+			)
+
+		end)
+
+	if not success
+		or not objects
+		or #objects == 0 then
+
+		return false
+	end
+
+	figureSource =
+		objects[1]
+
+	figureSource.Name =
+		"_FigureSource"
+
+	figureSource.Parent = nil
+
+	for i = 2, #objects do
+		pcall(function()
+			objects[i]:Destroy()
+		end)
+	end
+
+	return true
+end
+
+local function preloadAssets()
+	local objects = {}
+
+	if figureSource then
+		table.insert(
+			objects,
+			figureSource
+		)
+	end
+
+	for _, id in pairs(
+		KNOWN_ANIMATIONS
+	) do
+
+		local animation =
+			Instance.new("Animation")
+
+		animation.AnimationId =
+			"rbxassetid://" .. id
+
+		table.insert(
+			objects,
+			animation
+		)
+	end
+
+	pcall(function()
+		ContentProvider:
+			PreloadAsync(objects)
+	end)
+
+	for _, object in ipairs(objects) do
+
+		if object:IsA("Animation") then
+			object:Destroy()
+		end
+	end
+end
+
+local function findExistingFigure()
+	for _, object in ipairs(
+		currentRooms:GetDescendants()
+	) do
+
+		if object.Name == "FigureRig"
+			and (
+				object:IsA("Model")
+				or object:IsA("Folder")
+			) then
+
+			return object
+		end
+	end
+
+	return nil
+end
+
+local function start()
+	currentRooms =
+		workspace:
+			WaitForChild("CurrentRooms")
+
+	if not loadFigureSource() then
+		return
+	end
+
+	preloadAssets()
+
+	local existingFigure =
+		findExistingFigure()
+
+	if existingFigure then
+
+		bindFirstFigure(
+			existingFigure
+		)
+
+		return
+	end
+
+	addWaitingConnection(
+
+		currentRooms.DescendantAdded:
+			Connect(function(object)
+
+				if dead
+					or firstFigureLocked then
+
+					return
+				end
+
+				if object.Name
+					~= "FigureRig" then
+
+					return
+				end
+
+				if not object:IsA("Model")
+					and not object:IsA("Folder") then
+
+					return
+				end
+				bindFirstFigure(object)
+			end)
+	)
+end
+start()
 end
 -------
 function entityBehaviors.GodOFOne()
@@ -2691,7 +3900,7 @@ function LoadCustomInstance(source, parent)
     return model
 end
 
-local s = LoadCustomInstance("102472395826401", workspace)
+local s = LoadCustomInstance("83840759413024", workspace)
 if not s then
     return
 end
@@ -2878,36 +4087,1441 @@ wait(5)
 frost:Destroy()
 end
 function entityBehaviors.INGODONE()
-local entity = spawner.Create({Entity = {Name = "@&%^#*$Indescribable God!@$*&^!Q(* ",Asset = "115187708721417",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 50},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 20, 0.1, 1}},Movement = {Speed = 20,Delay = 2,Reversed = false},Rebounding = {Enabled = true,Type = "Ambush",Min = 3,Max = 5,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 40,Amount = 200},Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {"It seems you are so unfortunate...", "You died by the ??? God", "That powerful force will drag you into the abyss.","The cross cannot guarantee your safety.","See you next time."},Cause = ""},})
-entity:SetCallback("OnRebounding", function(startOfRebound)
-	local entityModel = entity.Model
-	local main = entityModel:WaitForChild("Main")
-	local attachment = main:WaitForChild("Attachment")
-	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
-	local sounds = {
-		footsteps = main:WaitForChild("Footsteps"),
-		playSound = main:WaitForChild("PlaySound"),
-		switch = main:WaitForChild("Switch"),
-		switchBack = main:WaitForChild("SwitchBack")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local MODEL_ID = 107995387840479
+local LOOP_SOUND_ID = 139459003161851
+local END_SOUND_ID = 101395573137763
+local SPECTATOR_SOUND_ID = 9041745062
+
+local FOLLOW_TIME = 5
+local TOTAL_TIME = 54
+local FADE_OUT_TIME = 3
+
+local START_SAN = 100
+local SAN_LOSS_PER_SECOND = 4
+local ROOM_SAN_GAIN = 8
+
+local MONSTER_DISTANCE = 13
+local MONSTER_HEIGHT_OFFSET = -1.5
+
+local LOOP_VOLUME = 5
+local END_VOLUME = 1
+local SPECTATOR_VOLUME = 1
+
+local active = false
+local ending = false
+local currentSan = START_SAN
+local sanityDeathTriggered = false
+
+local RENDER_NAME = "UNNAMEABLE_CAMERA_" .. tostring(player.UserId)
+
+local function isDeadOrSpectating()
+	if player:GetAttribute("Spectating") == true then
+		return true
+	end
+
+	if player:GetAttribute("Alive") == false then
+		return true
+	end
+
+	local character = player.Character
+
+	if character then
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+		if humanoid and humanoid.Health <= 0 then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function playSpectatorSound()
+	local sound = Instance.new("Sound")
+	sound.Name = "IndescribableSpectator"
+	sound.SoundId = "rbxassetid://" .. SPECTATOR_SOUND_ID
+	sound.Volume = SPECTATOR_VOLUME
+	sound.Looped = false
+	sound.Parent = SoundService
+
+	sound.Ended:Connect(function()
+		if sound.Parent then
+			sound:Destroy()
+		end
+	end)
+
+	sound:Play()
+end
+
+local function createLoopSound()
+	local sound = Instance.new("Sound")
+	sound.Name = "UnnameableLoop"
+	sound.SoundId = "rbxassetid://" .. LOOP_SOUND_ID
+	sound.Volume = LOOP_VOLUME
+	sound.Looped = true
+	sound.Parent = SoundService
+	sound:Play()
+
+	return sound
+end
+
+local function playEndingSound()
+	local sound = Instance.new("Sound")
+	sound.Name = "UnnameableEnding"
+	sound.SoundId = "rbxassetid://" .. END_SOUND_ID
+	sound.Volume = END_VOLUME
+	sound.Looped = false
+	sound.Parent = SoundService
+
+	sound.Ended:Connect(function()
+		if sound.Parent then
+			sound:Destroy()
+		end
+	end)
+
+	sound:Play()
+end
+
+local function createSanUI()
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "UnnameableSAN"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 1000
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	local veil = Instance.new("Frame")
+	veil.Size = UDim2.fromScale(1, 1)
+	veil.BackgroundColor3 = Color3.fromRGB(175, 190, 225)
+	veil.BackgroundTransparency = 0.99
+	veil.BorderSizePixel = 0
+	veil.ZIndex = 0
+	veil.Parent = gui
+
+	local ghostA = Instance.new("Frame")
+	ghostA.Size = UDim2.new(1.1, 0, 1.1, 0)
+	ghostA.AnchorPoint = Vector2.new(0.5, 0.5)
+	ghostA.Position = UDim2.fromScale(0.5, 0.5)
+	ghostA.BackgroundColor3 = Color3.fromRGB(125, 160, 235)
+	ghostA.BackgroundTransparency = 0.997
+	ghostA.BorderSizePixel = 0
+	ghostA.ZIndex = 1
+	ghostA.Parent = gui
+
+	local ghostB = Instance.new("Frame")
+	ghostB.Size = UDim2.new(1.1, 0, 1.1, 0)
+	ghostB.AnchorPoint = Vector2.new(0.5, 0.5)
+	ghostB.Position = UDim2.fromScale(0.5, 0.5)
+	ghostB.BackgroundColor3 = Color3.fromRGB(235, 135, 175)
+	ghostB.BackgroundTransparency = 0.998
+	ghostB.BorderSizePixel = 0
+	ghostB.ZIndex = 2
+	ghostB.Parent = gui
+
+	local holder = Instance.new("Frame")
+	holder.AnchorPoint = Vector2.new(1, 0.5)
+	holder.Position = UDim2.new(1, 220, 0.5, 0)
+	holder.Size = UDim2.fromOffset(190, 65)
+	holder.BackgroundColor3 = Color3.fromRGB(4, 4, 7)
+	holder.BackgroundTransparency = 0.15
+	holder.BorderSizePixel = 0
+	holder.ZIndex = 10
+	holder.Parent = gui
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 4)
+	corner.Parent = holder
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(110, 115, 130)
+	stroke.Transparency = 0.35
+	stroke.Thickness = 1
+	stroke.Parent = holder
+
+	local title = Instance.new("TextLabel")
+	title.BackgroundTransparency = 1
+	title.Position = UDim2.fromOffset(12, 5)
+	title.Size = UDim2.new(1, -24, 0, 22)
+	title.Font = Enum.Font.GothamMedium
+	title.Text = "SAN"
+	title.TextColor3 = Color3.fromRGB(190, 190, 200)
+	title.TextSize = 14
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.ZIndex = 11
+	title.Parent = holder
+
+	local value = Instance.new("TextLabel")
+	value.BackgroundTransparency = 1
+	value.Position = UDim2.fromOffset(12, 25)
+	value.Size = UDim2.new(1, -24, 0, 29)
+	value.Font = Enum.Font.GothamBold
+	value.Text = "100%"
+	value.TextColor3 = Color3.fromRGB(235, 235, 240)
+	value.TextSize = 23
+	value.TextXAlignment = Enum.TextXAlignment.Left
+	value.ZIndex = 11
+	value.Parent = holder
+
+	local barBG = Instance.new("Frame")
+	barBG.Position = UDim2.new(0, 12, 1, -7)
+	barBG.Size = UDim2.new(1, -24, 0, 2)
+	barBG.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+	barBG.BorderSizePixel = 0
+	barBG.ZIndex = 11
+	barBG.Parent = holder
+
+	local bar = Instance.new("Frame")
+	bar.Size = UDim2.fromScale(1, 1)
+	bar.BackgroundColor3 = Color3.fromRGB(205, 210, 220)
+	bar.BorderSizePixel = 0
+	bar.ZIndex = 12
+	bar.Parent = barBG
+
+	TweenService:Create(
+		holder,
+		TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+		{
+			Position = UDim2.new(1, -35, 0.5, 0)
+		}
+	):Play()
+
+	return {
+		gui = gui,
+		holder = holder,
+		label = value,
+		bar = bar,
+		veil = veil,
+		ghostA = ghostA,
+		ghostB = ghostB
 	}
-	for _, c in attachment:GetChildren() do
-		c.Enabled = (not startOfRebound)
+end
+
+local function createEffects()
+	local blur = Instance.new("BlurEffect")
+	blur.Name = "UnnameableBlur"
+	blur.Size = 4
+	blur.Parent = Lighting
+
+	local color = Instance.new("ColorCorrectionEffect")
+	color.Name = "UnnameableColor"
+	color.Brightness = 0
+	color.Contrast = 0
+	color.Saturation = 0
+	color.TintColor = Color3.new(1, 1, 1)
+	color.Parent = Lighting
+
+	local monochrome = Instance.new("ColorCorrectionEffect")
+	monochrome.Name = "UnnameableMonochrome"
+	monochrome.Brightness = 0
+	monochrome.Contrast = 0
+	monochrome.Saturation = 0
+	monochrome.TintColor = Color3.new(1, 1, 1)
+	monochrome.Parent = Lighting
+
+	local bloom = Instance.new("BloomEffect")
+	bloom.Name = "UnnameableBloom"
+	bloom.Intensity = 0
+	bloom.Size = 36
+	bloom.Threshold = 0.65
+	bloom.Parent = Lighting
+
+	local depth = Instance.new("DepthOfFieldEffect")
+	depth.Name = "UnnameableDepth"
+	depth.FarIntensity = 0
+	depth.NearIntensity = 0
+	depth.FocusDistance = 12
+	depth.InFocusRadius = 8
+	depth.Parent = Lighting
+
+	local rays = Instance.new("SunRaysEffect")
+	rays.Name = "UnnameableRays"
+	rays.Intensity = 0
+	rays.Spread = 1
+	rays.Parent = Lighting
+
+	return {
+		blur = blur,
+		color = color,
+		monochrome = monochrome,
+		bloom = bloom,
+		depth = depth,
+		rays = rays
+	}
+end
+
+local function loadMonster()
+	local success, objects = pcall(function()
+		return game:GetObjects("rbxassetid://" .. MODEL_ID)
+	end)
+
+	if not success or not objects or not objects[1] then
+		return nil
 	end
-	for _, c in AttachmentSwitch:GetChildren() do
-		c.Enabled = startOfRebound
+
+	local monster = objects[1]
+	monster.Name = "不可名状"
+	monster.Parent = workspace
+
+	if monster:IsA("BasePart") then
+		monster.Anchored = true
+		monster.CanCollide = false
+		monster.CanTouch = false
+		monster.CanQuery = false
 	end
-	if startOfRebound == true then
-		sounds.footsteps.PlaybackSpeed = 0.35
-		sounds.playSound.PlaybackSpeed = 0.25
-		sounds.switch:Play()
-	else
-		sounds.footsteps.PlaybackSpeed = 0.25
-		sounds.playSound.PlaybackSpeed = 0.16
-		sounds.switchBack:Play()
+
+	for _, object in ipairs(monster:GetDescendants()) do
+		if object:IsA("BasePart") then
+			object.Anchored = true
+			object.CanCollide = false
+			object.CanTouch = false
+			object.CanQuery = false
+		end
 	end
-	
-end)
-entity:Run()
+
+	return monster
+end
+
+local function setMonsterCFrame(monster, cf)
+	if not monster then
+		return
+	end
+
+	if monster:IsA("Model") then
+		monster:PivotTo(cf)
+	elseif monster:IsA("BasePart") then
+		monster.CFrame = cf
+	end
+end
+
+local function fadeMonster(monster, duration)
+	if not monster then
+		return
+	end
+
+	if monster:IsA("BasePart") then
+		TweenService:Create(
+			monster,
+			TweenInfo.new(duration),
+			{
+				Transparency = 1
+			}
+		):Play()
+	end
+
+	for _, object in ipairs(monster:GetDescendants()) do
+		if object:IsA("BasePart") then
+			TweenService:Create(
+				object,
+				TweenInfo.new(duration),
+				{
+					Transparency = 1
+				}
+			):Play()
+		elseif object:IsA("Decal") or object:IsA("Texture") then
+			TweenService:Create(
+				object,
+				TweenInfo.new(duration),
+				{
+					Transparency = 1
+				}
+			):Play()
+		end
+	end
+end
+
+local function updateSanDisplay(san, ui)
+	san = math.clamp(san, 0, 100)
+
+	if ui.label then
+		ui.label.Text = math.floor(san) .. "%"
+	end
+
+	if ui.bar then
+		TweenService:Create(
+			ui.bar,
+			TweenInfo.new(0.22, Enum.EasingStyle.Sine),
+			{
+				Size = UDim2.fromScale(san / 100, 1)
+			}
+		):Play()
+	end
+end
+
+local function giveAchievement()
+	task.spawn(function()
+		pcall(function()
+			local DoorsNotify = loadstring(
+				game:HttpGet(
+					"https://raw.githubusercontent.com/Guestly-Alt/Scripts/refs/heads/main/AchievementHolder.lua"
+				)
+			)()
+
+			DoorsNotify({
+				Style = "Completed!",
+				Title = "Indescribable",
+				Description = "A strange dream...",
+				Reason = "Survive In Indescribable",
+				Image = "rbxassetid://8178415737",
+				Time = 5
+			})
+		end)
+	end)
+end
+
+local function startUnnameable()
+	if isDeadOrSpectating() then
+		playSpectatorSound()
+		return
+	end
+
+	if active or ending then
+		return
+	end
+
+	active = true
+	ending = false
+	sanityDeathTriggered = false
+	currentSan = START_SAN
+
+	camera = workspace.CurrentCamera
+
+	local eventStartTime = os.clock()
+	local originalFOV = camera and camera.FieldOfView or 70
+
+	local loopSound = createLoopSound()
+	local monster = loadMonster()
+
+	if not monster then
+		active = false
+
+		if loopSound then
+			loopSound:Stop()
+			loopSound:Destroy()
+		end
+
+		return
+	end
+
+	local ui = createSanUI()
+	local effects = createEffects()
+
+	local fadeValue = Instance.new("NumberValue")
+	fadeValue.Value = 1
+
+	local latestRoom = ReplicatedStorage
+		:WaitForChild("GameData")
+		:WaitForChild("LatestRoom")
+
+	local roomConnection
+	local deathConnection
+	local characterConnection
+	local aliveConnection
+	local spectatingConnection
+
+	local flipActive = false
+	local flipStart = 0
+	local flipDuration = 2
+	local flipDirection = 1
+	local nextFlip = os.clock() + math.random(4, 7)
+
+	local finished = false
+
+	local function disconnectAll()
+		if roomConnection then
+			roomConnection:Disconnect()
+			roomConnection = nil
+		end
+
+		if deathConnection then
+			deathConnection:Disconnect()
+			deathConnection = nil
+		end
+
+		if characterConnection then
+			characterConnection:Disconnect()
+			characterConnection = nil
+		end
+
+		if aliveConnection then
+			aliveConnection:Disconnect()
+			aliveConnection = nil
+		end
+
+		if spectatingConnection then
+			spectatingConnection:Disconnect()
+			spectatingConnection = nil
+		end
+	end
+
+	local function destroyImmediately()
+		RunService:UnbindFromRenderStep(RENDER_NAME)
+
+		disconnectAll()
+
+		if loopSound then
+			loopSound:Stop()
+			loopSound:Destroy()
+			loopSound = nil
+		end
+
+		if monster and monster.Parent then
+			monster:Destroy()
+		end
+
+		for _, effect in pairs(effects) do
+			if effect and effect.Parent then
+				effect:Destroy()
+			end
+		end
+
+		if ui.gui and ui.gui.Parent then
+			ui.gui:Destroy()
+		end
+
+		if fadeValue then
+			pcall(function()
+				fadeValue:Destroy()
+			end)
+		end
+
+		camera = workspace.CurrentCamera
+
+		if camera then
+			camera.FieldOfView = originalFOV
+		end
+	end
+
+	local function failEvent()
+		if finished then
+			return
+		end
+
+		finished = true
+		ending = true
+		active = false
+
+		destroyImmediately()
+
+		ending = false
+	end
+
+	local function finishEvent(survived)
+		if finished then
+			return
+		end
+
+		finished = true
+		ending = true
+		active = false
+
+		disconnectAll()
+
+		if loopSound then
+			loopSound:Stop()
+			loopSound:Destroy()
+			loopSound = nil
+		end
+
+		fadeMonster(monster, FADE_OUT_TIME)
+
+		if ui.holder then
+			TweenService:Create(
+				ui.holder,
+				TweenInfo.new(
+					FADE_OUT_TIME,
+					Enum.EasingStyle.Sine,
+					Enum.EasingDirection.InOut
+				),
+				{
+					Position = UDim2.new(1, 230, 0.5, 0),
+					BackgroundTransparency = 1
+				}
+			):Play()
+		end
+
+		if ui.label then
+			TweenService:Create(
+				ui.label,
+				TweenInfo.new(FADE_OUT_TIME),
+				{
+					TextTransparency = 1
+				}
+			):Play()
+		end
+
+		local fadeTween = TweenService:Create(
+			fadeValue,
+			TweenInfo.new(
+				FADE_OUT_TIME,
+				Enum.EasingStyle.Sine,
+				Enum.EasingDirection.InOut
+			),
+			{
+				Value = 0
+			}
+		)
+
+		fadeTween:Play()
+		fadeTween.Completed:Wait()
+
+		RunService:UnbindFromRenderStep(RENDER_NAME)
+
+		camera = workspace.CurrentCamera
+
+		if camera then
+			camera.FieldOfView = originalFOV
+		end
+
+		if monster and monster.Parent then
+			monster:Destroy()
+		end
+
+		for _, effect in pairs(effects) do
+			if effect and effect.Parent then
+				effect:Destroy()
+			end
+		end
+
+		if ui.gui and ui.gui.Parent then
+			ui.gui:Destroy()
+		end
+
+		pcall(function()
+			fadeValue:Destroy()
+		end)
+
+		playEndingSound()
+
+		if survived and not sanityDeathTriggered then
+			giveAchievement()
+		end
+
+		ending = false
+	end
+
+	local function bindHumanoid(character)
+		if deathConnection then
+			deathConnection:Disconnect()
+			deathConnection = nil
+		end
+
+		if not character then
+			return
+		end
+
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+		if not humanoid then
+			humanoid = character:WaitForChild("Humanoid", 5)
+		end
+
+		if humanoid then
+			deathConnection = humanoid.Died:Connect(function()
+				if not active then
+					return
+				end
+
+				if sanityDeathTriggered then
+					return
+				end
+
+				failEvent()
+			end)
+		end
+	end
+
+	bindHumanoid(player.Character)
+
+	characterConnection = player.CharacterAdded:Connect(function()
+		if not active then
+			return
+		end
+
+		if not sanityDeathTriggered then
+			failEvent()
+		end
+	end)
+
+	aliveConnection = player:GetAttributeChangedSignal("Alive"):Connect(function()
+		if not active or sanityDeathTriggered then
+			return
+		end
+
+		if player:GetAttribute("Alive") == false then
+			failEvent()
+		end
+	end)
+
+	spectatingConnection = player:GetAttributeChangedSignal("Spectating"):Connect(function()
+		if not active or sanityDeathTriggered then
+			return
+		end
+
+		if player:GetAttribute("Spectating") == true then
+			failEvent()
+		end
+	end)
+
+	roomConnection = latestRoom.Changed:Connect(function()
+		if not active or sanityDeathTriggered then
+			return
+		end
+
+		currentSan = math.clamp(
+			currentSan + ROOM_SAN_GAIN,
+			0,
+			100
+		)
+
+		updateSanDisplay(currentSan, ui)
+
+		if ui.holder then
+			ui.holder.Size = UDim2.fromOffset(204, 69)
+
+			TweenService:Create(
+				ui.holder,
+				TweenInfo.new(
+					0.35,
+					Enum.EasingStyle.Back,
+					Enum.EasingDirection.Out
+				),
+				{
+					Size = UDim2.fromOffset(190, 65)
+				}
+			):Play()
+		end
+	end)
+
+	RunService:BindToRenderStep(
+		RENDER_NAME,
+		Enum.RenderPriority.Camera.Value + 1,
+		function()
+			camera = workspace.CurrentCamera
+
+			if not camera then
+				return
+			end
+
+			local now = os.clock()
+			local elapsed = now - eventStartTime
+			local fade = fadeValue.Value
+
+			local eventProgress = math.clamp(
+				elapsed / TOTAL_TIME,
+				0,
+				1
+			)
+
+			local insanity = math.clamp(
+				1 - currentSan / 100,
+				0,
+				1
+			)
+
+			local lateGame = math.clamp(
+				(eventProgress - 0.3) / 0.7,
+				0,
+				1
+			)
+
+			lateGame = lateGame ^ 1.25
+
+			local extremeLate = math.clamp(
+				(eventProgress - 0.68) / 0.32,
+				0,
+				1
+			)
+
+			extremeLate = extremeLate ^ 1.35
+
+			local finalPhase = math.clamp(
+				(eventProgress - 0.86) / 0.14,
+				0,
+				1
+			)
+
+			if effects.monochrome then
+				local monochromeProgress = math.clamp(
+					(elapsed - 12) / 8,
+					0,
+					1
+				)
+
+				monochromeProgress =
+					monochromeProgress
+					* monochromeProgress
+					* (3 - 2 * monochromeProgress)
+
+				effects.monochrome.Saturation =
+					-1
+					* monochromeProgress
+					* fade
+
+				effects.monochrome.Contrast =
+					0.14
+					* monochromeProgress
+					* fade
+
+				effects.monochrome.Brightness =
+					-0.03
+					* monochromeProgress
+					* fade
+			end
+
+			local flipAngle = 0
+
+			if active
+				and eventProgress >= 0.2
+				and not flipActive
+				and now >= nextFlip
+			then
+				flipActive = true
+				flipStart = now
+
+				flipDuration =
+					2.5
+					+ eventProgress * 3
+					+ extremeLate * 1.8
+
+				flipDirection =
+					math.random(0, 1) == 0
+					and -1
+					or 1
+			end
+
+			if flipActive then
+				local progress =
+					(now - flipStart) / flipDuration
+
+				if progress >= 1 then
+					flipActive = false
+
+					local minDelay =
+						math.max(
+							1.8,
+							6.5
+							- lateGame * 2.5
+							- extremeLate * 1.5
+						)
+
+					local maxDelay =
+						math.max(
+							3,
+							9
+							- lateGame * 3
+							- extremeLate * 2
+						)
+
+					nextFlip =
+						now
+						+ minDelay
+						+ math.random()
+						* (maxDelay - minDelay)
+				else
+					local curve =
+						math.sin(progress * math.pi) ^ 0.4
+
+					flipAngle =
+						math.rad(180)
+						* curve
+						* flipDirection
+						* fade
+				end
+			end
+
+			local curveRoll =
+				math.sin(now * 0.82)
+				* math.rad(
+					1.8
+					+ eventProgress * 2.5
+					+ lateGame * 2
+				)
+
+			local curveRoll2 =
+				math.sin(now * 0.39 + 1.6)
+				* math.rad(
+					1
+					+ eventProgress * 1.7
+					+ lateGame * 1.3
+				)
+
+			local violentRoll =
+				math.sin(now * 1.8)
+				* math.rad(
+					lateGame * 4
+					+ extremeLate * 8
+					+ finalPhase * 7
+				)
+
+			local noiseRoll =
+				math.noise(now * 8, 0, 0)
+				* math.rad(
+					lateGame * 2.5
+					+ extremeLate * 5
+					+ finalPhase * 6
+				)
+
+			local microRoll =
+				math.sin(now * 28)
+				* math.rad(
+					extremeLate * 1.3
+					+ finalPhase * 3
+				)
+
+			local pitch =
+				(
+					math.sin(now * 0.68)
+					* math.rad(
+						0.5
+						+ eventProgress * 1.6
+						+ lateGame * 1.5
+						+ extremeLate * 2.8
+						+ finalPhase * 3
+					)
+					+
+					math.noise(0, now * 8, 0)
+					* math.rad(
+						lateGame * 1.5
+						+ extremeLate * 3.5
+						+ finalPhase * 3
+					)
+				)
+				* fade
+
+			local yaw =
+				(
+					math.sin(now * 0.49)
+					* math.rad(
+						0.45
+						+ eventProgress
+						+ lateGame
+						+ extremeLate * 2.5
+					)
+					+
+					math.noise(now * 7, 20, 0)
+					* math.rad(
+						extremeLate * 2
+						+ finalPhase * 2.5
+					)
+				)
+				* fade
+
+			local shake =
+				(
+					0.004
+					+ eventProgress * 0.006
+					+ lateGame * 0.018
+					+ extremeLate * 0.06
+					+ finalPhase * 0.08
+				)
+				* fade
+
+			local shiftX =
+				(
+					math.sin(now * 1.45) * 0.012
+					+
+					math.noise(now * 18, 10, 0) * shake
+					+
+					math.sin(now * 25)
+					* 0.025
+					* extremeLate
+					+
+					math.sin(now * 39)
+					* 0.025
+					* finalPhase
+				)
+				* fade
+
+			local shiftY =
+				(
+					math.cos(now * 1.12) * 0.01
+					+
+					math.noise(10, now * 19, 0) * shake
+					+
+					math.cos(now * 23)
+					* 0.022
+					* extremeLate
+					+
+					math.cos(now * 35)
+					* 0.025
+					* finalPhase
+				)
+				* fade
+
+			camera.CFrame =
+				camera.CFrame
+				* CFrame.new(
+					shiftX,
+					shiftY,
+					0
+				)
+				* CFrame.Angles(
+					pitch,
+					yaw,
+					(
+						curveRoll
+						+ curveRoll2
+						+ violentRoll
+						+ noiseRoll
+						+ microRoll
+						+ flipAngle
+					)
+					* fade
+				)
+
+			local fovPulse =
+				math.sin(now * 1.05)
+				*
+				(
+					1.8
+					+ eventProgress * 2
+					+ lateGame * 4
+					+ extremeLate * 5
+					+ finalPhase * 3
+				)
+				* fade
+
+			local fovNoise =
+				math.noise(now * 2.5, 0, 0)
+				*
+				(
+					extremeLate * 4
+					+ finalPhase * 3
+				)
+				* fade
+
+			camera.FieldOfView =
+				originalFOV
+				+ fovPulse
+				+ fovNoise
+
+			if effects.blur then
+				local blurValue =
+					6
+					+ eventProgress ^ 1.3 * 19
+					+ lateGame ^ 1.2 * 15
+					+ extremeLate * 15
+					+ finalPhase * 11
+					+ insanity * 8
+					+
+					math.sin(now * 1.7)
+					*
+					(
+						1.4
+						+ lateGame * 2
+						+ extremeLate * 2.5
+					)
+
+				effects.blur.Size =
+					math.clamp(
+						blurValue * fade,
+						0,
+						52
+					)
+			end
+
+			if effects.color then
+				effects.color.Contrast =
+					(
+						0.09
+						+ eventProgress * 0.14
+						+ lateGame * 0.2
+						+ extremeLate * 0.17
+						+ finalPhase * 0.1
+						+
+						math.sin(now * 0.8) * 0.04
+					)
+					* fade
+
+				effects.color.Saturation =
+					(
+						-0.1
+						- eventProgress * 0.08
+						- lateGame * 0.12
+						- extremeLate * 0.1
+					)
+					* fade
+
+				effects.color.Brightness =
+					(
+						math.sin(now * 0.55) * 0.025
+						+
+						math.sin(now * 2.6)
+						* extremeLate
+						* 0.02
+						+
+						math.sin(now * 8)
+						* finalPhase
+						* 0.012
+					)
+					* fade
+
+				local tintStrength =
+					math.clamp(
+						(
+							0.13
+							+ eventProgress * 0.12
+							+ lateGame * 0.2
+							+ extremeLate * 0.2
+						)
+						* fade,
+						0,
+						0.75
+					)
+
+				effects.color.TintColor =
+					Color3.new(1, 1, 1):Lerp(
+						Color3.fromRGB(
+							155,
+							180,
+							225
+						),
+						tintStrength
+					)
+			end
+
+			if effects.bloom then
+				effects.bloom.Intensity =
+					(
+						0.35
+						+ eventProgress * 0.35
+						+ lateGame * 0.75
+						+ extremeLate * 0.85
+						+ finalPhase * 0.4
+						+
+						math.sin(now * 0.75) * 0.13
+					)
+					* fade
+
+				effects.bloom.Size =
+					34
+					+ lateGame * 12
+					+ extremeLate * 16
+					+ finalPhase * 8
+			end
+
+			if effects.depth then
+				effects.depth.FarIntensity =
+					math.clamp(
+						(
+							0.08
+							+ eventProgress * 0.13
+							+ lateGame * 0.23
+							+ extremeLate * 0.2
+							+ finalPhase * 0.1
+						)
+						* fade,
+						0,
+						0.72
+					)
+
+				effects.depth.NearIntensity =
+					math.clamp(
+						(
+							0.04
+							+ lateGame * 0.2
+							+ extremeLate * 0.18
+							+ finalPhase * 0.1
+						)
+						* fade,
+						0,
+						0.5
+					)
+
+				effects.depth.FocusDistance =
+					10
+					+
+					math.sin(now * 0.65)
+					*
+					(
+						3
+						+ lateGame * 4
+						+ extremeLate * 5
+						+ finalPhase * 4
+					)
+
+				effects.depth.InFocusRadius =
+					math.max(
+						1.5,
+						8
+						- lateGame * 3
+						- extremeLate * 2
+						- finalPhase * 1.5
+					)
+			end
+
+			if effects.rays then
+				effects.rays.Intensity =
+					(
+						0.015
+						+ lateGame * 0.05
+						+ extremeLate * 0.06
+						+ finalPhase * 0.03
+					)
+					* fade
+			end
+
+			if ui.holder then
+				local uiShake =
+					(
+						eventProgress * 1.5
+						+ lateGame * 4
+						+ extremeLate * 9
+						+ finalPhase * 10
+					)
+					* fade
+
+				ui.holder.Position =
+					UDim2.new(
+						1,
+						-35
+						+
+						math.sin(now * 14) * uiShake
+						+
+						math.noise(now * 18, 0, 0) * uiShake,
+						0.5,
+						math.cos(now * 12) * uiShake
+						+
+						math.noise(0, now * 17, 0) * uiShake
+					)
+			end
+
+			if ui.veil then
+				ui.veil.BackgroundTransparency =
+					math.clamp(
+						0.994
+						-
+						(
+							eventProgress * 0.012
+							+ lateGame * 0.025
+							+ extremeLate * 0.028
+							+ finalPhase * 0.015
+						)
+						* fade,
+						0.9,
+						1
+					)
+			end
+
+			if ui.ghostA then
+				ui.ghostA.Position =
+					UDim2.new(
+						0.5,
+						math.sin(now * 1.8)
+						*
+						(
+							6
+							+ eventProgress * 7
+							+ lateGame * 13
+							+ extremeLate * 16
+							+ finalPhase * 9
+						)
+						* fade,
+						0.5,
+						math.cos(now * 1.35)
+						*
+						(
+							4
+							+ eventProgress * 6
+							+ lateGame * 10
+							+ extremeLate * 12
+						)
+						* fade
+					)
+
+				ui.ghostA.BackgroundTransparency =
+					math.clamp(
+						0.997
+						-
+						(
+							eventProgress * 0.008
+							+ lateGame * 0.018
+							+ extremeLate * 0.02
+							+ finalPhase * 0.01
+						)
+						* fade,
+						0.93,
+						1
+					)
+			end
+
+			if ui.ghostB then
+				ui.ghostB.Position =
+					UDim2.new(
+						0.5,
+						-math.sin(now * 1.55)
+						*
+						(
+							5
+							+ eventProgress * 7
+							+ lateGame * 12
+							+ extremeLate * 15
+							+ finalPhase * 8
+						)
+						* fade,
+						0.5,
+						-math.cos(now * 1.9)
+						*
+						(
+							4
+							+ eventProgress * 5
+							+ lateGame * 9
+							+ extremeLate * 11
+						)
+						* fade
+					)
+
+				ui.ghostB.BackgroundTransparency =
+					math.clamp(
+						0.998
+						-
+						(
+							eventProgress * 0.007
+							+ lateGame * 0.015
+							+ extremeLate * 0.018
+							+ finalPhase * 0.01
+						)
+						* fade,
+						0.94,
+						1
+					)
+			end
+		end
+	)
+
+	task.spawn(function()
+		while active do
+			task.wait(1)
+
+			if not active or sanityDeathTriggered then
+				break
+			end
+
+			currentSan =
+				math.clamp(
+					currentSan - SAN_LOSS_PER_SECOND,
+					0,
+					100
+				)
+
+			updateSanDisplay(currentSan, ui)
+
+			if currentSan <= 35 and math.random() > 0.78 then
+				ui.label.Text = "??%"
+			end
+
+			if currentSan <= 15 and math.random() > 0.58 then
+				local fakeValues = {
+					"0%",
+					"???",
+					"-",
+					"∞",
+					tostring(math.random(101, 999)) .. "%"
+				}
+
+				ui.label.Text =
+					fakeValues[
+						math.random(1, #fakeValues)
+					]
+			end
+
+			if currentSan <= 0 then
+				if not sanityDeathTriggered then
+					sanityDeathTriggered = true
+
+					ui.label.Text = "0%"
+
+					if ui.bar then
+						ui.bar.Size = UDim2.fromScale(0, 1)
+					end
+
+					replicatesignal(
+						game.Players.LocalPlayer.Kill
+					)
+
+					finishEvent(false)
+				end
+
+				break
+			end
+		end
+	end)
+
+	local followStart = os.clock()
+
+	while active and os.clock() - followStart < FOLLOW_TIME do
+		camera = workspace.CurrentCamera
+
+		if camera then
+			local camCF = camera.CFrame
+
+			local position =
+				camCF.Position
+				+ camCF.LookVector * MONSTER_DISTANCE
+				+ Vector3.new(
+					0,
+					MONSTER_HEIGHT_OFFSET,
+					0
+				)
+
+			setMonsterCFrame(
+				monster,
+				CFrame.lookAt(
+					position,
+					camCF.Position
+				)
+			)
+		end
+
+		RunService.RenderStepped:Wait()
+	end
+
+	while active do
+		RunService.Heartbeat:Wait()
+
+		if not sanityDeathTriggered then
+			if player:GetAttribute("Alive") == false
+				or player:GetAttribute("Spectating") == true
+			then
+				failEvent()
+				return
+			end
+
+			local character = player.Character
+			local humanoid =
+				character
+				and character:FindFirstChildOfClass("Humanoid")
+
+			if not character
+				or not humanoid
+				or humanoid.Health <= 0
+			then
+				failEvent()
+				return
+			end
+		end
+
+		if os.clock() - eventStartTime >= TOTAL_TIME then
+			break
+		end
+	end
+
+	if active and not sanityDeathTriggered then
+		finishEvent(true)
+	end
+end
+
+startUnnameable()
 end
 
 function entityBehaviors.Subspace()

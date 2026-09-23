@@ -99,6 +99,13 @@ function entityBehaviors.GrimReaper()
     require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Task: Survive...",true)
 end
 
+function entityBehaviors.MONTNS()
+local concrete = workspace.MonumentEntity.Top.Concrete
+local decal = Instance.new("Decal")
+decal.Texture = "rbxassetid://18359551282"
+decal.Parent = concrete
+end
+
 function entityBehaviors.bsrebound()
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
@@ -8117,6 +8124,7 @@ local entityConfig = {
     ["rbxassetid://103"]  = entityBehaviors.REBOUNDrebound,
     ["rbxassetid://608"]  = entityBehaviors.A60OLD,
     ["rbxassetid://1201"]  = entityBehaviors.A120,
+    ["rbxassetid://9000"]  = entityBehaviors.MONTNS,
     ["rbxassetid://139371088930869"]  = entityBehaviors.GUIDINGNEW
 }
 

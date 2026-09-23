@@ -1117,5 +1117,5 @@ setupRoom49Listener()
 setupGEAudio()
 setupRoom51Listener()
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingMinesMusic... Doors HardCore V10.4 by HeavenNow :)"
+hint.Text = "LoadingMinesMusic... Doors HardCore V10.5 by HeavenNow :)"
 game.Debris:AddItem(hint, 3)

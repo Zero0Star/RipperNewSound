@@ -40,7 +40,7 @@ OS.Thickness = 6
 OS.Parent = MC
 local TL = Instance.new("TextLabel")
 TL.Name = "Title"
-TL.Text = "HardCore V10.4"
+TL.Text = "HardCore V10.5"
 TL.FontFace = CF
 TL.TextSize = 32
 TL.TextColor3 = Color3.fromRGB(255, 240, 230)
@@ -62,7 +62,7 @@ TI.Name = "TopImage"
 TI.Size = UDim2.new(0.9, 0, 0.3, 0)
 TI.Position = UDim2.new(0.05, 0, 0.12, 0)
 TI.BackgroundTransparency = 1
-TI.Image = "rbxassetid://81648387394111"
+TI.Image = "rbxassetid://126272536662931"
 TI.ScaleType = Enum.ScaleType.Crop
 TI.Parent = MC
 local C2 = Instance.new("UICorner")
@@ -506,7 +506,8 @@ PB.MouseButton1Click:Connect(function()
     local RunService = game:GetService("RunService")
     local items = {
         "HardcoreOne",
-        "HardcoreTwo", 
+        "HardcoreTwo",
+        "HardcoreM", 
         "HardcoreITEM",
         "HardcoreFour",
         "HardcoremUSIC"
@@ -529,7 +530,7 @@ PB.MouseButton1Click:Connect(function()
             
             pcall(function()
                 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-                    .caption("HardCore Loading: " .. count .. "/5", true)
+                    .caption("HardCore Loading: " .. count .. "/6", true)
             end)
             
             if count == 5 then
@@ -563,6 +564,7 @@ PB.MouseButton1Click:Connect(function()
         local scriptUrls = {
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua2.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua.lua?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/Charm?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/Music.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/Item.lua?raw=true"

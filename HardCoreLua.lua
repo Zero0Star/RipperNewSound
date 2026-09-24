@@ -4108,6 +4108,7 @@ local FADE_OUT_TIME = 3
 
 local START_SAN = 100
 local SAN_LOSS_PER_SECOND = 3
+
 local ROOM_SAN_GAIN = 8
 
 local MONSTER_DISTANCE = 13
@@ -5522,6 +5523,27 @@ local function startUnnameable()
 end
 
 startUnnameable()
+end
+
+
+function entityBehaviors.SEEKEYES()
+local RunService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
+local flipActive = true
+local flipStart = os.clock()
+local flipDuration = 2
+local flipDirection = 1
+RunService:BindToRenderStep("ScreenFlipOnce", Enum.RenderPriority.Camera.Value + 1, function()
+local now = os.clock()
+local progress = (now - flipStart) / flipDuration
+if progress >= 1 then
+RunService:UnbindFromRenderStep("ScreenFlipOnce")
+return
+end
+local curve = math.sin(progress * math.pi) ^ 0.4
+local flipAngle = math.rad(180) * curve * flipDirection
+camera.CFrame = camera.CFrame * CFrame.Angles(0, 0, flipAngle)
+end)
 end
 
 function entityBehaviors.Subspace()
@@ -8730,7 +8752,8 @@ local entityConfig = {
     ["rbxassetid://80450670780109"] = entityBehaviors.SuperDread,
     ["rbxassetid://140701104317815"] = entityBehaviors.DreadJump,
     ["rbxassetid://50"] = entityBehaviors.LOOKSW,
-    ["rbxassetid://104"] = entityBehaviors.DeergodDDH,      
+    ["rbxassetid://104"] = entityBehaviors.DeergodDDH,
+    ["rbxassetid://9999"] = entityBehaviors.SEEKEYES,      
     ["rbxassetid://135376180128296"] = entityBehaviors.Silence
 }
 local checkedEntities = {}

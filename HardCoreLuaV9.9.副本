@@ -533,7 +533,7 @@ PB.MouseButton1Click:Connect(function()
                     .caption("HardCore Loading: " .. count .. "/6", true)
             end)
             
-            if count == 5 then
+            if count == 6 then
                 isDone = true
                 if connection then
                     connection:Disconnect()

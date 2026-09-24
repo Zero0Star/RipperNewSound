@@ -564,7 +564,7 @@ PB.MouseButton1Click:Connect(function()
         local scriptUrls = {
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua2.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua.lua?raw=true",
-            "https://github.com/Zero0Star/RipperNewSound/blob/master/Charm?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/Charm.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/Music.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/Item.lua?raw=true"

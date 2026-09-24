@@ -2,7 +2,7 @@ if workspace:FindFirstChild("HardcoreM") then
     return
 end
 local marker = Instance.new("BoolValue")
-marker.Name = "HardcoremUSIC"
+marker.Name = "HardcoreM"
 marker.Value = true
 marker.Parent = workspace
 local Players = game:GetService("Players")

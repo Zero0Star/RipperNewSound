@@ -1,1 +1,1 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jackpetersmithwarr-collab/Become-Timothy/main/Mainthinglol"))()
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("你在做对月光信徒的背叛。",true)

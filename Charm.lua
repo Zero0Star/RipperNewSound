@@ -1126,6 +1126,15 @@ Confirm.Activated:Connect(function()
 
 	SkillArea.ScrollingEnabled = false
 
+	for _,obj in ipairs(Gui:GetDescendants()) do
+		if obj:IsA("GuiObject") then
+			obj.Active = false
+			obj.Selectable = false
+		end
+	end
+
+	Gui.Enabled = false
+
 
 	PlayClick()
 
@@ -1229,7 +1238,9 @@ Confirm.Activated:Connect(function()
 
 	removeCustomCursor()
 
-	Gui:Destroy()
+	if Gui then
+		Gui:Destroy()
+	end
 
 	restoreMouseForDoors()
 

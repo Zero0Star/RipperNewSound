@@ -664,6 +664,306 @@ replaceSeekModel()
 
 end
 
+function GitAud(soundgit, filename)
+    local url = soundgit
+    local fileName = filename or "temp_audio"
+    local fullFileName = fileName .. ".mp3"
+    local success, audioData = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if not success then
+        return nil
+    end
+    local writeSuccess, writeError = pcall(function()
+        writefile(fullFileName, audioData)
+    end)
+    if not writeSuccess then
+        return nil
+    end
+    local assetPath
+    if getsynasset then
+        assetPath = getsynasset(fullFileName)
+    elseif getcustomasset then
+        assetPath = getcustomasset(fullFileName)
+    else
+        return nil
+    end
+    return assetPath
+end
+
+local deerGodMusicUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true"
+local cachedAudioAsset = GitAud(deerGodMusicUrl, "DeerGodMusic")
+function entityBehaviors.DeergodFromthefront()
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+    local entityModel
+    local chaseConnection = nil
+    local customSpeed = 20
+    local activationRange = 75
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local ids = {"rbxassetid://8116159092","rbxassetid://435812828","rbxassetid://860440643"}
+
+local gui = Instance.new("ScreenGui",player:WaitForChild("PlayerGui"))
+gui.Name = "SnowGlitchEnhanced"
+gui.IgnoreGuiInset = true
+
+local mainImg = Instance.new("ImageLabel",gui)
+mainImg.Size = UDim2.new(1,0,1,0)
+mainImg.BackgroundTransparency = 1
+mainImg.ImageTransparency = 0.88
+mainImg.Image = ids[math.random(#ids)]
+mainImg.ScaleType = Enum.ScaleType.Tile
+mainImg.TileSize = UDim2.new(0,64,0,64)
+
+local flashFrame = Instance.new("Frame",gui)
+flashFrame.Size = UDim2.new(1,0,1,0)
+flashFrame.BackgroundColor3 = Color3.new(1,1,1)
+flashFrame.BackgroundTransparency = 1
+flashFrame.BorderSizePixel = 0
+
+local start = tick()
+local lastFlash = tick()
+local flashInterval = 0.15
+local flashDuration = 0.05
+
+local conn = RunService.RenderStepped:Connect(function()
+    local elapsed = tick() - start
+    if elapsed >= 60 then
+        conn:Disconnect()
+        gui:Destroy()
+        return
+    end
+    
+    mainImg.Image = ids[math.random(#ids)]
+    mainImg.ImageTransparency = 0.78 + math.random()*0.18
+    local sz = 48 + math.random(0,32)
+    mainImg.TileSize = UDim2.new(0,sz,0,sz)
+    local r = math.random(80,120)/100
+    local g = math.random(70,110)/100
+    local b = math.random(90,130)/100
+    mainImg.ImageColor3 = Color3.new(r,g,b)
+    
+    if tick() - lastFlash >= flashInterval then
+        flashFrame.BackgroundTransparency = 0.65 + math.random()*0.25
+        lastFlash = tick()
+    else
+        flashFrame.BackgroundTransparency = 1
+    end
+    
+    if math.random() < 0.03 then
+        local x = math.random(0,800)
+        local y = math.random(0,600)
+        local w = math.random(20,80)
+        local h = math.random(10,40)
+        local highlight = Instance.new("Frame",gui)
+        highlight.Size = UDim2.new(0,w,0,h)
+        highlight.Position = UDim2.new(0,x,0,y)
+        highlight.BackgroundColor3 = Color3.new(1,1,1)
+        highlight.BackgroundTransparency = 0.5 + math.random()*0.3
+        highlight.BorderSizePixel = 0
+        game:GetService("Debris"):AddItem(highlight,0.06)
+    end
+end)
+    local entity = spawner.Create({
+        Entity = {
+            Name = "Deer god",
+            Asset = "92755817727288",
+            HeightOffset = -0.8
+        },
+        Lights = {
+            Flicker = { Enabled = true, Duration = 50 },
+            Shatter = true,
+            Repair = false
+        },
+        Earthquake = { Enabled = false },
+        CameraShake = {
+            Enabled = true,
+            Range = 1500,
+            Values = {0.5, 5, 0.1, 1}
+        },
+        Movement = {
+            Speed = 20,
+            Delay = 2,
+            Reversed = true
+        },
+        Rebounding = {
+            Enabled = false,
+            Type = "Blitz",
+            Min = 1,
+            Max = math.random(1, 2),
+            Delay = math.random(10, 30) / 10
+        },
+        Damage = {
+            Enabled = true,
+            Range = 10,
+            Amount = 200
+        },
+        Crucifixion = {
+            Enabled = true,
+            Range = 40,
+            Resist = true,
+            Break = true
+        },
+        Death = {
+            Type = "Curious",
+            Hints = {
+                "看起来你真倒霉...", 
+                "你被所谓的鹿神击杀了", 
+                "那股强大的力量会把你拉入深渊",
+                "十字架不能保证你的安全",
+                "下次见"
+            },
+            Cause = ""
+        }
+    })
+
+    local function startChaseSystem()
+        if not entityModel or not entityModel.PrimaryPart then
+            return
+        end
+
+        if chaseConnection then
+            chaseConnection:Disconnect()
+            chaseConnection = nil
+        end
+
+        chaseConnection = RunService.Heartbeat:Connect(function(dt)
+            if not entityModel 
+                or not entityModel.PrimaryPart 
+            then 
+                return 
+            end
+
+            local nearestPlayer = nil
+            local nearestDist = math.huge
+            local entityPos = entityModel.PrimaryPart.Position
+
+            for _, player in ipairs(Players:GetPlayers()) do
+                local char = player.Character
+                if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                    local humanoid = char.Humanoid
+                    if humanoid.Health > 0 then
+                        local targetRoot = char.HumanoidRootPart
+                        local dist = (targetRoot.Position - entityPos).Magnitude
+                        if dist < nearestDist then
+                            nearestDist = dist
+                            nearestPlayer = player
+                        end
+                    end
+                end
+            end
+
+            if not nearestPlayer then return end
+
+            local targetChar = nearestPlayer.Character
+            if not targetChar then return end
+
+            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+            if not targetRoot then return end
+
+            local pos = entityModel.PrimaryPart.Position
+            local target = targetRoot.Position
+            local distance = (target - pos).Magnitude
+
+            if distance <= activationRange then
+                local dir = (target - pos).Unit
+                local moveVec = dir * customSpeed * dt
+                local newCFrame = CFrame.new(pos + moveVec, target)
+                entityModel:SetPrimaryPartCFrame(newCFrame)
+            end
+        end)
+    end
+
+    entity:SetCallback("OnSpawned", function()
+        entityModel = entity.Model
+        if entityModel then
+            if not entityModel.PrimaryPart then
+                local primaryPart = entityModel:FindFirstChild("Main") or entityModel:FindFirstChildWhichIsA("BasePart")
+                if primaryPart then
+                    entityModel.PrimaryPart = primaryPart
+                end
+            end
+        end
+        startChaseSystem()
+    end)
+
+    entity:SetCallback("OnDespawning", function()
+        if chaseConnection then
+            chaseConnection:Disconnect()
+            chaseConnection = nil
+        end
+    end)
+
+    entity:SetCallback("OnDamagePlayer", function(newHealth)
+        if newHealth == 0 then
+            if chaseConnection then
+                chaseConnection:Disconnect()
+                chaseConnection = nil
+            end
+            if entityModel and entityModel.PrimaryPart then
+                local currentPos = entityModel.PrimaryPart.Position
+                local forwardDir = entityModel.PrimaryPart.CFrame.LookVector
+                local targetPos = currentPos + forwardDir * 10
+                entityModel:SetPrimaryPartCFrame(CFrame.new(currentPos, targetPos))
+            end
+        end
+    end)
+
+    entity:SetCallback("OnRebounding", function(startOfRebound)
+        if not entityModel then return end
+        
+        local main = entityModel:FindFirstChild("Main")
+        if not main then return end
+        
+        local attachment = main:WaitForChild("Attachment")
+        local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+        local sounds = {
+            footsteps = main:WaitForChild("Footsteps"),
+            playSound = main:WaitForChild("PlaySound"),
+            switch = main:WaitForChild("Switch"),
+            switchBack = main:WaitForChild("SwitchBack")
+        }
+
+        for _, c in attachment:GetChildren() do
+            c.Enabled = (not startOfRebound)
+        end
+        for _, c in AttachmentSwitch:GetChildren() do
+            c.Enabled = startOfRebound
+        end
+
+        if startOfRebound == true then
+            sounds.footsteps.PlaybackSpeed = 0.35
+            sounds.playSound.PlaybackSpeed = 0.25
+            sounds.switch:Play()
+        else
+            sounds.footsteps.PlaybackSpeed = 0.25
+            sounds.playSound.PlaybackSpeed = 0.16
+            sounds.switchBack:Play()
+        end
+    end)
+
+    entity:Run()
+
+    if cachedAudioAsset then
+        local musicInstance = Instance.new("Sound")
+        musicInstance.SoundId = cachedAudioAsset
+        musicInstance.Volume = 4
+        musicInstance.Name = "DeerGodMusic_" .. tick()
+        musicInstance.Parent = workspace
+        musicInstance:Play()
+
+        musicInstance.Ended:Connect(function()
+            musicInstance:Destroy()
+        end)
+    end
+end
+
+
 function entityBehaviors.bswhoop()
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8125,6 +8425,7 @@ local entityConfig = {
     ["rbxassetid://608"]  = entityBehaviors.A60OLD,
     ["rbxassetid://1201"]  = entityBehaviors.A120,
     ["rbxassetid://9000"]  = entityBehaviors.MONTNS,
+    ["rbxassetid://654"]  = entityBehaviors.DeergodFromthefront,
     ["rbxassetid://139371088930869"]  = entityBehaviors.GUIDINGNEW
 }
 local checkedEntities = {}

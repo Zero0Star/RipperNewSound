@@ -102,7 +102,7 @@ end
 function entityBehaviors.MONTNS()
 local concrete = workspace.MonumentEntity.Top.Concrete
 local decal = Instance.new("Decal")
-decal.Texture = "rbxassetid://5799739939"
+decal.Texture = "rbxassetid://98047471415519"
 decal.Parent = concrete
 end
 

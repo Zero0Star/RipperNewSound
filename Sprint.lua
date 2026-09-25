@@ -328,9 +328,8 @@ local function createUI()
 		sprintButton = Instance.new("ImageLabel")
 		sprintButton.Name = "SprintButton"
 		sprintButton.Parent = mobileGui
-		sprintButton.AnchorPoint = Vector2.new(0.5, 0.5)
-		sprintButton.Size = UDim2.new(0.18, 0, 0.18, 0)
-		sprintButton.Position = UDim2.new(0.86, 0, 0.67, 0)
+		sprintButton.Size = UDim2.new(0.25, 0, 0.2, 0)
+		sprintButton.Position = UDim2.new(0.8, 0, 0.25, 0)
 		sprintButton.BackgroundTransparency = 1
 		sprintButton.BorderSizePixel = 0
 		sprintButton.Image = CONFIG.MobileButtonImage
@@ -348,6 +347,12 @@ local function createUI()
 		clickArea.Text = ""
 		clickArea.AutoButtonColor = false
 		clickArea.ZIndex = 21
+
+		-- 手机端独立缩小体力条，电脑端保持原样
+		if isMobile then
+			sprintContainer.Size = UDim2.new(0.04, 0, 0.04, 0)
+			bar.Size = UDim2.new(0, 220, 0, 20)
+		end
 	end
 end
 local function getStaminaColor()

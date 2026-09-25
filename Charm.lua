@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
 
 local Player = Players.LocalPlayer
 
@@ -30,7 +31,7 @@ local Skills = {
 	{
 		Name="未选择",
 		Icon="rbxassetid://262619583",
-		Description="不选择任何魅力。\n以普通状态开始游戏。",
+		Description="不选择任何魅力\n以普通状态开始。(你是位勇士)",
 		Function=function()
 
 			local TextChatService =
@@ -46,32 +47,240 @@ local Skills = {
 
 	{
 		Name="肾上腺素",
-		Icon="rbxassetid://134424884048913",
-		Description="当你受伤时，你将会得到大幅度的速度加成。",
+		Icon="rbxassetid://484395794",
+		Description="当你受伤时,你将会得到大幅度的速度加成,(该技能获取加速不稳定)",
 		Function=function()
 
 			local TextChatService =
 			game:GetService("TextChatService")
 
 			TextChatService.TextChannels.RBXGeneral:SendAsync(
-				"Selected Adrenaline"
+				"选择 肾上腺素"
 			)
 
 		end
 	},
 
-
 	{
-		Name="护盾",
-		Icon="rbxassetid://11322093465",
-		Description="你的耐力值将会消失，增加护盾血量。",
+		Name="宝藏猎手",
+		Icon="rbxassetid://2246496691",
+		Description="你的物品爆率将会提高,同时你更吸引怪物仇恨。",
 		Function=function()
 
 			local TextChatService =
 			game:GetService("TextChatService")
 
 			TextChatService.TextChannels.RBXGeneral:SendAsync(
-				"Selected Shield"
+				"选择 宝藏猎手"
+			)
+
+		end
+	},
+
+	{
+		Name="急救包",
+		Icon="rbxassetid://107890189177071",
+		Description="每局游戏开始时你将会有更多医疗物品,但是你将不再会在遭遇战复活,获得随时随地复活一次的能力。",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 医疗包"
+			)
+
+		end
+	},
+
+	{
+		Name="跳跃",
+		Icon="rbxassetid://12510788215",
+		Description="你将会解锁跳跃,滑铲等能力,没有任何负面效果。",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 跳跃"
+			)
+
+		end
+	},
+
+	{
+		Name="最后一口气",
+		Icon="rbxassetid://3733610821",
+		Description="当你濒临死亡时,你将会获得短暂的复活,并且获取30秒的无敌状态,速度,力量将会增加100%,同时你的血量将会更低。",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 最后一口气"
+			)
+
+		end
+	},
+
+	{
+		Name="生化",
+		Icon="rbxassetid://136334141519402",
+		Description="你将会免疫所有辐射,爆炸,冻霜伤害,同时在你身边的所有生物将会收到持续性生化伤害。",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 生化"
+			)
+
+		end
+	},
+
+	{
+		Name="力量",
+		Icon="rbxassetid://2245735821",
+		Description="你所有的武器将会得到40%的伤害加成,同时你受到的伤害也会增加5%。",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 力量"
+			)
+
+		end
+	},
+
+	{
+		Name="信徒",
+		Icon="rbxassetid://13050415802",
+		Description="你将更受到星光与月光的庇护,但同时你不能选择红光。",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 信徒"
+			)
+
+		end
+	},
+
+	{
+		Name="幸运",
+		Icon="rbxassetid://14513064598",
+		Description="每隔一段时间,你将获得一份随机物品或随机效果。",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 幸运"
+			)
+
+		end
+	},
+
+	{
+		Name="夜视",
+		Icon="rbxassetid://524302408",
+		Description="你将会拥有夜视与透视效果,但同时你将看不见所有的队友。",
+		Function=function()
+                local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local function hideModel(model)
+	for _,v in pairs(model:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.Transparency = 1
+		elseif v:IsA("Decal") or v:IsA("Texture") then
+			v.Transparency = 1
+		elseif v:IsA("Accessory") then
+			local h = v:FindFirstChild("Handle")
+			if h then
+				h.Transparency = 1
+			end
+		elseif v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") then
+			v:Destroy()
+		end
+	end
+end
+local function scan()
+	for _,v in pairs(workspace:GetChildren()) do
+		if v:IsA("Model") then
+			local hum = v:FindFirstChildOfClass("Humanoid")
+			if hum and v ~= LocalPlayer.Character then
+				hideModel(v)
+			end
+		end
+	end
+end
+scan()
+workspace.ChildAdded:Connect(function(v)
+	task.wait(0.2)
+	if v:IsA("Model") then
+		local hum = v:FindFirstChildOfClass("Humanoid")
+		if hum and v ~= LocalPlayer.Character then
+			hideModel(v)
+		end
+	end
+end)
+local Lighting = game:GetService("Lighting")
+Lighting.GlobalShadows = false
+Lighting.Brightness = 5
+Lighting.ExposureCompensation = 0.3
+Lighting.Ambient = Color3.fromRGB(180,180,180)
+Lighting.OutdoorAmbient = Color3.fromRGB(200,200,200)
+Lighting.FogEnd = 100000
+for _,v in pairs(Lighting:GetChildren()) do
+	if v:IsA("ColorCorrectionEffect") then
+		v:Destroy()
+	elseif v:IsA("BloomEffect") then
+		v:Destroy()
+	elseif v:IsA("Atmosphere") then
+		v.Density = 0.1
+		v.Haze = 0
+	end
+end
+local cc = Instance.new("ColorCorrectionEffect")
+cc.Brightness = 0.1
+cc.Contrast = 0.05
+cc.Saturation = 0.1
+cc.TintColor = Color3.fromRGB(255,255,255)
+cc.Parent = Lighting
+local bloom = Instance.new("BloomEffect")
+bloom.Intensity = 0.15
+bloom.Size = 24
+bloom.Threshold = 2
+bloom.Parent = Lighting
+			local TextChatService =
+			game:GetService("TextChatService")
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 夜视"
+                        
+			)
+
+		end
+	},
+
+	{
+		Name="护盾",
+		Icon="rbxassetid://11322093465",
+		Description="你的耐力值将会消失,增加护盾血量。(这下我什么都不怕了。)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 护盾"
 			)
 			local Stamina =
 			game.Players.LocalPlayer.PlayerGui:FindFirstChild(
@@ -87,14 +296,14 @@ local Skills = {
 
 }
 
-for i=1,7 do
+for i=1,15 do
 
 	table.insert(
 		Skills,
 		{
 			Name="未解锁",
 			Icon="rbxassetid://15117261700",
-			Description="???",
+			Description="需要解锁成就",
 			Function=function()
 
 			end
@@ -116,7 +325,7 @@ local function PlayClick()
 
 
 	Sound.Volume =
-	1
+	10
 
 	Sound.Parent =
 	workspace
@@ -369,7 +578,25 @@ Select
 
 
 local SkillArea =
-Instance.new("Frame")
+Instance.new("ScrollingFrame")
+
+SkillArea.ScrollBarThickness =
+8
+
+SkillArea.ScrollBarImageColor3 =
+BORDER_COLOR
+
+SkillArea.AutomaticCanvasSize =
+Enum.AutomaticSize.Y
+
+SkillArea.CanvasSize =
+UDim2.new(0,0,0,0)
+
+SkillArea.ScrollingDirection =
+Enum.ScrollingDirection.Y
+
+SkillArea.ClipsDescendants =
+true
 
 
 SkillArea.Size =
@@ -897,6 +1124,8 @@ end
 
 Confirm.Activated:Connect(function()
 
+	SkillArea.ScrollingEnabled = false
+
 
 	PlayClick()
 
@@ -938,6 +1167,18 @@ Confirm.Activated:Connect(function()
 					BackgroundTransparency = 1
 				}
 			):Play()
+
+		elseif v:IsA("ScrollingFrame") then
+
+			TweenService:Create(
+				v,
+				Fade,
+				{
+					BackgroundTransparency = 1,
+					ScrollBarImageTransparency = 1
+				}
+			):Play()
+
 
 		elseif v:IsA("TextLabel")
 		or v:IsA("TextButton") then
@@ -985,6 +1226,8 @@ Confirm.Activated:Connect(function()
 	task.wait(
 		0.8
 	)
+
+	removeCustomCursor()
 
 	Gui:Destroy()
 

@@ -117,7 +117,7 @@ end
 function entityBehaviors.CURXT()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local FollowPlayerName = "QWQ75321"
+local FollowPlayerName = "SparkleAtom"
 local ModelID = "rbxassetid://82956537226998"
 local AnimationID = "rbxassetid://122746752555782"
 local RightOffset = 4

@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-local targetPlayerName = "sppvve"
+local targetPlayerName = "goat_qiu"
 local modelId = 81410369891419
 
 local targetPlayer = Players:WaitForChild(targetPlayerName)

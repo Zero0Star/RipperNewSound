@@ -77,6 +77,7 @@ local Skills = {
 		end
 	},
 
+
 	{
 		Name="急救包",
 		Icon="rbxassetid://107890189177071",
@@ -265,6 +266,38 @@ bloom.Parent = Lighting
 			TextChatService.TextChannels.RBXGeneral:SendAsync(
 				"选择 夜视"
                         
+			)
+
+		end
+	},
+
+	{
+		Name="爆破",
+		Icon="rbxassetid://15889469852",
+		Description="你将对爆破伤害减免40%,同时开出爆炸类型武器的概率将会提高,但你有概率炸死队友。",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 爆破"
+			)
+
+		end
+	},
+
+	{
+		Name="恶搞",
+		Icon="rbxassetid://76564632589409",
+		Description="高的风险,高回报。(需要成就 Eternity of Land)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 恶搞"
 			)
 
 		end

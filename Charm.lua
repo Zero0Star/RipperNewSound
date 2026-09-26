@@ -304,6 +304,54 @@ bloom.Parent = Lighting
 	},
 
 	{
+		Name="邪教徒",
+		Icon="rbxassetid://137068949699451",
+		Description="真正的教徒,在游戏内你不再获得建筑师们的帮助,但大幅度提升身体属性。(需要成就 Why are you running?)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 邪教徒"
+			)
+
+		end
+	},
+
+	{
+		Name="先驱",
+		Icon="rbxassetid://12711425013",
+		Description="当你随着游戏越后期,你将获得更强大的力量,但力量有隐藏着的负面效果。(需要成就 Why are you running?)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 先驱"
+			)
+
+		end
+	},
+
+	{
+		Name="憎恨",
+		Icon="rbxassetid://4675906142",
+		Description="所有生物将会对你仇恨拉满,同时你将会被HatRed所庇护。(需要成就 Hate Tracker)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 憎恨"
+			)
+
+		end
+	},
+
+	{
 		Name="护盾",
 		Icon="rbxassetid://11322093465",
 		Description="你的耐力值将会消失,增加护盾血量。(这下我什么都不怕了。)",

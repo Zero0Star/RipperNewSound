@@ -1386,329 +1386,289 @@ if sound and sound.Parent then sound:Destroy() end
 end
 
 function entityBehaviors.DEBUGONE()
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local player = Players.LocalPlayer
-if not player or not player:FindFirstChild("PlayerGui") then return end
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = player.PlayerGui
-screenGui.Name = "BlackOverlay"
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.DisplayOrder = 2147483647
-screenGui.ResetOnSpawn = false 
+local pet = Workspace:FindFirstChild("PetFollower")
 
-local frame = Instance.new("Frame")
-frame.Parent = screenGui
-frame.Size = UDim2.new(1, 0, 1, 0)
-frame.Position = UDim2.new(0, 0, 0, 0)
-frame.AnchorPoint = Vector2.new(0, 0)
-frame.BackgroundColor3 = Color3.new(0, 0, 0)
-frame.BorderSizePixel = 0
-frame.BackgroundTransparency = 1 
-frame.ZIndex = 1000
+if not pet then
+	return
+end
+local humanoid = pet:FindFirstChildOfClass("Humanoid")
 
-frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-    frame.Size = UDim2.new(1, 0, 1, 0)
-end)
+if not humanoid then
+	return
+end
+local animator = humanoid:FindFirstChildOfClass("Animator")
 
-local sound = Instance.new("Sound")
-sound.SoundId = "rbxassetid://127988102685688"
-sound.Volume = 5
-sound.Parent = workspace
+if not animator then
+	
+	animator = Instance.new("Animator")
+	animator.Parent = humanoid
+	
+end
+local idleAnimationId = "rbxassetid://122746752555782"
+local skillAnimationId = "rbxassetid://119462812450656"
+local explosionSoundId = "rbxassetid://139900006476219"
+local idleAnimation = Instance.new("Animation")
+idleAnimation.AnimationId = idleAnimationId
 
-local function fadeTo(targetTransparency, duration)
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(frame, tweenInfo, {BackgroundTransparency = targetTransparency})
-    tween:Play()
-    return tween
+
+local idleTrack =
+	animator:LoadAnimation(idleAnimation)
+
+
+idleTrack.Priority =
+	Enum.AnimationPriority.Action
+
+
+idleTrack.Looped = true
+
+
+
+local function setParticles(state)
+
+	local leftHand =
+		pet:FindFirstChild("LeftHand", true)
+
+
+	if not leftHand then
+		return
+	end
+
+
+	local palma =
+		leftHand:FindFirstChild("Palma")
+
+
+	if not palma then
+		return
+	end
+
+
+	for _,v in ipairs(palma:GetDescendants()) do
+		
+		if v:IsA("ParticleEmitter") then
+			
+			v.Enabled = state
+			
+		end
+		
+	end
+
 end
 
-task.wait(1)
-local fadeInTween = fadeTo(0, 1)
-sound:Play()
-fadeInTween.Completed:Wait()
-fadeTo(1, 1).Completed:Wait()
-game.Debris:AddItem(screenGui, sound.TimeLength + 1)end
-function entityBehaviors.luckblock1()
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 
-local REPLACEMENT_CONFIG = {
-    ["bread"] = {assetId = 116624705319388}
-}
 
-local CHECK_INTERVAL = 0.3
-local trackedTargets = {}
+local function runFinalCameraShake()
 
-local function loadAsset(assetId)
-    local success, result = pcall(function()
-        return game:GetObjects("rbxassetid://" .. assetId)[1]
-    end)
-    if success and result then
-        return result:Clone()
-    end
-    return nil
+	local cameraShakerModule =
+		ReplicatedStorage:FindFirstChild("CameraShaker")
+
+
+	if not cameraShakerModule then
+		return
+	end
+
+
+	local CameraShaker =
+		require(cameraShakerModule)
+
+
+	local camera =
+		Workspace.CurrentCamera
+
+
+	local camShake =
+		CameraShaker.new(
+			Enum.RenderPriority.Camera.Value,
+			function(shakeCf)
+
+				if camera then
+
+					camera.CFrame =
+						camera.CFrame
+						*
+						shakeCf
+
+				end
+
+			end
+		)
+
+
+	camShake:Start()
+
+
+	camShake:ShakeOnce(
+		50,
+		200,
+		0.1,
+		0.3,
+		2,
+		0.5
+	)
+
 end
 
-local function disableCollision(model)
-    for _, part in ipairs(model:GetDescendants()) do
-        if part:IsA("BasePart") or part:IsA("MeshPart") then
-            part.CanCollide = false
-            part.CanTouch = false
-            part.CanQuery = false
-        end
-    end
+
+
+local function spawnEntities()
+
+	local Event =
+		ReplicatedStorage
+		.RemotesFolder
+		.AdminPanelRunCommand
+
+
+
+	Event:FireServer(
+		"Spawn Custom Entity",
+		{
+			["Fog Image ID"] = "9712725118",
+			["Face Image ID"] = "9712725118",
+			["Fog Color"] = Color3.new(0,0,0),
+			Rebounds = 0,
+
+			["Far Sound"] = {
+				Pitch = 1,
+				AudioId = "36",
+				Speed = 0
+			},
+
+			["Light Color"] = Color3.new(0,0,0),
+			Speed = 0,
+
+			["Close Sound"] = {
+				Pitch = 1,
+				AudioId = "36",
+				Speed = 0
+			},
+
+			Delay = 100,
+			Damage = 0
+		}
+	)
+
+
+
+	Event:FireServer(
+		"Spawn Custom Entity",
+		{
+			["Fog Image ID"] = "9712725118",
+			["Face Image ID"] = "9712725118",
+			["Fog Color"] = Color3.new(0,0,0),
+			Rebounds = 0,
+
+			["Far Sound"] = {
+				Pitch = 1,
+				AudioId = "35",
+				Speed = 0
+			},
+
+			["Light Color"] = Color3.new(0,0,0),
+			Speed = 0,
+
+			["Close Sound"] = {
+				Pitch = 1,
+				AudioId = "35",
+				Speed = 0
+			},
+
+			Delay = 100,
+			Damage = 0
+		}
+	)
+
+
+
+	Event:FireServer(
+		"Spawn Custom Entity",
+		{
+			["Fog Image ID"] = "9712725118",
+			["Face Image ID"] = "9712725118",
+			["Fog Color"] = Color3.new(0,0,0),
+			Rebounds = 0,
+
+			["Far Sound"] = {
+				Pitch = 1,
+				AudioId = "32",
+				Speed = 0
+			},
+
+			["Light Color"] = Color3.new(0,0,0),
+			Speed = 0,
+
+			["Close Sound"] = {
+				Pitch = 1,
+				AudioId = "32",
+				Speed = 0
+			},
+
+			Delay = 100,
+			Damage = 0
+		}
+	)
+
 end
 
-local function hideObject(obj)
-    if obj:IsA("BasePart") or obj:IsA("MeshPart") then
-        if not trackedTargets[obj] then
-            trackedTargets[obj] = {originalTransparency = obj.Transparency}
-        end
-        obj.Transparency = 1
-        if obj:IsA("Tool") and obj.Handle then
-            if not trackedTargets[obj].handleTransparency then
-                trackedTargets[obj].handleTransparency = obj.Handle.Transparency
-            end
-            obj.Handle.Transparency = 1
-        end
-    elseif obj:IsA("Model") then
-        if not trackedTargets[obj] then
-            trackedTargets[obj] = {originalParts = {}}
-        end
-        for _, part in ipairs(obj:GetDescendants()) do
-            if part:IsA("BasePart") or part:IsA("MeshPart") then
-                trackedTargets[obj].originalParts[part] = part.Transparency
-                part.Transparency = 1
-            end
-        end
-    end
-end
 
-local function showObject(obj)
-    local data = trackedTargets[obj]
-    if not data then return end
-    if obj:IsA("BasePart") or obj:IsA("MeshPart") then
-        if data.originalTransparency then
-            obj.Transparency = data.originalTransparency
-        end
-        if obj:IsA("Tool") and obj.Handle and data.handleTransparency then
-            obj.Handle.Transparency = data.handleTransparency
-        end
-    elseif obj:IsA("Model") and data.originalParts then
-        for part, transparency in pairs(data.originalParts) do
-            if part and part.Parent then
-                part.Transparency = transparency
-            end
-        end
-    end
-end
 
-local function getConfig(itemName)
-    local nameLower = itemName:lower()
-    return REPLACEMENT_CONFIG[nameLower]
-end
+local function playSkill()
 
-local function findTargets()
-    local targets = {}
-    
-    for _, item in ipairs(workspace:GetChildren()) do
-        local config = getConfig(item.Name)
-        
-        if item:IsA("Model") and config and item.Name ~= "Drops" then
-            table.insert(targets, {target = item, config = config})
-        end
-        
-        if item:IsA("Tool") and config then
-            table.insert(targets, {target = item, config = config})
-        end
-        
-        if (item:IsA("BasePart") or item:IsA("MeshPart")) and config then
-            table.insert(targets, {target = item, config = config})
-        end
-        
-        if item:IsA("Model") and item.Name ~= "Drops" then
-            for _, child in ipairs(item:GetDescendants()) do
-                local childConfig = getConfig(child.Name)
-                
-                if child:IsA("Model") and childConfig then
-                    table.insert(targets, {target = child, config = childConfig})
-                end
-                
-                if child:IsA("Tool") and childConfig then
-                    table.insert(targets, {target = child, config = childConfig})
-                end
-                
-                if (child:IsA("BasePart") or child:IsA("MeshPart")) and childConfig then
-                    table.insert(targets, {target = child, config = childConfig})
-                end
-            end
-        end
-    end
-    
-    local dropsFolder = workspace:FindFirstChild("Drops")
-    if dropsFolder then
-        for _, item in ipairs(dropsFolder:GetChildren()) do
-            if item:IsA("Model") then
-                local config = getConfig(item.Name)
-                if config then
-                    table.insert(targets, {target = item, config = config})
-                end
-            end
-        end
-    end
-    
-    return targets
-end
 
-local function getPosition(target)
-    if target:IsA("BasePart") or target:IsA("MeshPart") then
-        return target.CFrame
-    elseif target:IsA("Tool") and target.Handle then
-        return target.Handle.CFrame
-    elseif target:IsA("Model") then
-        if target.PrimaryPart then
-            return target:GetPivot()
-        elseif target:FindFirstChildWhichIsA("BasePart") then
-            return target:FindFirstChildWhichIsA("BasePart").CFrame
-        end
-    end
-    return nil
-end
+	if idleTrack.IsPlaying then
+		
+		idleTrack:Stop()
+		
+	end
 
-local function createModel(target, assetId)
-    local model = loadAsset(assetId)
-    if not model then return nil end
-    model.Name = "LuckBlock"
-    model.Parent = workspace
-    disableCollision(model)
-    if not model.PrimaryPart then
-        if model:FindFirstChildWhichIsA("BasePart") then
-            model.PrimaryPart = model:FindFirstChildWhichIsA("BasePart")
-        else
-            model:Destroy()
-            return nil
-        end
-    end
-    
-    local targetPos = getPosition(target)
-    if targetPos then
-        model:PivotTo(targetPos)
-    end
-    return model
-end
 
-local function updatePosition(data, target)
-    if not data.effect or not data.effect.Parent or not target or not target.Parent then
-        return false
-    end
-    local targetPos = getPosition(target)
-    if not targetPos then
-        return false
-    end
-    data.effect:PivotTo(targetPos)
-    return true
-end
 
-local function startTracking(target, config)
-    if trackedTargets[target] then return trackedTargets[target] end
-    
-    local effect = createModel(target, config.assetId)
-    if not effect then return end
-    
-    hideObject(target)
-    
-    trackedTargets[target] = {
-        effect = effect, 
-        target = target,
-        config = config
-    }
-    
-    local data = trackedTargets[target]
-    data.connection = RunService.RenderStepped:Connect(function()
-        if not updatePosition(data, target) then
-            if data.connection then
-                data.connection:Disconnect()
-            end
-            if data.effect and data.effect.Parent then
-                data.effect:Destroy()
-            end
-            trackedTargets[target] = nil
-        end
-    end)
-    
-    return trackedTargets[target]
-end
+	local skillAnimation =
+		Instance.new("Animation")
 
-local function stopTracking(target, restore)
-    local data = trackedTargets[target]
-    if not data then return end
-    
-    if restore then
-        showObject(target)
-    end
-    
-    if data.effect and data.effect.Parent then
-        data.effect:Destroy()
-    end
-    
-    if data.connection then
-        data.connection:Disconnect()
-    end
-    
-    trackedTargets[target] = nil
-end
 
-local function cleanup()
-    for target, _ in pairs(trackedTargets) do
-        if not target or not target.Parent then
-            if trackedTargets[target].effect and trackedTargets[target].effect.Parent then
-                trackedTargets[target].effect:Destroy()
-            end
-            if trackedTargets[target].connection then
-                trackedTargets[target].connection:Disconnect()
-            end
-            trackedTargets[target] = nil
-        end
-    end
-end
+	skillAnimation.AnimationId =
+		skillAnimationId
 
-local function start()
-    local lastCheck = 0
-    while true do
-        local currentTime = tick()
-        if currentTime - lastCheck >= CHECK_INTERVAL then
-            lastCheck = currentTime
-            cleanup()
-            local allTargets = findTargets()
-            for _, targetData in ipairs(allTargets) do
-                if not trackedTargets[targetData.target] then
-                    startTracking(targetData.target, targetData.config)
-                end
-            end
-            for target, data in pairs(trackedTargets) do
-                if target and target.Parent then
-                    local valid = false
-                    local parent = target.Parent
-                    while parent do
-                        if parent == workspace or (parent.Name == "Drops" and parent.Parent == workspace) or (parent:IsA("Model") and parent.Parent == workspace) then
-                            valid = true
-                            break
-                        end
-                        parent = parent.Parent
-                    end
-                    if not valid then
-                        stopTracking(target, true)
-                    end
-                end
-            end
-        end
-        RunService.Heartbeat:Wait()
-    end
+
+
+	local skillTrack =
+		animator:LoadAnimation(skillAnimation)
+
+
+
+	skillTrack.Priority =
+		Enum.AnimationPriority.Action
+
+
+	skillTrack.Looped = false
+
+
+	skillTrack:Play()
+	task.wait(0.4)
+	setParticles(true)
+	local sound =
+		Instance.new("Sound")
+	sound.SoundId =
+		explosionSoundId
+	sound.Volume = 8
+
+	sound.Parent =
+		pet
+	sound:Play()
+	runFinalCameraShake()
+	spawnEntities()
+	task.wait(1)
+	setParticles(false)
+	skillTrack.Stopped:Wait()
+	skillTrack:Destroy()
+	idleTrack:Play()
+
 end
-task.spawn(start)
+playSkill()
 end
 function entityBehaviors.TwoKane1()
 local Players = game:GetService("Players")

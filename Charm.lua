@@ -64,7 +64,7 @@ local Skills = {
 	{
 		Name="宝藏猎手",
 		Icon="rbxassetid://2246496691",
-		Description="你的物品爆率将会提高,同时你更吸引怪物仇恨。",
+		Description="你的物品与金币爆率将会提高,同时你更吸引怪物仇恨。",
 		Function=function()
 
 			local TextChatService =
@@ -81,7 +81,7 @@ local Skills = {
 	{
 		Name="急救包",
 		Icon="rbxassetid://107890189177071",
-		Description="每局游戏开始时你将会有更多医疗物品,但是你将不再会在遭遇战复活,获得随时随地复活一次的能力。",
+		Description="每局游戏开始时你将会有更多医疗物品,但是你将不再会在遭遇战复活,获得随时随地复活两次的能力。",
 		Function=function()
 
 			local TextChatService =
@@ -145,7 +145,7 @@ local Skills = {
 	{
 		Name="力量",
 		Icon="rbxassetid://2245735821",
-		Description="你所有的武器将会得到40%的伤害加成,同时你受到的伤害也会增加5%。",
+		Description="你所有的武器将会得到50%的伤害加成,同时你受到的伤害也会增加5%。",
 		Function=function()
 
 			local TextChatService =
@@ -161,7 +161,7 @@ local Skills = {
 	{
 		Name="信徒",
 		Icon="rbxassetid://13050415802",
-		Description="你将更受到星光与月光的庇护,但同时你不能选择红光。",
+		Description="你将会随即成为强大建筑师们的随机一员教徒。",
 		Function=function()
 
 			local TextChatService =
@@ -177,7 +177,7 @@ local Skills = {
 	{
 		Name="幸运",
 		Icon="rbxassetid://14513064598",
-		Description="每隔一段时间,你将获得一份随机物品或随机效果。",
+		Description="每隔一段时间,你将获得一份随机物品或随机效果,但有时并不全是正确的。",
 		Function=function()
 
 			local TextChatService =
@@ -352,6 +352,312 @@ bloom.Parent = Lighting
 	},
 
 	{
+		Name="友好协议",
+		Icon="rbxassetid://2614876855",
+		Description="四神将不会再对你感兴趣,同时你在也没有办法使用星光与月光道具。(需要成就 Indescribable)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 友好协议"
+			)
+
+		end
+	},
+
+
+	{
+		Name="霸体",
+		Icon="rbxassetid://81302409089961",
+		Description="在使用技能后的30秒内,部分怪物将无法对你造成伤害,此技能没有任何负面效果。(需要成就 Land of Eternity)",
+		Function=function()
+                  local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local TextChatService = game:GetService("TextChatService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local ACTIVE_TIME = 30
+local COOLDOWN_TIME = 120
+local BAR_COLOR = Color3.fromRGB(83, 103, 255)
+
+local ready = true
+local active = false
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "SkillGui"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = playerGui
+
+local barOuter = Instance.new("Frame")
+barOuter.Name = "SkillBar"
+barOuter.AnchorPoint = Vector2.new(1, 1)
+barOuter.Position = UDim2.new(1, -35, 1, -105)
+barOuter.Size = UDim2.new(0, 260, 0, 22)
+barOuter.BackgroundColor3 = Color3.fromRGB(10, 12, 22)
+barOuter.BorderSizePixel = 0
+barOuter.Parent = gui
+
+local outerCorner = Instance.new("UICorner")
+outerCorner.CornerRadius = UDim.new(0, 7)
+outerCorner.Parent = barOuter
+
+local outerStroke = Instance.new("UIStroke")
+outerStroke.Color = BAR_COLOR
+outerStroke.Thickness = 3
+outerStroke.Parent = barOuter
+
+local innerBack = Instance.new("Frame")
+innerBack.Name = "InnerBack"
+innerBack.Position = UDim2.new(0, 5, 0, 5)
+innerBack.Size = UDim2.new(1, -10, 1, -10)
+innerBack.BackgroundColor3 = Color3.fromRGB(14, 17, 30)
+innerBack.BorderSizePixel = 0
+innerBack.ClipsDescendants = true
+innerBack.Parent = barOuter
+
+local innerCorner = Instance.new("UICorner")
+innerCorner.CornerRadius = UDim.new(0, 4)
+innerCorner.Parent = innerBack
+
+local fill = Instance.new("Frame")
+fill.Name = "Energy"
+fill.AnchorPoint = Vector2.new(1, 0)
+fill.Position = UDim2.new(1, 0, 0, 0)
+fill.Size = UDim2.new(1, 0, 1, 0)
+fill.BackgroundColor3 = BAR_COLOR
+fill.BorderSizePixel = 0
+fill.Parent = innerBack
+
+local fillCorner = Instance.new("UICorner")
+fillCorner.CornerRadius = UDim.new(0, 4)
+fillCorner.Parent = fill
+
+local skillEffect = Instance.new("ImageLabel")
+skillEffect.Name = "SkillEffect"
+skillEffect.AnchorPoint = Vector2.new(0.5, 0.5)
+skillEffect.Position = UDim2.fromScale(0.5, 0.5)
+skillEffect.Size = UDim2.fromScale(1, 1)
+skillEffect.BackgroundTransparency = 1
+skillEffect.Image = "rbxassetid://6110752068"
+skillEffect.ImageColor3 = BAR_COLOR
+skillEffect.ImageTransparency = 1
+skillEffect.ScaleType = Enum.ScaleType.Crop
+skillEffect.Visible = false
+skillEffect.ZIndex = 50
+skillEffect.Parent = gui
+
+local mobileButton
+
+if UserInputService.TouchEnabled then
+	mobileButton = Instance.new("ImageButton")
+	mobileButton.Name = "SkillButton"
+	mobileButton.Position = UDim2.new(0, 25, 0, 455)
+	mobileButton.Size = UDim2.new(0, 102, 0, 102)
+	mobileButton.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
+	mobileButton.BackgroundTransparency = 0.15
+	mobileButton.Image = "rbxassetid://81302409089961"
+	mobileButton.AutoButtonColor = true
+	mobileButton.Parent = gui
+
+	local buttonCorner = Instance.new("UICorner")
+	buttonCorner.CornerRadius = UDim.new(1, 0)
+	buttonCorner.Parent = mobileButton
+
+	local buttonStroke = Instance.new("UIStroke")
+	buttonStroke.Color = Color3.fromRGB(130, 130, 130)
+	buttonStroke.Thickness = 2
+	buttonStroke.Parent = mobileButton
+end
+
+local function playSkillSound()
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://136250070756091"
+	sound.Volume = 4
+	sound.Parent = playerGui
+
+	sound.Ended:Once(function()
+		sound:Destroy()
+	end)
+
+	sound:Play()
+end
+
+local function showScreenEffect()
+	skillEffect.Visible = true
+	skillEffect.ImageTransparency = 1
+
+	local fadeIn = TweenService:Create(
+		skillEffect,
+		TweenInfo.new(
+			1,
+			Enum.EasingStyle.Sine,
+			Enum.EasingDirection.Out
+		),
+		{
+			ImageTransparency = 0
+		}
+	)
+
+	fadeIn:Play()
+end
+
+local function hideScreenEffect()
+	local fadeOut = TweenService:Create(
+		skillEffect,
+		TweenInfo.new(
+			1,
+			Enum.EasingStyle.Sine,
+			Enum.EasingDirection.In
+		),
+		{
+			ImageTransparency = 1
+		}
+	)
+
+	fadeOut:Play()
+	fadeOut.Completed:Wait()
+
+	skillEffect.Visible = false
+end
+
+local function findHumanoid(character)
+	if not character then
+		return nil
+	end
+
+	return character:FindFirstChild("Humanoid")
+		or character:FindFirstChild("DEBUGHUMAN")
+		or character:FindFirstChildOfClass("Humanoid")
+end
+
+local function setHumanoidDebug()
+	local humanoid = findHumanoid(player.Character)
+
+	if humanoid then
+		humanoid.Name = "DEBUGHUMAN"
+	end
+end
+
+local function restoreHumanoid()
+	local character = player.Character
+
+	if not character then
+		return
+	end
+
+	local humanoid = character:FindFirstChild("DEBUGHUMAN")
+		or character:FindFirstChildOfClass("Humanoid")
+
+	if humanoid then
+		humanoid.Name = "Humanoid"
+	end
+end
+
+local function setMobileEnabled(enabled)
+	if mobileButton then
+		mobileButton.Active = enabled
+		mobileButton.AutoButtonColor = enabled
+		mobileButton.ImageTransparency = enabled and 0 or 0.5
+	end
+end
+
+local function useSkill()
+	if not ready or active then
+		return
+	end
+
+	ready = false
+	active = true
+
+	setMobileEnabled(false)
+
+	playSkillSound()
+	showScreenEffect()
+	setHumanoidDebug()
+
+	local drainTween = TweenService:Create(
+		fill,
+		TweenInfo.new(
+			0.5,
+			Enum.EasingStyle.Quart,
+			Enum.EasingDirection.Out
+		),
+		{
+			Size = UDim2.new(0, 0, 1, 0)
+		}
+	)
+
+	drainTween:Play()
+
+	task.delay(ACTIVE_TIME, function()
+		restoreHumanoid()
+		active = false
+
+		task.spawn(hideScreenEffect)
+
+		fill.Size = UDim2.new(0, 0, 1, 0)
+
+		local rechargeTween = TweenService:Create(
+			fill,
+			TweenInfo.new(
+				COOLDOWN_TIME,
+				Enum.EasingStyle.Linear,
+				Enum.EasingDirection.Out
+			),
+			{
+				Size = UDim2.new(1, 0, 1, 0)
+			}
+		)
+
+		rechargeTween:Play()
+		rechargeTween.Completed:Wait()
+
+		ready = true
+		setMobileEnabled(true)
+	end)
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then
+		return
+	end
+
+	if input.KeyCode == Enum.KeyCode.G then
+		useSkill()
+	end
+end)
+
+if mobileButton then
+	mobileButton.Activated:Connect(function()
+		useSkill()
+	end)
+end
+
+TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 霸体"
+)
+
+player.CharacterAdded:Connect(function(character)
+	task.wait(1)
+
+	if active then
+		local humanoid = findHumanoid(character)
+
+		if humanoid then
+			humanoid.Name = "DEBUGHUMAN"
+		end
+	end
+end)
+
+		end
+	},
+
+	{
 		Name="护盾",
 		Icon="rbxassetid://11322093465",
 		Description="你的耐力值将会消失,增加护盾血量。(这下我什么都不怕了。)",
@@ -377,7 +683,7 @@ bloom.Parent = Lighting
 
 }
 
-for i=1,15 do
+for i=1,14 do
 
 	table.insert(
 		Skills,
@@ -1067,9 +1373,6 @@ for _,Data in ipairs(Skills) do
 
 	Button.Parent =
 	SkillArea
-
-
-
 
 
 	local Corner =

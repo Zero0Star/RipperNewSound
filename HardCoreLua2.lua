@@ -7615,7 +7615,7 @@ end
 PreloadReboundSounds()
 
 function entityBehaviors.REBOUNDSW()
-    local testModelId = 90731910259298
+    local testModelId = 91875007809375
 
     local function PlayPreloadedSound(soundName, volume)
         volume = volume or 1
@@ -7763,7 +7763,7 @@ function entityBehaviors.REBOUNDSW()
             v323.BackgroundTransparency = 1
             v323.Position = UDim2.new(0.486631036, 0, 0.479363143, 0)
             v323.Size = UDim2.new(0.0267379656, 0, 0.0387096703, 0)
-            v323.Image = "rbxassetid://97823818277141"
+            v323.Image = "rbxassetid://79906427468430"
             
             v324.Name = "JSSIZE"
             v324.Parent = vu321
@@ -8026,7 +8026,7 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
 end
 
 function entityBehaviors.REBOUNDrebound()
-local entity = spawner.Create({Entity = {Name = "Rebound",Asset = "108529386798441",HeightOffset = 2
+local entity = spawner.Create({Entity = {Name = "Rebound",Asset = "118059742443183",HeightOffset = 2
 },Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},
 Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {0.5, 50, 0.1, 1}},
 Movement = {Speed = 140,Delay = 0,Reversed = false},Rebounding = {

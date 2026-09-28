@@ -370,16 +370,214 @@ bloom.Parent = Lighting
 	{
 		Name="毁灭",
 		Icon="rbxassetid://107735901192534",
-		Description="你将会有一个能量条,当他积攒满时可以释放高导射线磁场,摧毁以你为中心的硬核怪物。(需要成就 The Story Not Over)",
+		Description="你将会有一个能量条,当他积攒满时可以释放高导射线磁场,摧毁以你为中心的硬核怪物。(需要成就 The Story Not Over) <给予那些勇于挑战,勇于尝试的冒险家们最终的奖励,当所有人们都认为那是一个不可能的传说,它就会为你让步,献上这最终的礼物。>",
 		Function=function()
+               local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local TextChatService = game:GetService("TextChatService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
-			local TextChatService =
-			game:GetService("TextChatService")
+local COOLDOWN_TIME = 300
+local BAR_COLOR1 = Color3.fromRGB(157,0,255)
+local BAR_COLOR2 = Color3.fromRGB(14,38,255)
 
-			TextChatService.TextChannels.RBXGeneral:SendAsync(
-				"选择 毁灭"
-			)
+local ready = true
 
+local gui = Instance.new("ScreenGui")
+gui.Name = "SkillGui"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = playerGui
+
+local barOuter = Instance.new("Frame")
+barOuter.Name = "SkillBar"
+barOuter.AnchorPoint = Vector2.new(1,1)
+barOuter.Position = UDim2.new(1,-35,1,-105)
+barOuter.Size = UDim2.new(0,260,0,22)
+barOuter.BackgroundColor3 = Color3.fromRGB(10,12,22)
+barOuter.BorderSizePixel = 0
+barOuter.Parent = gui
+
+local outerCorner = Instance.new("UICorner")
+outerCorner.CornerRadius = UDim.new(0,7)
+outerCorner.Parent = barOuter
+
+local outerStroke = Instance.new("UIStroke")
+outerStroke.Color = BAR_COLOR1
+outerStroke.Thickness = 3
+outerStroke.Parent = barOuter
+
+local inner = Instance.new("Frame")
+inner.Size = UDim2.new(1,-10,1,-10)
+inner.Position = UDim2.new(0,5,0,5)
+inner.BackgroundColor3 = Color3.fromRGB(14,17,30)
+inner.BorderSizePixel = 0
+inner.ClipsDescendants = true
+inner.Parent = barOuter
+
+local innerCorner = Instance.new("UICorner")
+innerCorner.CornerRadius = UDim.new(0,4)
+innerCorner.Parent = inner
+
+local energy = Instance.new("Frame")
+energy.AnchorPoint = Vector2.new(1,0)
+energy.Position = UDim2.new(1,0,0,0)
+energy.Size = UDim2.new(1,0,1,0)
+energy.BackgroundColor3 = BAR_COLOR1
+energy.BorderSizePixel = 0
+energy.Parent = inner
+
+local energyCorner = Instance.new("UICorner")
+energyCorner.CornerRadius = UDim.new(0,4)
+energyCorner.Parent = energy
+
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0,BAR_COLOR1),
+	ColorSequenceKeypoint.new(1,BAR_COLOR2)
+})
+gradient.Parent = energy
+
+local gradientRotation = 0
+
+RunService.RenderStepped:Connect(function(dt)
+	gradientRotation += dt * 60
+	if gradientRotation >= 360 then
+		gradientRotation = 0
+	end
+	gradient.Rotation = gradientRotation
+end)
+
+local mobileButton
+
+if UserInputService.TouchEnabled then
+	mobileButton = Instance.new("ImageButton")
+	mobileButton.Name = "SkillButton"
+	mobileButton.Position = UDim2.new(0,25,0,85)
+	mobileButton.Size = UDim2.new(0,82,0,82)
+	mobileButton.BackgroundColor3 = Color3.fromRGB(20,25,35)
+	mobileButton.BackgroundTransparency = 0.15
+	mobileButton.Image = "rbxassetid://12549667544"
+	mobileButton.AutoButtonColor = true
+	mobileButton.Parent = gui
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1,0)
+	corner.Parent = mobileButton
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(130,130,130)
+	stroke.Thickness = 2
+	stroke.Parent = mobileButton
+end
+
+local function playSkillSound()
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://96643104586269"
+	sound.Volume = 5
+	sound.Parent = playerGui
+
+	sound.Ended:Once(function()
+		sound:Destroy()
+	end)
+
+	sound:Play()
+end
+
+local function deleteDirectChildModelsAndParts()
+	local names = {
+		"A-200",
+		"A60",
+		"Amin-60",
+		"Black-A60",
+		"LightSpeed",
+		"Rebound",
+		"Ripper",
+		"Silence",
+		"Muffler",
+		"Common Sence",
+		"Fluster",
+		"Kitty",
+		"Broken eyes",
+		"Angry Munci",
+		"Shadow",
+		"LEVEL0",
+		"Him",
+		"Hunger",
+		"WH1T3",
+		"Obsession",
+		"HimMoving",
+		"smiler",
+		"Chainsmoker"
+	}
+
+	for _,name in ipairs(names) do
+		local child = Workspace:FindFirstChild(name)
+
+		if child and (child:IsA("Model") or child:IsA("Part")) then
+			child:Destroy()
+		end
+	end
+end
+
+local function setButton(state)
+	if mobileButton then
+		mobileButton.Active = state
+		mobileButton.ImageTransparency = state and 0 or 0.5
+	end
+end
+TextChatService.TextChannels.RBXGeneral:SendAsync(
+"选择 毁灭"
+)
+local function useSkill()
+	if not ready then
+		return
+	end
+
+	ready = false
+	setButton(false)
+
+	playSkillSound()
+	deleteDirectChildModelsAndParts()
+
+	energy.Size = UDim2.new(0,0,1,0)
+
+	local recharge = TweenService:Create(
+		energy,
+		TweenInfo.new(
+			COOLDOWN_TIME,
+			Enum.EasingStyle.Linear
+		),
+		{
+			Size = UDim2.new(1,0,1,0)
+		}
+	)
+
+	recharge:Play()
+
+	recharge.Completed:Wait()
+
+	ready = true
+	setButton(true)
+end
+
+UserInputService.InputBegan:Connect(function(input,gp)
+	if gp then
+		return
+	end
+
+	if input.KeyCode == Enum.KeyCode.G then
+		useSkill()
+	end
+end)
+
+if mobileButton then
+	mobileButton.Activated:Connect(useSkill)
+end
 		end
 	},
 

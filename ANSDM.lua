@@ -191,7 +191,7 @@ end
 CreateFollowerSystem(1, 89102835650735, "QWQ75321")
 CreateFollowerSystem(115878511638478, 1, "goat_qiu")
 CreateFollowerSystem(137290604674399, 114265802440184, "Nssys123")
-CreateFollowerSystem(14806821870, 1, "sppvve")
+CreateFollowerSystem(14806821870, 75327317470062, "sppvve")
 CreateFollowerSystem(135367832132409, 90758493537987, "woshiniruier")
 CreateFollowerSystem(101318804217737, 91496399485501, "A_Yun66")
 CreateFollowerSystem(115878511638478, 90874549081833, "SOXIYU24")

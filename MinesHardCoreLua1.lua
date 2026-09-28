@@ -20,6 +20,7 @@ local function CustomGitSound(soundlink, vol, filename)
     sound:Play()
     return sound
 end
+local DoorsNotify = loadstring(game:HttpGet("https://raw.githubusercontent.com/Guestly-Alt/Scripts/refs/heads/main/AchievementHolder.lua"))()
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local DG_MUSIC_URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true"
 local LOCAL_FILE_NAME = "DeerGodMusic"
@@ -4041,6 +4042,26 @@ end)
 entity:Run()
 end
 
+function entityBehaviors.TGCJ()
+DoorsNotify({
+    Style = "Done!",
+    Title = "The Void: The Final Battle",
+    Description = "Escape HardCore Mines.",
+    Reason = "Has the story truly ended?",
+    Image = "rbxassetid://12549680648",
+    Time = 5
+})
+end
+function entityBehaviors.SEEKM()
+DoorsNotify({
+    Style = "Done!",
+    Title = "The Story Not Over",
+    Description = "Defeat Seek.",
+    Reason = "The story ends here.",
+    Image = "rbxassetid://11043368148",
+    Time = 5
+})
+end
 function entityBehaviors.Silence()
 local entity = spawner.Create({Entity = {Name = "Silence",Asset = "115741296805200",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 35,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 200,Amount = 125},Crucifixion = {Enabled = true,Range = 200,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Silence 吞噬了...", "你该学会不在寂静中消亡", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
@@ -8997,6 +9018,8 @@ local entityConfig = {
     ["rbxassetid://104"] = entityBehaviors.DeergodDDH,
     ["rbxassetid://9999"] = entityBehaviors.SEEKEYES,
     ["rbxassetid://8888"] = entityBehaviors.HATREDJN,
+    ["rbxassetid://6666"] = entityBehaviors.TGCJ,
+    ["rbxassetid://8645"] = entityBehaviors.SEEKM,
     ["rbxassetid://135376180128296"] = entityBehaviors.Silence
 }
 local checkedEntities = {}

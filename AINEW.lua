@@ -1,8 +1,8 @@
 
 local sound = Instance.new("Sound")
 sound.Name = "Subspace"
-sound.SoundId = "rbxassetid://140278004623742"
-sound.Volume = 2
+sound.SoundId = "rbxassetid://138257446252471"
+sound.Volume = 10
 sound.Parent = workspace
 sound.Ended:Connect(function()
     sound:Destroy()

@@ -367,6 +367,21 @@ bloom.Parent = Lighting
 		end
 	},
 
+	{
+		Name="毁灭",
+		Icon="rbxassetid://107735901192534",
+		Description="你将会有一个能量条,当他积攒满时可以释放高导射线磁场,摧毁以你为中心的硬核怪物。(需要成就 The Story Not Over)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 毁灭"
+			)
+
+		end
+	},
 
 	{
 		Name="霸体",
@@ -683,7 +698,7 @@ end)
 
 }
 
-for i=1,14 do
+for i=1,13 do
 
 	table.insert(
 		Skills,

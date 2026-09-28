@@ -358,7 +358,8 @@ MB.MouseButton1Click:Connect(function()
     local RunService = game:GetService("RunService")
     local items = {
         "HardcoreOne",
-        "HardcoreTwo", 
+        "HardcoreTwo",
+        "HardcoreM", 
         "HardcoreITEM",
         "HardcoremUSIC",
         "HardcoreFour"
@@ -381,7 +382,7 @@ MB.MouseButton1Click:Connect(function()
             
             pcall(function()
                 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-                    .caption("HardCoreMines Loading: " .. count .. "/5", true)
+                    .caption("HardCoreMines Loading: " .. count .. "/6", true)
             end)
             
             if count == 6 then
@@ -418,6 +419,7 @@ MB.MouseButton1Click:Connect(function()
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua2.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/MinesHardCoreLua1.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour.lua?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/Charm.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardcoreMineLua.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/MineItem.lua?raw=true"
         }

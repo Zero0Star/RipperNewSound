@@ -1865,302 +1865,6 @@ end)
 entity:Run()
 end
 
-function entityBehaviors.Z367Two1()
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-local Camera = workspace.CurrentCamera
-local entityModel
-local chaseConnection = nil
-local customSpeed = 70
-local activationRange = 70
-
-local isChasing = false
-local soundSystemActive = false
-local bangSounds = {}
-local attackSound = nil
-local chaseStartTime = 0
-local isShakingCamera = false
-local soundManagerConnection = nil
-local pandemoniumEyesBeam = nil 
-local entity = spawner.Create({
-	Entity = {
-		Name = "Z-367",
-		Asset = "100118518576966",
-HeightOffset = -3},Lights = {Flicker = {Enabled = true,Duration = 1.5},Shatter = false,Repair = false},
-Earthquake = {Enabled = false},CameraShake = {Enabled = false,Range = 20,Values = {1.5, 20, 0.1, 1}},
-Movement = {Speed = 50,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",
-Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 20,Amount = 0},
-Crucifixion = {Enabled = true,Range = 70,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Z-367 击败了...", "你该多练练准星!", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}
-})
-local function findSoundsAndBeam()
-    local zModel = Workspace:FindFirstChild("Z-367")
-    if not zModel then return false end
-    
-    local pandemoniumPart = zModel:FindFirstChild("Pandemonium")
-    if not pandemoniumPart then return false end
-    pandemoniumEyesBeam = pandemoniumPart:FindFirstChild("PandemoniumEyes")
-    if pandemoniumEyesBeam and pandemoniumEyesBeam:IsA("Beam") then
-        pandemoniumEyesBeam.Enabled = false
-    end
-    
-    attackSound = pandemoniumPart:FindFirstChild("Attack")
-    
-    for i = 1, 4 do
-        local bangSound = pandemoniumPart:FindFirstChild("Bang"..i)
-        if bangSound and bangSound:IsA("Sound") then
-            table.insert(bangSounds, bangSound)
-        end
-    end
-    
-    return attackSound ~= nil and #bangSounds > 0
-end
-
-local function setPandemoniumEyesEnabled(enabled)
-    if pandemoniumEyesBeam and pandemoniumEyesBeam:IsA("Beam") then
-        pandemoniumEyesBeam.Enabled = enabled
-    end
-end
-
-local function playRandomBang()
-    if #bangSounds == 0 then return end
-    
-    local randomIndex = math.random(1, #bangSounds)
-    local selectedSound = bangSounds[randomIndex]
-    
-    if selectedSound then
-        selectedSound:Play()
-    end
-end
-local function startSoundManager()
-    if soundManagerConnection then
-        soundManagerConnection:Disconnect()
-    end
-    
-    local bangTimer = 0
-    local nextBangInterval = math.random(2, 6)
-    
-    soundManagerConnection = RunService.Heartbeat:Connect(function(dt)
-        if not soundSystemActive then return end
-        
-        local currentTime = os.clock()
-        local elapsedTime = currentTime - chaseStartTime
-
-        if elapsedTime < 0.1 and attackSound and not attackSound.Playing then
-            attackSound:Play()
-        end
-
-        if elapsedTime >= 6 and attackSound and attackSound.Volume > 0.1 then
-            attackSound.Volume = 0.1
-
-        end
-
-        if elapsedTime >= 6 and elapsedTime < 66 then
-            bangTimer = bangTimer + dt
-            
-            if bangTimer >= nextBangInterval then
-                playRandomBang()
-                bangTimer = 0
-                nextBangInterval = math.random(2, 6)
-            end
-        end
-
-        if elapsedTime >= 66 then
-            soundSystemActive = false
-            soundManagerConnection:Disconnect()
-            soundManagerConnection = nil
-        end
-    end)
-end
-
-local function startCameraShake()
-    if isShakingCamera then return end
-    
-    isShakingCamera = true
-    
-    task.spawn(function()
-        while isShakingCamera and soundSystemActive do
-            local shakeIntensity = math.random(5, 15) / 100
-            local shakeDuration = math.random(5, 10) / 100
-            
-            local startTime = os.clock()
-            while os.clock() - startTime < shakeDuration and isShakingCamera and soundSystemActive do
-                local offset = Vector3.new(
-                    (math.random() - 0.5) * 2 * shakeIntensity,
-                    (math.random() - 0.5) * 2 * shakeIntensity,
-                    0
-                )
-                Camera.CFrame = Camera.CFrame + offset
-                task.wait(0.01)
-            end
-            task.wait(math.random(5, 20) / 10)
-        end
-    end)
-end
-
-local function startSoundSystem()
-    if soundSystemActive then return end
-    
-    soundSystemActive = true
-    chaseStartTime = os.clock()
-    
-    startSoundManager()
-    startCameraShake()
-end
-
-local function stopSoundSystem()
-    if not soundSystemActive then return end
-    
-    soundSystemActive = false
-    isShakingCamera = false
-    
-    if soundManagerConnection then
-        soundManagerConnection:Disconnect()
-        soundManagerConnection = nil
-    end
-    
-    if attackSound then
-        attackSound:Stop()
-        attackSound.Volume = 1
-    end
-    
-    for _, sound in ipairs(bangSounds) do
-        if sound and sound.Playing then
-            sound:Stop()
-        end
-    end
-end
-
-local function startChaseSystem()
-    if not entityModel or not entityModel.PrimaryPart then
-        return
-    end
-
-    if chaseConnection then
-        chaseConnection:Disconnect()
-        chaseConnection = nil
-    end
-
-    chaseConnection = RunService.Heartbeat:Connect(function(dt)
-
-        if not entityModel 
-            or not entityModel.PrimaryPart 
-            or not HumanoidRootPart 
-            or not HumanoidRootPart.Parent 
-        then 
-            return 
-        end
-        
-        local pos = entityModel.PrimaryPart.Position
-        local target = HumanoidRootPart.Position
-        local distance = (target - pos).Magnitude
-
-        if distance <= activationRange then
-            local dir = (target - pos).Unit
-            local moveVec = dir * customSpeed * dt
-            local newCFrame = CFrame.new(pos + moveVec, target)
-            entityModel:SetPrimaryPartCFrame(newCFrame)
-
-            setPandemoniumEyesEnabled(true)
-
-            if not isChasing then
-                isChasing = true
-                startSoundSystem()
-            end
-        else
-
-            setPandemoniumEyesEnabled(false)
-
-            if isChasing then
-                isChasing = false
-                stopSoundSystem()
-            end
-        end
-    end)
-end
-
-entity:SetCallback("OnSpawned", function()
-    entityModel = entity.Model
-
-    if entityModel then
-        if not entityModel.PrimaryPart then
-            local primaryPart = entityModel:FindFirstChild("Main") or entityModel:FindFirstChildWhichIsA("BasePart")
-            if primaryPart then
-                entityModel.PrimaryPart = primaryPart
-            end
-        end
-    end
-
-    findSoundsAndBeam()
-    startChaseSystem()
-end)
-
-entity:SetCallback("OnDespawning", function()
-    if chaseConnection then
-        chaseConnection:Disconnect()
-        chaseConnection = nil
-    end
-    
-    stopSoundSystem()
-    setPandemoniumEyesEnabled(false)
-end)
-
-entity:SetCallback("OnDamagePlayer", function(newHealth)
-    if newHealth == 0 then
-        if chaseConnection then
-            chaseConnection:Disconnect()
-            chaseConnection = nil
-        end
-        
-        stopSoundSystem()
-        setPandemoniumEyesEnabled(false)
-
-        if entityModel and entityModel.PrimaryPart then
-            local currentPos = entityModel.PrimaryPart.Position
-            local forwardDir = entityModel.PrimaryPart.CFrame.LookVector
-            local targetPos = currentPos + forwardDir * 10
-            
-            entityModel:SetPrimaryPartCFrame(CFrame.new(currentPos, targetPos))
-        end
-    end
-end)
-
-entity:SetCallback("OnRebounding", function(startOfRebound)
-    if not entityModel then return end
-    
-    local main = entityModel:FindFirstChild("Main")
-    if not main then return end
-    
-    local attachment = main:WaitForChild("Attachment")
-    local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
-    local sounds = {
-        footsteps = main:WaitForChild("Footsteps"),
-        playSound = main:WaitForChild("PlaySound"),
-        switch = main:WaitForChild("Switch"),
-        switchBack = main:WaitForChild("SwitchBack")
-    }
-    for _, c in attachment:GetChildren() do
-        c.Enabled = (not startOfRebound)
-    end
-    for _, c in AttachmentSwitch:GetChildren() do
-        c.Enabled = startOfRebound
-    end
-    if startOfRebound == true then
-        sounds.footsteps.PlaybackSpeed = 0.35
-        sounds.playSound.PlaybackSpeed = 0.25
-        sounds.switch:Play()
-    else
-        sounds.footsteps.PlaybackSpeed = 0.25
-        sounds.playSound.PlaybackSpeed = 0.16
-        sounds.switchBack:Play()
-    end
-end)
-entity:Run()
-end
-
 function entityBehaviors.Z367Two2()
 local entity = spawner.Create({
 	Entity = {
@@ -2202,6 +1906,7 @@ entity:SetCallback("OnRebounding", function(startOfRebound)
 end)
 entity:Run()
 end
+
 function GitAud(soundgit, filename)
     local fileName = filename or "temp_audio"
     local fullFileName = fileName .. ".mp3"
@@ -2949,7 +2654,7 @@ function entityBehaviors.RipperSw()
     end
 
     local function ExecuteRipperPathfinding()
-        local RIPPER_MODEL_ID = "104570339911705"
+        local RIPPER_MODEL_ID = "117924594764489"
 
         local success, loadedAsset = pcall(function()
             return game:GetObjects(
@@ -3017,7 +2722,7 @@ function entityBehaviors.RipperSw()
             return
         end
 
-        local heightOffset = Vector3.new(0, 2, 0)
+        local heightOffset = Vector3.new(0, 1, 0)
         local speedFactor = 89
 
         ripper.CFrame =
@@ -3308,24 +3013,174 @@ function entityBehaviors.RipperSw()
             return
         end
 
-        local explodeSound =
-            Instance.new("Sound")
+        -- Distance-based despawn sound + camera shake.
+        -- Near: original explosion sound / original strong shake.
+        -- Mid:  RushNew.Despawn2, Volume = 10.
+        -- Far:  RushNew.Despawn3, Volume = 10.
+        -- Shake fades with distance after the near range.
+        local NEAR_EXPLOSION_DISTANCE = 80
+        local FAR_EXPLOSION_DISTANCE = 220
+        local SHAKE_MAX_DISTANCE = 350
+        local MAX_EXPLOSION_SHAKE = 300
 
-        local explosionSound =
-            workspace:FindFirstChild(
-                "RipperExplosionSound"
-            )
+        local localPlayer = Players.LocalPlayer
+        local playerRoot = nil
 
-        if explosionSound then
-            explodeSound.SoundId =
-                explosionSound.SoundId
+        if localPlayer and localPlayer.Character then
+            playerRoot =
+                localPlayer.Character:FindFirstChild(
+                    "HumanoidRootPart"
+                )
         end
 
-        explodeSound.Volume = 5
-        explodeSound.Parent = ripper
-        explodeSound:Play()
+        local ripperDistance = math.huge
 
-        if cameraShakerModule then
+        if playerRoot and ripper and ripper.Parent then
+            ripperDistance =
+                (
+                    playerRoot.Position
+                    - ripper.Position
+                ).Magnitude
+        end
+
+        -- The moving Ripper is a cloned BasePart. In this asset that part
+        -- can itself be RushNew, so check it first, then fall back to the
+        -- original loaded asset in case RushNew lives deeper in the model.
+        local rushNew = nil
+
+        if ripper and ripper.Parent then
+            if ripper.Name == "RushNew" then
+                rushNew = ripper
+            else
+                rushNew =
+                    ripper:FindFirstChild(
+                        "RushNew",
+                        true
+                    )
+            end
+        end
+
+        if not rushNew
+            and ripperAsset
+            and ripperAsset.Parent
+        then
+            rushNew =
+                ripperAsset:FindFirstChild(
+                    "RushNew",
+                    true
+                )
+        end
+
+        local explodeSound = nil
+
+        if ripperDistance
+            <= NEAR_EXPLOSION_DISTANCE
+        then
+            -- Very close: keep the original explosion sound.
+            local explosionSound =
+                workspace:FindFirstChild(
+                    "RipperExplosionSound"
+                )
+
+            if explosionSound
+                and explosionSound:IsA("Sound")
+            then
+                explodeSound = Instance.new("Sound")
+                explodeSound.SoundId =
+                    explosionSound.SoundId
+                explodeSound.Volume = 5
+                explodeSound.PlaybackSpeed =
+                    explosionSound.PlaybackSpeed
+                explodeSound.Parent = ripper
+            end
+        elseif ripperDistance
+            <= FAR_EXPLOSION_DISTANCE
+        then
+            -- Mid distance: use RushNew.Despawn2 at Volume 10.
+            local despawn2 =
+                rushNew
+                and rushNew:FindFirstChild(
+                    "Despawn2"
+                )
+
+            if despawn2
+                and despawn2:IsA("Sound")
+            then
+                explodeSound = despawn2:Clone()
+                explodeSound.Volume = 10
+                explodeSound.Parent = ripper
+            end
+        else
+            -- Very far: use RushNew.Despawn3 at Volume 10.
+            local despawn3 =
+                rushNew
+                and rushNew:FindFirstChild(
+                    "Despawn3"
+                )
+
+            if despawn3
+                and despawn3:IsA("Sound")
+            then
+                explodeSound = despawn3:Clone()
+                explodeSound.Volume = 10
+                explodeSound.Parent = ripper
+            end
+        end
+
+        -- Safety fallback if Despawn2 / Despawn3 is missing from the asset.
+        if not explodeSound then
+            local explosionSound =
+                workspace:FindFirstChild(
+                    "RipperExplosionSound"
+                )
+
+            if explosionSound
+                and explosionSound:IsA("Sound")
+            then
+                explodeSound = Instance.new("Sound")
+                explodeSound.SoundId =
+                    explosionSound.SoundId
+                explodeSound.Volume = 5
+                explodeSound.PlaybackSpeed =
+                    explosionSound.PlaybackSpeed
+                explodeSound.Parent = ripper
+            end
+        end
+
+        if explodeSound then
+            explodeSound:Play()
+        end
+
+        -- Keep the original 300 shake while very close. Beyond the near
+        -- range, smoothly fade the amplitude to 0 by SHAKE_MAX_DISTANCE.
+        local shakeAmplitude = 0
+
+        if ripperDistance
+            <= NEAR_EXPLOSION_DISTANCE
+        then
+            shakeAmplitude = MAX_EXPLOSION_SHAKE
+        elseif ripperDistance
+            < SHAKE_MAX_DISTANCE
+        then
+            local alpha =
+                1
+                - (
+                    ripperDistance
+                    - NEAR_EXPLOSION_DISTANCE
+                )
+                / (
+                    SHAKE_MAX_DISTANCE
+                    - NEAR_EXPLOSION_DISTANCE
+                )
+
+            shakeAmplitude =
+                MAX_EXPLOSION_SHAKE
+                * math.clamp(alpha, 0, 1)
+        end
+
+        if cameraShakerModule
+            and shakeAmplitude > 0
+        then
             local endExplosionCameraShaker =
                 require(cameraShakerModule)
 
@@ -3347,7 +3202,7 @@ function entityBehaviors.RipperSw()
             endExplosionCamShake:Start()
 
             endExplosionCamShake:ShakeOnce(
-                300,
+                shakeAmplitude,
                 400,
                 0.1,
                 0.7,
@@ -7702,7 +7557,7 @@ function entityBehaviors.REBOUNDSW()
         camShake:Start()
 
         local v305 = 2
-        local v306 = 2
+        local v306 = 1.2
         local v307 = Vector3.new(0, 1, 0)
         local v310 = workspace.CurrentRooms
 
@@ -8033,7 +7888,7 @@ Movement = {Speed = 140,Delay = 0,Reversed = false},Rebounding = {
 Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},
 Damage = {Enabled = true,Range = 100,Amount = 125},Crucifixion = {Enabled = true,
 Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",
-Hints = {"你死于Rebound", "巨大的噪音震耳欲聋", "保持时刻警惕它的存在", "祝你好运"},Cause = ""}})
+Hints = {"你死于Rebound", "巨大的噪音震耳欲聋", "保持时刻警惕它的存在", "祝你好运"},Cause = "Rebound"}})
 entity:SetCallback("OnRebounding", function(startOfRebound)
 	local entityModel = entity.Model
 	local main = entityModel:WaitForChild("Main")
@@ -8345,8 +8200,7 @@ end
 
 local entityConfig = {
     ["rbxassetid://129108783729677"]  = entityBehaviors.TwoKane1, 
-    ["rbxassetid://119672184905651"]  = entityBehaviors.Angler,      
-    ["rbxassetid://122666487907498"]  = entityBehaviors.Z367Two1, 
+    ["rbxassetid://119672184905651"]  = entityBehaviors.Angler,
     ["rbxassetid://1845474773"]  = entityBehaviors.Z367Two2,  
     ["rbxassetid://101665501585468"]  = entityBehaviors.RipperSw,       
     ["rbxassetid://140510675673683"]  = entityBehaviors.GodEgg,           

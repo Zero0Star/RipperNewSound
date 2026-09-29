@@ -2258,58 +2258,1218 @@ end)
 entity:Run()
 end
 
+local Z367_MUSIC_URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/Z367Music.mp3?raw=true"
+local Z367_MUSIC_FILENAME = "Z367Music_V36"
+local Z367_MUSIC_SOUND_NAME = "Z367Music_Preloaded"
+local Z367_MUSIC_VOLUME = 4.4
+
+local function preloadZ367Music()
+    local sound = workspace:FindFirstChild(Z367_MUSIC_SOUND_NAME)
+
+    if sound and not sound:IsA("Sound") then
+        sound:Destroy()
+        sound = nil
+    end
+
+    if not sound then
+        sound = Instance.new("Sound")
+        sound.Name = Z367_MUSIC_SOUND_NAME
+        sound.Looped = false
+        sound.Parent = workspace
+    end
+
+    sound.Volume = Z367_MUSIC_VOLUME
+    sound.Looped = false
+
+    -- Never autoplay during preload.
+    pcall(function()
+        sound:Stop()
+        sound.TimePosition = 0
+    end)
+
+    local ok, err = pcall(function()
+        if type(writefile) ~= "function" or type(game.HttpGet) ~= "function" then
+            error("executor file/http functions unavailable")
+        end
+
+        local path = Z367_MUSIC_FILENAME .. ".mp3"
+        writefile(path, game:HttpGet(Z367_MUSIC_URL))
+
+        local getter = getcustomasset or getsynasset
+        if not getter then
+            error("getcustomasset/getsynasset unavailable")
+        end
+
+        sound.SoundId = getter(path)
+    end)
+
+    if not ok then
+        warn("[Z-367] Music preload failed:", err)
+    end
+
+    return sound
+end
+
+local Z367_PRELOADED_MUSIC = preloadZ367Music()
+
 function entityBehaviors.Z367Game()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local player = Players.LocalPlayer
-local gui = player:WaitForChild("PlayerGui")
-local gameData = {
-    gameActive = false,
-    gameDuration = 61,
-    maxPressure = 5,
-    currentPressure = 5,
-    remainingTime = 61,
-    escapeForce = 0.03,
-    recoveryRate = 1,
-    drainRate = 1,
-    lastSlamTime = 0,
-    minSlamInterval = 2,
-    maxSlamInterval = 6,
-    currentSlamInterval = 4,
-    timeProgress = 0
+local playerGui = player:WaitForChild("PlayerGui")
+local camera = workspace.CurrentCamera
+
+--// Configuration
+local CONFIG = {
+    Duration = 42,
+    MaxPressure = 5,
+
+    -- Mouse physics
+    MouseSensitivity = 0.00205,
+    Friction = 0.875,
+    MaxSpeed = 0.027,
+    CenterRadius = 0.105,
+    OuterLimit = 0.445,
+    Spring = 0.00082,
+
+    -- Pressure
+    RecoveryRate = 1.45,
+    BaseDrainRate = 0.48,
+    DistanceDrain = 1.55,
+
+    -- Phase thresholds: 0-25 / 25-50 / 50-75 / 75-100%
+    Phase = {
+        [1] = {
+            MinEventDelay = 4.0,
+            MaxEventDelay = 6.2,
+            ImpactForce = 0.105, -- stronger than old early phase
+            ShakeMagnitude = 18,
+            ShakeRoughness = 120,
+            ShakeFadeIn = 0.06,
+            ShakeFadeOut = 0.28,
+            ShakePosInfluence = 1.45,
+            ShakeRotInfluence = 0.32,
+            DrainMultiplier = 1.00,
+            InputMultiplier = 1.00,
+        },
+        [2] = {
+            MinEventDelay = 3.1,
+            MaxEventDelay = 5.0,
+            ImpactForce = 0.135,
+            ShakeMagnitude = 22,
+            ShakeRoughness = 145,
+            ShakeFadeIn = 0.06,
+            ShakeFadeOut = 0.30,
+            ShakePosInfluence = 1.70,
+            ShakeRotInfluence = 0.40,
+            DrainMultiplier = 1.06,
+            InputMultiplier = 0.98,
+        },
+        [3] = {
+            MinEventDelay = 2.35,
+            MaxEventDelay = 4.0,
+            ImpactForce = 0.165,
+            ShakeMagnitude = 26,
+            ShakeRoughness = 170,
+            ShakeFadeIn = 0.07,
+            ShakeFadeOut = 0.34,
+            ShakePosInfluence = 1.90,
+            ShakeRotInfluence = 0.48,
+            DrainMultiplier = 1.12,
+            InputMultiplier = 0.96,
+        },
+
+        -- V3.1: Phase 4 is only a little easier, not trivial.
+        [4] = {
+            MinEventDelay = 2.75, -- V3.2 easier final phase
+            MaxEventDelay = 4.45,
+            ImpactForce = 0.150,  -- easier to recover from
+            ShakeMagnitude = 30,
+            ShakeRoughness = 200,
+            ShakeFadeIn = 0.10,
+            ShakeFadeOut = 0.22,
+            ShakePosInfluence = 2.00,
+            ShakeRotInfluence = 0.50,
+            DrainMultiplier = 1.07,
+            InputMultiplier = 0.95,
+        },
+    },
+
+    -- Optional executor music.
+    MusicUrl = Z367_MUSIC_URL,
+    MusicFilename = Z367_MUSIC_FILENAME,
+
+    -- Roblox asset fallbacks. Replace with your own if desired.
+    ImpactSoundId = "",
+    WarningSoundId = "",
+    HeartbeatSoundId = "",
 }
 
-local isPlayerDead = false
+--// Runtime state
+state = {
+    active = false,
+    dead = false,
+    ending = false,
+    pressure = CONFIG.MaxPressure,
+    remaining = CONFIG.Duration,
+    progress = 0,
+    phase = 1,
+    ballPos = Vector2.new(0.5, 0.5),
+    ballVelocity = Vector2.zero,
+    inverted = false,
+    blackout = false,
+    distortion = 0,
+    nextEventAt = 0,
+    connections = {},
+    tweens = {},
+    music = nil,
+    heartbeat = nil,
+    oldMouseBehavior = UserInputService.MouseBehavior,
+    oldMouseIcon = UserInputService.MouseIconEnabled,
+}
+
+--// Utilities
+local function clamp01(x)
+    return math.clamp(x, 0, 1)
+end
+
+local function randomUnit2()
+    local a = math.random() * math.pi * 2
+    return Vector2.new(math.cos(a), math.sin(a))
+end
+
+local function tween(obj, info, props)
+    if not obj or not obj.Parent then return nil end
+    local t = TweenService:Create(obj, info, props)
+    table.insert(state.tweens, t)
+    t:Play()
+    return t
+end
+
+local function safeDestroy(x)
+    if x and x.Parent then
+        x:Destroy()
+    end
+end
+
+local function new(className, props, parent)
+    local obj = Instance.new(className)
+    for k, v in pairs(props or {}) do
+        obj[k] = v
+    end
+    obj.Parent = parent
+    return obj
+end
+
+local function corner(parent, radius)
+    return new("UICorner", {CornerRadius = UDim.new(0, radius or 8)}, parent)
+end
+
+local function stroke(parent, color, thickness, transparency)
+    return new("UIStroke", {
+        Color = color or Color3.fromRGB(255,255,255),
+        Thickness = thickness or 1,
+        Transparency = transparency or 0,
+    }, parent)
+end
+
+--// Z-367 music is preloaded outside entityBehaviors.Z367Game().
+-- The game body only starts/stops the persistent workspace Sound.
+
+local function playOneShot(soundId, volume, speed)
+    if not soundId or soundId == "" then return end
+    local s = new("Sound", {
+        SoundId = soundId,
+        Volume = volume or 1,
+        PlaybackSpeed = speed or 1,
+    }, workspace)
+    s:Play()
+    Debris:AddItem(s, 5)
+end
+
+--// CameraShaker integration
+-- Every major Z-367 impact routes through this function.
+local function runCameraShake(magnitude, roughness, fadeIn, fadeOut, posInfluence, rotInfluence)
+    local cameraShakerModule = ReplicatedStorage:FindFirstChild("CameraShaker")
+    if not cameraShakerModule then
+        return false
+    end
+
+    local ok = pcall(function()
+        local CameraShaker = require(cameraShakerModule)
+        local currentCamera = workspace.CurrentCamera
+
+        local camShake = CameraShaker.new(
+            Enum.RenderPriority.Camera.Value,
+            function(shakeCf)
+                currentCamera = workspace.CurrentCamera
+                if currentCamera then
+                    currentCamera.CFrame = currentCamera.CFrame * shakeCf
+                end
+            end
+        )
+
+        camShake:Start()
+        camShake:ShakeOnce(
+            magnitude or 30,
+            roughness or 200,
+            fadeIn or 0.1,
+            fadeOut or 0.2,
+            posInfluence or 2,
+            rotInfluence or 0.5
+        )
+
+        task.delay((fadeIn or 0.1) + (fadeOut or 0.2) + 0.35, function()
+            pcall(function()
+                camShake:Stop()
+            end)
+        end)
+    end)
+
+    return ok
+end
+
+-- Short strong shake used by win/death sequences.
+local function runFinalCameraShake()
+    return runCameraShake(30, 200, 0.1, 0.2, 2, 0.5)
+end
+
+-- Runtime state is forward-declared because the persistent camera shaker
+-- callback needs to read state.active.
+local state
+
+-- Fallback visual shake if CameraShaker isn't present.
+local fallbackShake = {
+    power = 0,
+    endAt = 0,
+}
+
+local function requestFallbackShake(power, duration)
+    fallbackShake.power = math.max(fallbackShake.power, power or 0)
+    fallbackShake.endAt = math.max(fallbackShake.endAt, os.clock() + (duration or 0.25))
+end
+
+-- Full-minigame low-frequency camera motion.
+-- This is an independent shaker that stays active for the WHOLE game.
+-- The strong hit at 6 seconds is a separate effect and does not replace it.
+local gameCameraShaker = nil
+
+local function stopGameCameraShake()
+    if gameCameraShaker then
+        pcall(function()
+            gameCameraShaker:Stop()
+        end)
+        gameCameraShaker = nil
+    end
+end
+
+local function runGameCameraShake()
+    stopGameCameraShake()
+
+    local cameraShakerModule = ReplicatedStorage:FindFirstChild("CameraShaker")
+    if not cameraShakerModule then
+        -- Very small full-duration fallback if CameraShaker is unavailable.
+        requestFallbackShake(0.004, CONFIG.Duration)
+        return false
+    end
+
+    local ok = pcall(function()
+        local CameraShaker = require(cameraShakerModule)
+
+        gameCameraShaker = CameraShaker.new(
+            Enum.RenderPriority.Camera.Value,
+            function(shakeCf)
+                local currentCamera = workspace.CurrentCamera
+                if currentCamera and state.active then
+                    currentCamera.CFrame = currentCamera.CFrame * shakeCf
+                end
+            end
+        )
+
+        gameCameraShaker:Start()
+
+        -- User-requested full-game subtle shake.
+        gameCameraShaker:ShakeOnce(
+            10,
+            10,
+            0.1,
+            CONFIG.Duration,
+            2,
+            0.5
+        )
+    end)
+
+    if not ok then
+        gameCameraShaker = nil
+        requestFallbackShake(0.004, CONFIG.Duration)
+        return false
+    end
+
+    return true
+end
+
+local function shakeForPhase(multiplier)
+    if _G.Z367PlayModelBang then
+        pcall(_G.Z367PlayModelBang)
+    end
+    local p = CONFIG.Phase[state.phase]
+    multiplier = multiplier or 1
+
+    local worked = runCameraShake(
+        p.ShakeMagnitude * multiplier,
+        p.ShakeRoughness,
+        p.ShakeFadeIn,
+        p.ShakeFadeOut,
+        p.ShakePosInfluence,
+        p.ShakeRotInfluence
+    )
+
+    if not worked then
+        requestFallbackShake(0.010 * p.ShakeMagnitude / 18 * multiplier, p.ShakeFadeOut + 0.15)
+    end
+end
+
+--// UI
+local function buildUI()
+    local old = playerGui:FindFirstChild("Z367_V31")
+    if old then old:Destroy() end
+
+    local gui = new("ScreenGui", {
+        Name = "Z367_V31",
+        IgnoreGuiInset = true,
+        ResetOnSpawn = false,
+        DisplayOrder = 999,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    }, playerGui)
+
+    local root = new("Frame", {
+        Name = "Root",
+        Size = UDim2.fromScale(1,1),
+        BackgroundColor3 = Color3.fromRGB(5,5,7),
+        BackgroundTransparency = 0.46,
+        BorderSizePixel = 0,
+        ZIndex = 1,
+    }, gui)
+
+    -- Full-screen opening fade.
+    -- IMPORTANT: keep it hidden until the minigame actually starts.
+    -- The old version spawned this fully opaque during script initialization,
+    -- which caused a permanent black screen while Z-367 was still chasing.
+    local introFade = new("Frame", {
+        Name = "GameFade",
+        Size = UDim2.fromScale(1,1),
+        BackgroundColor3 = Color3.new(0,0,0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Visible = false,
+        Active = false,
+        ZIndex = 1000,
+    }, gui)
+
+    local flash = new("Frame", {
+        Name = "ImpactFlash",
+        Size = UDim2.fromScale(1,1),
+        BackgroundColor3 = Color3.fromRGB(255,245,245),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 800,
+    }, gui)
+
+    local redPulse = new("Frame", {
+        Name = "DangerPulse",
+        Size = UDim2.fromScale(1,1),
+        BackgroundColor3 = Color3.fromRGB(170,0,0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 20,
+    }, gui)
+
+    -- Vignette using four gradients so no external image is required.
+    local vignetteTop = new("Frame", {
+        Size = UDim2.new(1,0,0.24,0),
+        BackgroundColor3 = Color3.new(0,0,0),
+        BackgroundTransparency = 0.25,
+        BorderSizePixel = 0,
+        ZIndex = 10,
+    }, gui)
+    local gt = new("UIGradient", {Rotation = 90}, vignetteTop)
+    gt.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0,0),
+        NumberSequenceKeypoint.new(1,1),
+    })
+
+    local vignetteBottom = vignetteTop:Clone()
+    vignetteBottom.Position = UDim2.new(0,0,0.76,0)
+    vignetteBottom.Parent = gui
+    vignetteBottom.UIGradient.Rotation = -90
+
+    local vignetteLeft = new("Frame", {
+        Size = UDim2.new(0.18,0,1,0),
+        BackgroundColor3 = Color3.new(0,0,0),
+        BackgroundTransparency = 0.28,
+        BorderSizePixel = 0,
+        ZIndex = 10,
+    }, gui)
+    local gl = new("UIGradient", {Rotation = 0}, vignetteLeft)
+    gl.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0,0),
+        NumberSequenceKeypoint.new(1,1),
+    })
+
+    local vignetteRight = vignetteLeft:Clone()
+    vignetteRight.Position = UDim2.new(0.82,0,0,0)
+    vignetteRight.Parent = gui
+    vignetteRight.UIGradient.Rotation = 180
+
+    -- Scanlines
+    local scanHolder = new("Frame", {
+        Name = "Scanlines",
+        Size = UDim2.fromScale(1,1),
+        BackgroundTransparency = 1,
+        ZIndex = 15,
+    }, gui)
+
+    for y = 0, 1, 0.018 do
+        new("Frame", {
+            Size = UDim2.new(1,0,0,1),
+            Position = UDim2.new(0,0,y,0),
+            BackgroundColor3 = Color3.fromRGB(255,255,255),
+            BackgroundTransparency = 0.965,
+            BorderSizePixel = 0,
+            ZIndex = 15,
+        }, scanHolder)
+    end
+
+    local title = new("TextLabel", {
+        Name = "Title",
+        AnchorPoint = Vector2.new(0.5,0),
+        Position = UDim2.new(0.5,0,0.055,0),
+        Size = UDim2.new(0.7,0,0,34),
+        BackgroundTransparency = 1,
+        Text = "Z-367 // CONTAINMENT INTERFACE",
+        TextColor3 = Color3.fromRGB(218,218,218),
+        TextTransparency = 1,
+        Font = Enum.Font.Code,
+        TextSize = 21,
+        TextStrokeTransparency = 0.7,
+        ZIndex = 30,
+    }, gui)
+
+    local subtitle = new("TextLabel", {
+        AnchorPoint = Vector2.new(0.5,0),
+        Position = UDim2.new(0.5,0,0.095,0),
+        Size = UDim2.new(0.7,0,0,24),
+        BackgroundTransparency = 1,
+        Text = "MAINTAIN SIGNAL STABILITY",
+        TextColor3 = Color3.fromRGB(145,145,150),
+        TextTransparency = 1,
+        Font = Enum.Font.Code,
+        TextSize = 14,
+        ZIndex = 30,
+    }, gui)
+
+    local arena = new("Frame", {
+        Name = "Arena",
+        AnchorPoint = Vector2.new(0.5,0.5),
+        Position = UDim2.fromScale(0.5,0.52),
+        Size = UDim2.fromOffset(410,410),
+        BackgroundColor3 = Color3.fromRGB(12,12,15),
+        BackgroundTransparency = 0.36,
+        BorderSizePixel = 0,
+        ZIndex = 30,
+    }, gui)
+    corner(arena, 205)
+    local arenaStroke = stroke(arena, Color3.fromRGB(115,115,125), 2, 0.34)
+
+    local ring2 = new("Frame", {
+        AnchorPoint = Vector2.new(0.5,0.5),
+        Position = UDim2.fromScale(0.5,0.5),
+        Size = UDim2.fromOffset(270,270),
+        BackgroundTransparency = 1,
+        ZIndex = 31,
+    }, arena)
+    corner(ring2, 135)
+    stroke(ring2, Color3.fromRGB(80,80,90), 1, 0.48)
+
+    local safeZone = new("Frame", {
+        Name = "SafeZone",
+        AnchorPoint = Vector2.new(0.5,0.5),
+        Position = UDim2.fromScale(0.5,0.5),
+        Size = UDim2.fromOffset(88,88),
+        BackgroundColor3 = Color3.fromRGB(185,185,190),
+        BackgroundTransparency = 0.94,
+        BorderSizePixel = 0,
+        ZIndex = 33,
+    }, arena)
+    corner(safeZone, 44)
+    local safeStroke = stroke(safeZone, Color3.fromRGB(200,200,205), 2, 0.18)
+
+    local centerDot = new("Frame", {
+        AnchorPoint = Vector2.new(0.5,0.5),
+        Position = UDim2.fromScale(0.5,0.5),
+        Size = UDim2.fromOffset(6,6),
+        BackgroundColor3 = Color3.fromRGB(235,235,240),
+        BorderSizePixel = 0,
+        ZIndex = 36,
+    }, arena)
+    corner(centerDot, 6)
+
+    local ballGlow = new("Frame", {
+        AnchorPoint = Vector2.new(0.5,0.5),
+        Position = UDim2.fromScale(0.5,0.5),
+        Size = UDim2.fromOffset(42,42),
+        BackgroundColor3 = Color3.fromRGB(220,220,230),
+        BackgroundTransparency = 0.84,
+        BorderSizePixel = 0,
+        ZIndex = 34,
+    }, arena)
+    corner(ballGlow, 21)
+
+    local ball = new("Frame", {
+        Name = "ControlBall",
+        AnchorPoint = Vector2.new(0.5,0.5),
+        Position = UDim2.fromScale(0.5,0.5),
+        Size = UDim2.fromOffset(19,19),
+        BackgroundColor3 = Color3.fromRGB(225,225,232),
+        BorderSizePixel = 0,
+        ZIndex = 35,
+    }, arena)
+    corner(ball, 10)
+    stroke(ball, Color3.fromRGB(255,255,255), 1, 0.4)
+
+    local pressurePanel = new("Frame", {
+        AnchorPoint = Vector2.new(0.5,1),
+        Position = UDim2.new(0.5,0,0.92,0),
+        Size = UDim2.fromOffset(520,62),
+        BackgroundColor3 = Color3.fromRGB(8,8,10),
+        BackgroundTransparency = 0.25,
+        BorderSizePixel = 0,
+        ZIndex = 30,
+    }, gui)
+    corner(pressurePanel, 6)
+    stroke(pressurePanel, Color3.fromRGB(75,75,82), 1, 0.3)
+
+    local pressureLabel = new("TextLabel", {
+        Position = UDim2.fromOffset(12,6),
+        Size = UDim2.new(1,-24,0,18),
+        BackgroundTransparency = 1,
+        Text = "SIGNAL PRESSURE",
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextColor3 = Color3.fromRGB(170,170,175),
+        Font = Enum.Font.Code,
+        TextSize = 13,
+        ZIndex = 32,
+    }, pressurePanel)
+
+    local pressureBack = new("Frame", {
+        Position = UDim2.fromOffset(12,31),
+        Size = UDim2.new(1,-24,0,17),
+        BackgroundColor3 = Color3.fromRGB(30,30,34),
+        BorderSizePixel = 0,
+        ZIndex = 32,
+    }, pressurePanel)
+    corner(pressureBack, 3)
+
+    local pressureFill = new("Frame", {
+        Name = "PressureFill",
+        Size = UDim2.fromScale(1,1),
+        BackgroundColor3 = Color3.fromRGB(195,195,200),
+        BorderSizePixel = 0,
+        ZIndex = 33,
+    }, pressureBack)
+    corner(pressureFill, 3)
+
+    local timer = new("TextLabel", {
+        AnchorPoint = Vector2.new(0.5,0),
+        Position = UDim2.new(0.5,0,0.135,0),
+        Size = UDim2.fromOffset(180,48),
+        BackgroundTransparency = 1,
+        Text = "01:01",
+        TextColor3 = Color3.fromRGB(225,225,230),
+        TextTransparency = 1,
+        Font = Enum.Font.Code,
+        TextSize = 34,
+        TextStrokeTransparency = 0.72,
+        ZIndex = 30,
+    }, gui)
+
+    local phaseText = new("TextLabel", {
+        AnchorPoint = Vector2.new(0,0),
+        Position = UDim2.new(0.025,0,0.04,0),
+        Size = UDim2.fromOffset(240,30),
+        BackgroundTransparency = 1,
+        Text = "PHASE // 01",
+        TextColor3 = Color3.fromRGB(135,135,145),
+        TextTransparency = 1,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.Code,
+        TextSize = 15,
+        ZIndex = 30,
+    }, gui)
+
+    local warning = new("TextLabel", {
+        AnchorPoint = Vector2.new(0.5,0.5),
+        Position = UDim2.fromScale(0.5,0.29),
+        Size = UDim2.new(0.8,0,0,52),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextColor3 = Color3.fromRGB(255,75,75),
+        TextTransparency = 1,
+        TextStrokeTransparency = 0.35,
+        Font = Enum.Font.Code,
+        TextSize = 25,
+        ZIndex = 120,
+    }, gui)
+
+    local glitchHolder = new("Frame", {
+        Name = "GlitchHolder",
+        Size = UDim2.fromScale(1,1),
+        BackgroundTransparency = 1,
+        ZIndex = 150,
+    }, gui)
+
+    local blur = Lighting:FindFirstChild("Z367_V31_Blur")
+    if blur then blur:Destroy() end
+    blur = new("BlurEffect", {Name="Z367_V31_Blur", Size=0}, Lighting)
+
+    local color = Lighting:FindFirstChild("Z367_V31_Color")
+    if color then color:Destroy() end
+    color = new("ColorCorrectionEffect", {
+        Name = "Z367_V31_Color",
+        Brightness = -0.02,
+        Contrast = 0.05,
+        Saturation = -0.08,
+        TintColor = Color3.fromRGB(240,240,246),
+    }, Lighting)
+
+    return {
+        Gui = gui,
+        Root = root,
+        IntroFade = introFade,
+        Flash = flash,
+        RedPulse = redPulse,
+        Title = title,
+        Subtitle = subtitle,
+        Arena = arena,
+        ArenaStroke = arenaStroke,
+        SafeZone = safeZone,
+        SafeStroke = safeStroke,
+        Ball = ball,
+        BallGlow = ballGlow,
+        PressureFill = pressureFill,
+        PressureLabel = pressureLabel,
+        Timer = timer,
+        PhaseText = phaseText,
+        Warning = warning,
+        GlitchHolder = glitchHolder,
+        Blur = blur,
+        Color = color,
+    }
+end
+
+-- Do not create the minigame UI during script initialization.
+-- It is created only when startGame() is actually called for the locked player.
+local ui = nil
+
+--// Full game fade-in
+local function runGameFadeIn()
+    -- Only cover the screen once the minigame has REALLY started.
+    ui.IntroFade.Visible = true
+    ui.IntroFade.Active = false
+    ui.IntroFade.BackgroundTransparency = 0
+    ui.Title.TextTransparency = 1
+    ui.Subtitle.TextTransparency = 1
+    ui.Timer.TextTransparency = 1
+    ui.PhaseText.TextTransparency = 1
+
+    -- Short black hold makes the transition feel deliberate.
+    task.wait(0.35)
+
+    tween(
+        ui.IntroFade,
+        TweenInfo.new(1.65, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        {BackgroundTransparency = 1}
+    )
+
+    task.delay(0.22, function()
+        tween(ui.Title, TweenInfo.new(0.65, Enum.EasingStyle.Quad), {TextTransparency = 0})
+        tween(ui.Timer, TweenInfo.new(0.75, Enum.EasingStyle.Quad), {TextTransparency = 0})
+    end)
+
+    task.delay(0.46, function()
+        tween(ui.Subtitle, TweenInfo.new(0.65, Enum.EasingStyle.Quad), {TextTransparency = 0})
+        tween(ui.PhaseText, TweenInfo.new(0.65, Enum.EasingStyle.Quad), {TextTransparency = 0})
+    end)
+
+    -- Fail-safe: GameFade must never be allowed to remain over the game.
+    task.delay(1.8, function()
+        if ui.IntroFade and ui.IntroFade.Parent then
+            ui.IntroFade.BackgroundTransparency = 1
+            ui.IntroFade.Visible = false
+            ui.IntroFade.Active = false
+        end
+    end)
+end
+
+--// UI effects
+local function setWarning(text, duration, strong)
+    if not state.active or state.ending then return end
+    ui.Warning.Text = text
+    ui.Warning.TextTransparency = 1
+    ui.Warning.Position = UDim2.fromScale(0.5,0.29)
+
+    tween(ui.Warning, TweenInfo.new(0.10, Enum.EasingStyle.Linear), {
+        TextTransparency = 0,
+        Position = UDim2.fromScale(0.5,0.285),
+    })
+
+    if strong then
+        ui.Warning.TextSize = 29
+    else
+        ui.Warning.TextSize = 24
+    end
+
+    task.delay(duration or 0.65, function()
+        if ui.Warning and ui.Warning.Parent then
+            tween(ui.Warning, TweenInfo.new(0.24), {TextTransparency = 1})
+        end
+    end)
+end
+
+local function flashScreen(color, peakTransparency, inTime, outTime)
+    ui.Flash.BackgroundColor3 = color or Color3.new(1,1,1)
+    ui.Flash.BackgroundTransparency = 1
+
+    tween(ui.Flash, TweenInfo.new(inTime or 0.035), {
+        BackgroundTransparency = peakTransparency or 0.18
+    })
+
+    task.delay(inTime or 0.035, function()
+        tween(ui.Flash, TweenInfo.new(outTime or 0.30, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            BackgroundTransparency = 1
+        })
+    end)
+end
+
+local function pulseDanger(amount)
+    amount = clamp01(amount or 0.5)
+    ui.RedPulse.BackgroundTransparency = 1
+    tween(ui.RedPulse, TweenInfo.new(0.07), {
+        BackgroundTransparency = 0.92 - amount * 0.34
+    })
+    task.delay(0.08, function()
+        tween(ui.RedPulse, TweenInfo.new(0.45), {BackgroundTransparency = 1})
+    end)
+end
+
+local function impactBlur(size)
+    ui.Blur.Size = 0
+    tween(ui.Blur, TweenInfo.new(0.055), {Size = size or 17})
+    task.delay(0.07, function()
+        tween(ui.Blur, TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = 0})
+    end)
+end
+
+local function spawnGlitchSlice(intensity)
+    if not ui.GlitchHolder or not ui.GlitchHolder.Parent then return end
+    intensity = intensity or 1
+
+    local h = math.random(2, math.max(3, math.floor(12 * intensity)))
+    local y = math.random(5,95) / 100
+    local offset = math.random(-22,22) * intensity
+
+    local slice = new("Frame", {
+        Position = UDim2.new(0,offset,y,0),
+        Size = UDim2.new(1,0,0,h),
+        BackgroundColor3 = (math.random() > 0.5)
+            and Color3.fromRGB(220,225,235)
+            or Color3.fromRGB(140,0,20),
+        BackgroundTransparency = 0.70 + math.random() * 0.20,
+        BorderSizePixel = 0,
+        ZIndex = 151,
+    }, ui.GlitchHolder)
+
+    Debris:AddItem(slice, math.random(3,10)/100)
+end
+
+local function glitchBurst(intensity, duration)
+    intensity = intensity or 1
+    duration = duration or 0.3
+
+    task.spawn(function()
+        local finish = os.clock() + duration
+        while state.active and os.clock() < finish do
+            for _ = 1, math.max(1, math.floor(2 * intensity)) do
+                spawnGlitchSlice(intensity)
+            end
+
+            local x = math.random(-5,5) * intensity
+            local y = math.random(-3,3) * intensity
+            ui.Arena.Position = UDim2.new(0.5,x,0.52,y)
+            ui.Title.Position = UDim2.new(0.5,-x,0.055,0)
+
+            task.wait(math.random(2,6)/100)
+        end
+
+        if ui.Arena and ui.Arena.Parent then
+            ui.Arena.Position = UDim2.fromScale(0.5,0.52)
+        end
+        if ui.Title and ui.Title.Parent then
+            ui.Title.Position = UDim2.new(0.5,0,0.055,0)
+        end
+    end)
+end
+
+--// Impact/event helpers
+local function addForce(force, multiplier)
+    state.ballVelocity += force * (multiplier or 1)
+end
+
+local function doImpact(strengthMultiplier, warningText)
+    if not state.active or state.ending then return end
+
+    local p = CONFIG.Phase[state.phase]
+    strengthMultiplier = strengthMultiplier or 1
+
+    setWarning(warningText or ">> IMPACT DETECTED <<", 0.45, true)
+    playOneShot(CONFIG.WarningSoundId, 1.2, 1)
+
+    -- Tiny telegraph.
+    task.wait(math.max(0.10, 0.22 - state.phase * 0.025))
+
+    local direction = randomUnit2()
+    addForce(direction * p.ImpactForce * strengthMultiplier)
+
+    -- V3.1: EVERY impact gets screen/camera shake.
+    shakeForPhase(strengthMultiplier)
+
+    flashScreen(Color3.fromRGB(255,245,245), 0.12, 0.025, 0.32)
+    pulseDanger(0.55 + state.phase * 0.08)
+    impactBlur(13 + state.phase * 3)
+    glitchBurst(0.65 + state.phase * 0.12, 0.18 + state.phase * 0.035)
+    playOneShot(CONFIG.ImpactSoundId, 1.8, 0.92 + math.random() * 0.12)
+end
+
+local function doDoubleImpact()
+    if not state.active then return end
+    setWarning("MULTIPLE CONTACTS", 0.55, true)
+    doImpact(0.82, "CONTACT // 01")
+    task.wait(0.22)
+    if state.active then
+        doImpact(0.78, "CONTACT // 02")
+    end
+end
+
+local function doDistortion()
+    if not state.active or state.ending then return end
+    setWarning("SIGNAL INVERSION", 0.9, true)
+
+    state.inverted = true
+    state.distortion = math.max(state.distortion, 0.85)
+
+    -- Distortion starts with a real camera hit too.
+    shakeForPhase(0.58)
+    glitchBurst(1.65, 0.8)
+    impactBlur(19)
+    pulseDanger(0.45)
+
+    local oldTint = ui.Color.TintColor
+    ui.Color.TintColor = Color3.fromRGB(205,225,255)
+    ui.Color.Contrast = 0.18
+
+    task.delay(state.phase == 4 and 1.45 or 1.7, function()
+        state.inverted = false
+        if ui.Color and ui.Color.Parent then
+            ui.Color.TintColor = oldTint
+            ui.Color.Contrast = 0.05
+        end
+    end)
+end
+
+local function doPressureSurge()
+    if not state.active or state.ending then return end
+    setWarning("PRESSURE SURGE", 0.75, true)
+
+    -- Visual hit and camera shake on surge.
+    shakeForPhase(0.72)
+    flashScreen(Color3.fromRGB(255,70,70), 0.56, 0.05, 0.50)
+    pulseDanger(0.8)
+    impactBlur(15)
+    glitchBurst(1.1, 0.42)
+
+    -- Phase 4 made slightly less punishing.
+    local drain = ({0.20,0.28,0.36,0.36})[state.phase]
+    state.pressure = math.max(0, state.pressure - drain)
+
+    addForce(randomUnit2() * CONFIG.Phase[state.phase].ImpactForce * 0.62)
+end
+
+local function doBlackout()
+    if not state.active or state.ending then return end
+    setWarning("VISUAL FEED LOST", 0.5, true)
+
+    -- Entry impact.
+    shakeForPhase(0.62)
+    glitchBurst(1.35, 0.32)
+
+    state.blackout = true
+    tween(ui.Root, TweenInfo.new(0.10), {BackgroundTransparency = 0.02})
+    tween(ui.Arena, TweenInfo.new(0.10), {BackgroundTransparency = 0.94})
+    tween(ui.Ball, TweenInfo.new(0.10), {BackgroundTransparency = 0.82})
+    tween(ui.SafeZone, TweenInfo.new(0.10), {BackgroundTransparency = 1})
+
+    -- Phase 4 blackout shortened.
+    local duration = ({0.62,0.78,0.92,0.88})[state.phase]
+
+    task.delay(duration, function()
+        if not state.active then return end
+        state.blackout = false
+
+        -- Restoration gets a smaller shake so every major visual jolt is felt.
+        shakeForPhase(0.32)
+        flashScreen(Color3.fromRGB(225,235,255), 0.34, 0.03, 0.28)
+        tween(ui.Root, TweenInfo.new(0.22), {BackgroundTransparency = 0.46})
+        tween(ui.Arena, TweenInfo.new(0.22), {BackgroundTransparency = 0.36})
+        tween(ui.Ball, TweenInfo.new(0.22), {BackgroundTransparency = 0})
+        tween(ui.SafeZone, TweenInfo.new(0.22), {BackgroundTransparency = 0.94})
+    end)
+end
+
+local function doSignalCorruption()
+    if not state.active or state.ending then return end
+    setWarning("CORRUPTED INPUT", 0.8, false)
+    glitchBurst(1.8, 0.65)
+    shakeForPhase(0.45)
+    impactBlur(11)
+
+    state.distortion = 1
+    addForce(randomUnit2() * CONFIG.Phase[state.phase].ImpactForce * 0.48)
+end
+
+local EVENT_FUNCTIONS = {
+    Impact = function() doImpact(1.00) end,
+    HeavyImpact = function() doImpact(1.22, ">> HEAVY IMPACT <<") end,
+    DoubleImpact = doDoubleImpact,
+    Distortion = doDistortion,
+    Surge = doPressureSurge,
+    Blackout = doBlackout,
+    Corruption = doSignalCorruption,
+}
+
+local function chooseEvent()
+    local phase = state.phase
+    local pool
+
+    if phase == 1 then
+        pool = {"Impact","Impact","HeavyImpact","Corruption"}
+    elseif phase == 2 then
+        pool = {"Impact","HeavyImpact","HeavyImpact","Surge","Corruption","Blackout"}
+    elseif phase == 3 then
+        pool = {"HeavyImpact","HeavyImpact","DoubleImpact","Surge","Distortion","Blackout","Corruption"}
+    else
+        -- Phase 4 V3.1: fewer chained/double events, more single heavy impacts.
+        pool = {
+            "HeavyImpact","HeavyImpact","HeavyImpact",
+            "Impact",
+            "Surge","Surge",
+            "Distortion",
+            "Blackout",
+            "Corruption",
+            "DoubleImpact"
+        }
+    end
+
+    return pool[math.random(1,#pool)]
+end
+
+local function scheduleNextEvent(now)
+    local p = CONFIG.Phase[state.phase]
+    state.nextEventAt = now + p.MinEventDelay + math.random() * (p.MaxEventDelay - p.MinEventDelay)
+end
+
+--// Phase handling
+local function calculatePhase(progress)
+    if progress < 0.25 then return 1 end
+    if progress < 0.50 then return 2 end
+    if progress < 0.75 then return 3 end
+    return 4
+end
+
+local function enterPhase(newPhase)
+    if newPhase == state.phase then return end
+    state.phase = newPhase
+    ui.PhaseText.Text = string.format("PHASE // %02d", newPhase)
+
+    setWarning("PHASE " .. tostring(newPhase) .. " // ESCALATION", 0.9, true)
+
+    -- Phase transition itself gets camera shake.
+    shakeForPhase(0.55 + newPhase * 0.08)
+    flashScreen(Color3.fromRGB(235,235,245), 0.52, 0.04, 0.42)
+    glitchBurst(0.8 + newPhase * 0.18, 0.42)
+end
+
+--// Input
+local function lockMouse()
+    state.oldMouseBehavior = UserInputService.MouseBehavior
+    state.oldMouseIcon = UserInputService.MouseIconEnabled
+    UserInputService.MouseIconEnabled = false
+    UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+end
+
+local function restoreMouse()
+    UserInputService.MouseBehavior = state.oldMouseBehavior
+    UserInputService.MouseIconEnabled = state.oldMouseIcon
+end
+
+local function connectInput()
+    table.insert(state.connections, UserInputService.InputChanged:Connect(function(input)
+        if not state.active or state.ending then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+
+        local delta = input.Delta
+        local sign = state.inverted and -1 or 1
+        local p = CONFIG.Phase[state.phase]
+
+        local d = Vector2.new(delta.X, delta.Y)
+        local distortionScale = 1
+
+        if state.distortion > 0 then
+            local wobble = Vector2.new(
+                math.sin(os.clock()*17),
+                math.cos(os.clock()*13)
+            ) * state.distortion * 0.18
+            d += d * wobble
+            distortionScale = 1 - state.distortion * 0.10
+        end
+
+        state.ballVelocity += d
+            * CONFIG.MouseSensitivity
+            * p.InputMultiplier
+            * distortionScale
+            * sign
+    end))
+end
+
+--// End sequences
+local function disconnectAll()
+    for _, c in ipairs(state.connections) do
+        pcall(function() c:Disconnect() end)
+    end
+    table.clear(state.connections)
+end
+
+local function cleanup()
+    state.active = false
+
+    -- Stop the independent full-game micro shake only when the minigame ends.
+    stopGameCameraShake()
+
+    -- Defensive screen release. Even if an end sequence errors later,
+    -- this prevents GameFade from trapping the player behind black.
+    if ui and ui.IntroFade and ui.IntroFade.Parent then
+        ui.IntroFade.BackgroundTransparency = 1
+        ui.IntroFade.Visible = false
+        ui.IntroFade.Active = false
+    end
+
+    disconnectAll()
+    restoreMouse()
+
+    for _, t in ipairs(state.tweens) do
+        pcall(function() t:Cancel() end)
+    end
+    table.clear(state.tweens)
+
+    -- Z367_PRELOADED_MUSIC is persistent and must not be destroyed here.
+    -- Playback is controlled by the encounter controller/stopAmbient().
+
+    if state.heartbeat then
+        pcall(function()
+            state.heartbeat:Stop()
+            state.heartbeat:Destroy()
+        end)
+        state.heartbeat = nil
+    end
+
+    task.delay(0.2, function()
+        safeDestroy(ui.Blur)
+        safeDestroy(ui.Color)
+    end)
+end
+
+local showSurviveEffect
+
+local function surviveSequence()
+    if state.ending then return end
+    state.ending = true
+
+    setWarning("SIGNAL STABILIZED", 1.3, true)
+    runFinalCameraShake()
+    flashScreen(Color3.fromRGB(235,245,255), 0.10, 0.06, 0.70)
+
+    tween(ui.Blur, TweenInfo.new(0.7), {Size = 0})
+    tween(ui.Root, TweenInfo.new(1.0), {BackgroundTransparency = 0.72})
+
+    task.wait(1.15)
+
+    ui.IntroFade.Visible = true
+    ui.IntroFade.BackgroundTransparency = 1
+    tween(ui.IntroFade, TweenInfo.new(0.85, Enum.EasingStyle.Quad), {BackgroundTransparency = 0})
+
+    task.wait(0.9)
+    cleanup()
+    safeDestroy(ui.Gui)
+
+    -- Success removes Z-367 immediately.
+    showSurviveEffect()
+
+    if _G.Z367IntegratedResult then
+        pcall(_G.Z367IntegratedResult, "win")
+    end
+end
+
 local killEffectPlayed = false
+local isPlayerDead = false
 
 local function showKillEffect()
     if killEffectPlayed then
         return
     end
-    
+
     killEffectPlayed = true
     isPlayerDead = true
-    
+
     local playerGui = player:WaitForChild("PlayerGui")
+    local oldKillGui = playerGui:FindFirstChild("KillEffect")
+    if oldKillGui then
+        oldKillGui:Destroy()
+    end
+
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "KillEffect"
     screenGui.ResetOnSpawn = false
+    screenGui.IgnoreGuiInset = true
+    screenGui.DisplayOrder = 10000
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.Parent = playerGui
-    
+
     for _, child in ipairs(screenGui:GetChildren()) do
         child:Destroy()
     end
-    
+
     local sound = Instance.new("Sound")
     sound.SoundId = "rbxassetid://112123002526111"
     sound.Volume = 4
     sound.Parent = workspace
     sound:Play()
-    game:GetService("Debris"):AddItem(sound, sound.TimeLength + 1)
-    
+    Debris:AddItem(sound, math.max(sound.TimeLength + 1, 3))
+
     local image = Instance.new("ImageLabel")
     image.Image = "rbxassetid://99207315574595"
     image.Size = UDim2.new(0, 10, 0, 10)
@@ -2318,576 +3478,1043 @@ local function showKillEffect()
     image.BackgroundTransparency = 1
     image.ScaleType = Enum.ScaleType.Fit
     image.SizeConstraint = Enum.SizeConstraint.RelativeXY
+    image.ZIndex = 2
     image.Parent = screenGui
-    
-    TweenService:Create(image, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(1.5, 0, 1.5, 0)
-    }):Play()
-    
-    wait(0.3)
+
+    TweenService:Create(
+        image,
+        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {Size = UDim2.new(1.5, 0, 1.5, 0)}
+    ):Play()
+
+    task.wait(0.3)
 
     local time = 0
     local duration = 0.8
-    
-    while time < duration do
-        time = time + wait()
+
+    while time < duration and image.Parent do
+        local dt = task.wait()
+        time += dt
+
         local shakeX = math.sin(time * 30) * 0.002
         local shakeY = math.cos(time * 28) * 0.002
-        
+
         image.Position = UDim2.new(0.5 + shakeX, 0, 0.5 + shakeY, 0)
     end
 
-    replicatesignal(game.Players.LocalPlayer.Kill)
-    
-    TweenService:Create(image, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        ImageTransparency = 1
-    }):Play()
-    
-    wait(0.2)
-    image:Destroy()
-    wait(0.5)
-    screenGui:Destroy()
+    -- Use the requested Doors/executor kill signal when available.
+    -- Fallback to Humanoid.Health = 0 so failure still actually kills the player.
+    local signalWorked = pcall(function()
+        if type(replicatesignal) ~= "function" then
+            error("replicatesignal unavailable")
+        end
+        replicatesignal(game.Players.LocalPlayer.Kill)
+    end)
+
+    if not signalWorked then
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid.Health > 0 then
+            pcall(function()
+                humanoid.Health = 0
+            end)
+        end
+    end
+
+    TweenService:Create(
+        image,
+        TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {ImageTransparency = 1}
+    ):Play()
+
+    task.wait(0.2)
+
+    if image.Parent then
+        image:Destroy()
+    end
+
+    task.wait(0.5)
+
+    if screenGui.Parent then
+        screenGui:Destroy()
+    end
 end
 
-local function showSurviveEffect()
+showSurviveEffect = function()
     if workspace:FindFirstChild("Z-367") then
         workspace["Z-367"]:Destroy()
     end
 end
 
-local function isPlayerAlive()
-    local character = player.Character
-    if not character then
-        return false
-    end
-    
-    local humanoid = character:FindFirstChild("Humanoid")
-    if not humanoid then
-        return false
-    end
-    
-    return humanoid.Health > 0
-end
+local function deathSequence()
+    if state.ending then return end
+    state.ending = true
+    state.dead = true
 
-local function GitAud(soundgit, filename)
-    local url = soundgit
-    local FileName = filename
-    writefile(FileName .. ".mp3", game:HttpGet(url))
-    return (getcustomasset or getsynasset)(FileName .. ".mp3")
-end
-
-local function CustomGitSound(soundlink, vol, filename)
-    local sound = Instance.new("Sound")
-    sound.SoundId = GitAud(soundlink, filename)
-    sound.Parent = workspace
-    sound.Name = filename or "Music"
-    sound.Volume = vol
-    sound:Play()
-    return sound
-end
-
-local function loadMusicOnly()
-    local targetAudioUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/Z367Music.mp3?raw=true"
-    local localFileName = "Z367Music"
-    
-    local gameMusic = nil
-    local success, errorMsg = pcall(function()
-        gameMusic = CustomGitSound(targetAudioUrl, 3, localFileName)
-    end)
-    
-    if not success then
-        gameMusic = Instance.new("Sound")
-        gameMusic.Name = "Z367MusicFallback"
-        gameMusic.Volume = 0
-        gameMusic.Parent = workspace
+    if ui and ui.Warning then
+        ui.Warning.Text = "SIGNAL LOST"
+        ui.Warning.TextColor3 = Color3.fromRGB(255,45,45)
+        ui.Warning.TextTransparency = 0
     end
-    
-    if gameMusic then
-        repeat
-            wait(0.1)
-        until gameMusic.IsPlaying
-    end
-    
-    if gameMusic then
-        wait(gameMusic.TimeLength or 61)
-        if gameMusic and gameMusic.Parent then
-            gameMusic:Stop()
-            gameMusic:Destroy()
-        end
+
+    runFinalCameraShake()
+    requestFallbackShake(0.035,0.5)
+    flashScreen(Color3.fromRGB(255,20,20), 0.08, 0.025, 0.30)
+    glitchBurst(2.4, 0.42)
+    impactBlur(28)
+
+    task.wait(0.08)
+
+    -- Exact Z-367 kill presentation requested by the user.
+    showKillEffect()
+
+    cleanup()
+    safeDestroy(ui and ui.Gui)
+
+    -- Only after the player has failed/died is Z-367 released to leave.
+    if _G.Z367IntegratedResult then
+        pcall(_G.Z367IntegratedResult, "lose")
     end
 end
 
-local function createGameUI()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "PressureMinigame"
-    screenGui.Enabled = false
-    screenGui.DisplayOrder = 10
-    screenGui.Parent = gui
-    
-    local background = Instance.new("Frame")
-    background.Name = "Background"
-    background.Size = UDim2.new(1, 0, 1, 0)
-    background.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    background.BackgroundTransparency = 1
-    background.ZIndex = 1
-    background.Parent = screenGui
-    
-    local centerDot = Instance.new("Frame")
-    centerDot.Name = "CenterDot"
-    centerDot.Size = UDim2.new(0, 8, 0, 8)
-    centerDot.Position = UDim2.new(0.5, -4, 0.5, -4)
-    centerDot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-    centerDot.BorderSizePixel = 0
-    centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
-    centerDot.ZIndex = 5
-    centerDot.BackgroundTransparency = 1
-    
-    local dotCorner = Instance.new("UICorner")
-    dotCorner.CornerRadius = UDim.new(1, 0)
-    dotCorner.Parent = centerDot
-    
-    local centerCircle = Instance.new("Frame")
-    centerCircle.Name = "CenterCircle"
-    centerCircle.Size = UDim2.new(0, 100, 0, 100)
-    centerCircle.Position = UDim2.new(0.5, -50, 0.5, -50)
-    centerCircle.BackgroundTransparency = 1
-    centerCircle.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
-    centerCircle.BorderColor3 = Color3.fromRGB(180, 180, 180)
-    centerCircle.BorderSizePixel = 2
-    centerCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-    centerCircle.ZIndex = 4
-    centerCircle.BackgroundTransparency = 1
-    
-    local circleCorner = Instance.new("UICorner")
-    circleCorner.CornerRadius = UDim.new(1, 0)
-    circleCorner.Parent = centerCircle
-    
-    local controlBall = Instance.new("Frame")
-    controlBall.Name = "ControlBall"
-    controlBall.Size = UDim2.new(0, 30, 0, 30)
-    controlBall.Position = UDim2.new(0.5, -15, 0.5, -15)
-    controlBall.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    controlBall.BorderSizePixel = 0
-    controlBall.AnchorPoint = Vector2.new(0.5, 0.5)
-    controlBall.ZIndex = 6
-    controlBall.BackgroundTransparency = 1
-    
-    local ballCorner = Instance.new("UICorner")
-    ballCorner.CornerRadius = UDim.new(1, 0)
-    ballCorner.Parent = controlBall
-    
-    local pressureBack = Instance.new("Frame")
-    pressureBack.Name = "PressureBack"
-    pressureBack.Size = UDim2.new(0.6, 0, 0, 30)
-    pressureBack.Position = UDim2.new(0.2, 0, 0.05, 0)
-    pressureBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    pressureBack.BorderSizePixel = 2
-    pressureBack.BorderColor3 = Color3.fromRGB(80, 80, 80)
-    pressureBack.ZIndex = 3
-    pressureBack.BackgroundTransparency = 1
-    
-    local backCorner = Instance.new("UICorner")
-    backCorner.CornerRadius = UDim.new(0, 6)
-    backCorner.Parent = pressureBack
-    
-    local pressureFill = Instance.new("Frame")
-    pressureFill.Name = "PressureFill"
-    pressureFill.Size = UDim2.new(1, 0, 1, 0)
-    pressureFill.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-    pressureFill.BorderSizePixel = 0
-    pressureFill.ZIndex = 4
-    pressureFill.BackgroundTransparency = 1
-    
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, 6)
-    fillCorner.Parent = pressureFill
-    
-    local pressureText = Instance.new("TextLabel")
-    pressureText.Name = "PressureText"
-    pressureText.Size = UDim2.new(1, 0, 1, 0)
-    pressureText.BackgroundTransparency = 1
-    pressureText.Text = "Stay in the center!"
-    pressureText.TextColor3 = Color3.fromRGB(200, 200, 200)
-    pressureText.TextSize = 18
-    pressureText.Font = Enum.Font.GothamBold
-    pressureText.TextStrokeTransparency = 0.5
-    pressureText.ZIndex = 5
-    pressureText.TextTransparency = 1
-    
-    local timerText = Instance.new("TextLabel")
-    timerText.Name = "Timer"
-    timerText.Size = UDim2.new(0.3, 0, 0, 40)
-    timerText.Position = UDim2.new(0.35, 0, 0.1, 0)
-    timerText.BackgroundTransparency = 1
-    timerText.Text = "01:01"
-    timerText.TextColor3 = Color3.fromRGB(200, 200, 200)
-    timerText.TextSize = 36
-    timerText.Font = Enum.Font.GothamBold
-    timerText.TextStrokeTransparency = 0.5
-    timerText.ZIndex = 3
-    timerText.TextTransparency = 1
-    
-    pressureFill.Parent = pressureBack
-    pressureText.Parent = pressureBack
-    centerDot.Parent = screenGui
-    centerCircle.Parent = screenGui
-    controlBall.Parent = screenGui
-    pressureBack.Parent = screenGui
-    timerText.Parent = screenGui
-    
-    return {
-        ScreenGui = screenGui,
-        Background = background,
-        Ball = controlBall,
-        CenterDot = centerDot,
-        CenterCircle = centerCircle,
-        PressureBack = pressureBack,
-        PressureFill = pressureFill,
-        PressureText = pressureText,
-        Timer = timerText
-    }
+--// Main visual update
+local function updatePressureVisual(percent, inCenter)
+    percent = clamp01(percent)
+    ui.PressureFill.Size = UDim2.new(percent,0,1,0)
+
+    -- White -> amber -> red
+    local r, g, b
+    if percent > 0.55 then
+        local t = (percent - 0.55) / 0.45
+        r = 225
+        g = math.floor(145 + 80*t)
+        b = math.floor(110 + 110*t)
+    else
+        local t = percent / 0.55
+        r = 235
+        g = math.floor(45 + 100*t)
+        b = math.floor(50 + 60*t)
+    end
+
+    ui.PressureFill.BackgroundColor3 = Color3.fromRGB(r,g,b)
+
+    if percent < 0.38 then
+        local pulse = (math.sin(os.clock()*8)+1)/2
+        ui.RedPulse.BackgroundTransparency = 0.91 + pulse*0.07
+        ui.PressureLabel.Text = "SIGNAL PRESSURE // CRITICAL"
+        ui.PressureLabel.TextColor3 = Color3.fromRGB(255,85,85)
+    elseif percent < 0.62 then
+        ui.RedPulse.BackgroundTransparency = 1
+        ui.PressureLabel.Text = "SIGNAL PRESSURE // UNSTABLE"
+        ui.PressureLabel.TextColor3 = Color3.fromRGB(220,165,120)
+    else
+        ui.RedPulse.BackgroundTransparency = 1
+        ui.PressureLabel.Text = "SIGNAL PRESSURE"
+        ui.PressureLabel.TextColor3 = Color3.fromRGB(170,170,175)
+    end
+
+    ui.SafeStroke.Color = inCenter
+        and Color3.fromRGB(215,225,220)
+        or Color3.fromRGB(145,80,80)
 end
 
-local function fadeInUI(ui)
-    ui.ScreenGui.Enabled = true
-    
-    local fadeTime = 0.8
-    local fadeInfo = TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    
-    TweenService:Create(ui.Background, fadeInfo, {BackgroundTransparency = 0.7}):Play()
-    
-    wait(0.2)
-    TweenService:Create(ui.CenterDot, fadeInfo, {BackgroundTransparency = 0}):Play()
-    wait(0.1)
-    TweenService:Create(ui.CenterCircle, fadeInfo, {BackgroundTransparency = 0.7, BorderColor3 = Color3.fromRGB(180, 180, 180)}):Play()
-    wait(0.1)
-    TweenService:Create(ui.Ball, fadeInfo, {BackgroundTransparency = 0}):Play()
-    wait(0.1)
-    TweenService:Create(ui.PressureBack, fadeInfo, {BackgroundTransparency = 0.3}):Play()
-    TweenService:Create(ui.PressureFill, fadeInfo, {BackgroundTransparency = 0}):Play()
-    TweenService:Create(ui.PressureText, TweenInfo.new(fadeTime, Enum.EasingStyle.Linear), {TextTransparency = 0}):Play()
-    TweenService:Create(ui.Timer, TweenInfo.new(fadeTime, Enum.EasingStyle.Linear), {TextTransparency = 0}):Play()
-    
-    wait(fadeTime)
+local function updateTimer()
+    local seconds = math.max(0, math.ceil(state.remaining))
+    local mins = math.floor(seconds/60)
+    local secs = seconds%60
+    ui.Timer.Text = string.format("%02d:%02d", mins, secs)
 end
 
-local function fadeOutUI(ui, result)
-    local fadeTime = 0.5
-    local fadeInfo = TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-    
-    wait(1.5)
-    
-    TweenService:Create(ui.Background, fadeInfo, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(ui.CenterDot, fadeInfo, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(ui.CenterCircle, fadeInfo, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(ui.Ball, fadeInfo, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(ui.PressureBack, fadeInfo, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(ui.PressureFill, fadeInfo, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(ui.PressureText, TweenInfo.new(fadeTime), {TextTransparency = 1}):Play()
-    TweenService:Create(ui.Timer, TweenInfo.new(fadeTime), {TextTransparency = 1}):Play()
-    
-    wait(fadeTime)
-    ui.ScreenGui:Destroy()
-end
+-- Timestamp is set by the encounter controller exactly when the
+-- preloaded music begins, so the 6-second climax stays synchronized.
+local Z367MusicStartedAt = nil
 
-local function applySlamForce()
-    local forceMultiplier = 0.12
-    local angle = math.random() * math.pi * 2
-    return Vector2.new(
-        math.cos(angle) * forceMultiplier,
-        math.sin(angle) * forceMultiplier
-    )
-end
-
-local function updateSlamInterval(gameProgress)
-    local minStart = 2
-    local maxStart = 6
-    local minEnd = 1
-    local maxEnd = 4
-    
-    local currentMin = minStart + (minEnd - minStart) * gameProgress
-    local currentMax = maxStart + (maxEnd - maxStart) * gameProgress
-    
-    local randomInterval = currentMin + (currentMax - currentMin) * math.random()
-    
-    return randomInterval, currentMin, currentMax
-end
-
+--// Main
 local function startGame()
-    local targetAudioUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/Z367Music.mp3?raw=true"
-    local localFileName = "Z367Music"
-    
-    local gameMusic = nil
-    local success, errorMsg = pcall(function()
-        gameMusic = CustomGitSound(targetAudioUrl, 3, localFileName)
-    end)
-    
-    if not success then
-        gameMusic = Instance.new("Sound")
-        gameMusic.Name = "Z367MusicFallback"
-        gameMusic.Volume = 4
-        gameMusic.Parent = workspace
+    if state.active or state.ending then return end
+
+    -- Rebuild UI if another cleanup/respawn removed it before the encounter starts.
+    if not ui or not ui.Gui or not ui.Gui.Parent then
+        ui = buildUI()
     end
-    
-    if gameMusic then
-        repeat
-            wait(0.1)
-        until gameMusic.IsPlaying
-    end
-    
-    local ui = createGameUI()
-    fadeInUI(ui)
-    
-    gameData.gameActive = true
-    gameData.currentPressure = gameData.maxPressure
-    gameData.remainingTime = gameData.gameDuration
-    gameData.lastSlamTime = tick()
-    gameData.timeProgress = 0
-    
-    local initialInterval = 2 + (6 - 2) * math.random()
-    gameData.currentSlamInterval = initialInterval
-    
-    local ballPos = Vector2.new(0.5, 0.5)
-    local ballVelocity = Vector2.new(0, 0)
-    local isDragging = false
-    local lastMousePos = Vector2.new(0, 0)
-    local mouseDown = false
-    local isMouseControl = true
-    
-    local mouseSensitivity = 0.0003
-    local touchSensitivity = 0.0004
-    local minShakeInterval = 0.1
-    
-    local viewportSize = workspace.CurrentCamera.ViewportSize
-    local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-    
-    local inputBeganConnection = UserInputService.InputBegan:Connect(function(input)
-        if not gameData.gameActive then return end
-        
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            mouseDown = true
-            isDragging = true
-            lastMousePos = Vector2.new(input.Position.X, input.Position.Y)
-        elseif input.UserInputType == Enum.UserInputType.Touch then
-            mouseDown = true
-            isDragging = true
-            isMouseControl = false
-            lastMousePos = Vector2.new(input.Position.X, input.Position.Y)
+
+    -- Nothing from the minigame exists onscreen before this point.
+    ui.Gui.Enabled = true
+    if ui.Blur then ui.Blur.Enabled = true end
+    if ui.Color then ui.Color.Enabled = true end
+
+    killEffectPlayed = false
+    isPlayerDead = false
+
+    state.active = true
+    state.dead = false
+    state.ending = false
+    state.pressure = CONFIG.MaxPressure
+    state.remaining = CONFIG.Duration
+    state.progress = 0
+    state.phase = 1
+    state.ballPos = Vector2.new(0.5,0.5)
+    state.ballVelocity = Vector2.zero
+    state.inverted = false
+    state.blackout = false
+    state.distortion = 0
+
+    lockMouse()
+    connectInput()
+
+    -- Music is NOT created here. It was preloaded when the script loaded
+    -- and is started only after Z-367 has locked/approached a player.
+    state.music = Z367_PRELOADED_MUSIC
+
+    runGameFadeIn()
+
+    -- Sync the six-second difficulty/climax transition to music playback.
+    local gameStartedAt = Z367MusicStartedAt or os.clock()
+    local warmupBurstPlayed = false
+
+    -- Start the independent micro shake now; it persists through the full 42 seconds.
+    runGameCameraShake()
+
+    -- Keep random events out of the first 6 seconds.
+    -- Passing +2 here means the first normal event lands roughly at 6-8.2s.
+    scheduleNextEvent(gameStartedAt + 2.0)
+
+    local last = gameStartedAt
+
+    table.insert(state.connections, RunService.RenderStepped:Connect(function(dt)
+        if not state.active or state.ending then return end
+
+        local now = os.clock()
+        dt = math.min(dt, 1/20)
+
+        camera = workspace.CurrentCamera
+
+        -- Fallback shake only when CameraShaker isn't available.
+        if fallbackShake.endAt > now and camera then
+            local p = fallbackShake.power
+            local rx = math.rad((math.random()-0.5) * p * 90)
+            local ry = math.rad((math.random()-0.5) * p * 90)
+            local rz = math.rad((math.random()-0.5) * p * 50)
+            local tx = (math.random()-0.5) * p
+            local ty = (math.random()-0.5) * p
+            camera.CFrame = camera.CFrame * CFrame.new(tx,ty,0) * CFrame.Angles(rx,ry,rz)
+        elseif fallbackShake.endAt <= now then
+            fallbackShake.power = 0
         end
-    end)
-    
-    local inputEndedConnection = UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
-            mouseDown = false
-            isDragging = false
+
+        -- Time/phase
+        state.remaining -= dt
+        state.progress = clamp01(1 - state.remaining / CONFIG.Duration)
+
+        local elapsed = now - gameStartedAt
+        local warmup = elapsed < 6
+
+        -- At exactly ~6 seconds, difficulty snaps from the easy opening
+        -- into the normal game and gives one pronounced camera hit.
+        if not warmupBurstPlayed and elapsed >= 6 then
+            warmupBurstPlayed = true
+
+            runCameraShake(
+                34,   -- magnitude
+                220,  -- roughness
+                0.05, -- fade in
+                0.62, -- fade out
+                2.2,  -- position influence
+                0.55  -- rotation influence
+            )
+
+            flashScreen(Color3.fromRGB(245,245,255), 0.34, 0.025, 0.32)
+            glitchBurst(0.75, 0.20)
         end
-    end)
-    
-    local inputChangedConnection = UserInputService.InputChanged:Connect(function(input)
-        if not gameData.gameActive or not mouseDown then return end
-        
-        if input.UserInputType == Enum.UserInputType.MouseMovement and isMouseControl then
-            local currentMousePos = Vector2.new(input.Position.X, input.Position.Y)
-            local delta = currentMousePos - lastMousePos
-            
-            ballVelocity = ballVelocity + Vector2.new(delta.X, delta.Y) * mouseSensitivity
-            
-            lastMousePos = currentMousePos
-            
-        elseif input.UserInputType == Enum.UserInputType.Touch and not isMouseControl then
-            local currentTouchPos = Vector2.new(input.Position.X, input.Position.Y)
-            local delta = currentTouchPos - lastMousePos
-            
-            ballVelocity = ballVelocity + Vector2.new(delta.X, delta.Y) * touchSensitivity
-            
-            lastMousePos = currentTouchPos
+
+        local phase = calculatePhase(state.progress)
+        if phase ~= state.phase then
+            enterPhase(phase)
+            scheduleNextEvent(now + 0.35)
         end
-    end)
-    
-    local lastUpdate = tick()
-    local lastBorderHit = 0
-    local lastBallPos = ballPos
-    local gameLoopConnection
-    
-    local function cleanupGame()
-        if gameData.gameActive then
-            gameData.gameActive = false
+
+        local phaseCfg = CONFIG.Phase[state.phase]
+
+        -- First six seconds: deliberately very easy and calm.
+        -- Afterwards: still less ordinary ball wandering than v3.4 so the
+        -- 42-second game stays demanding without becoming exhausting.
+        local driftStrength
+        local randomStrength
+
+        if warmup then
+            driftStrength = 0.000035 + state.phase * 0.000008
+            randomStrength = 0.000035
+        else
+            driftStrength = 0.000125 + state.phase * 0.000034
+            randomStrength = 0.000110
         end
-        
-        if inputBeganConnection then
-            inputBeganConnection:Disconnect()
+
+        state.ballVelocity += Vector2.new(
+            math.sin(now*2.7 + state.phase) * driftStrength,
+            math.cos(now*2.2 + state.phase*0.7) * driftStrength
+        )
+
+        -- Small random instability.
+        state.ballVelocity += Vector2.new(
+            (math.random()-0.5) * randomStrength,
+            (math.random()-0.5) * randomStrength
+        )
+
+        -- Gentle spring toward center so control feels physical rather than impossible.
+        local center = Vector2.new(0.5,0.5)
+        local towardCenter = center - state.ballPos
+        state.ballVelocity += towardCenter * CONFIG.Spring
+
+        state.ballVelocity *= math.pow(CONFIG.Friction, dt*60)
+
+        local maxSpeed = CONFIG.MaxSpeed
+
+        if warmup then
+            maxSpeed *= 0.58
+        else
+            -- Slightly lower ordinary movement ceiling for the shorter 42s game.
+            maxSpeed *= 0.92
         end
-        
-        if inputEndedConnection then
-            inputEndedConnection:Disconnect()
+
+        if state.phase == 4 then
+            -- Preserve the final-phase mercy from the previous version.
+            maxSpeed *= 0.94
         end
-        
-        if inputChangedConnection then
-            inputChangedConnection:Disconnect()
+
+        if state.ballVelocity.Magnitude > maxSpeed then
+            state.ballVelocity = state.ballVelocity.Unit * maxSpeed
         end
-        
-        if gameLoopConnection then
-            gameLoopConnection:Disconnect()
+
+        state.ballPos += state.ballVelocity
+
+        -- Circular-ish arena clamp using normalized center distance.
+        local offset = state.ballPos - center
+        local dist = offset.Magnitude
+        if dist > CONFIG.OuterLimit then
+            state.ballPos = center + offset.Unit * CONFIG.OuterLimit
+            state.ballVelocity = -state.ballVelocity * 0.46
+
+            -- Border impact also shakes the screen.
+            shakeForPhase(0.22)
+            pulseDanger(0.35)
+            glitchBurst(0.38,0.10)
         end
-        
-        if gameMusic and gameMusic.Parent then
-            gameMusic:Stop()
-            wait(0.1)
-            gameMusic:Destroy()
+
+        ui.Ball.Position = UDim2.fromScale(state.ballPos.X,state.ballPos.Y)
+        ui.BallGlow.Position = ui.Ball.Position
+
+        local safeDistance = (state.ballPos-center).Magnitude
+        local inCenter = safeDistance <= CONFIG.CenterRadius
+
+        if inCenter then
+            state.pressure = math.min(
+                CONFIG.MaxPressure,
+                state.pressure + CONFIG.RecoveryRate * dt
+            )
+        else
+            local outside = math.max(0, safeDistance-CONFIG.CenterRadius)
+            local distancePenalty = outside * CONFIG.DistanceDrain
+
+            local drain = (
+                CONFIG.BaseDrainRate + distancePenalty
+            ) * phaseCfg.DrainMultiplier
+
+            -- Final phase V3.1 extra mercy.
+            if state.phase == 4 then
+                drain *= 0.92
+            end
+
+            state.pressure -= drain * dt
         end
-    end
-    
-    gameLoopConnection = RunService.RenderStepped:Connect(function(deltaTime)
-        if not gameData.gameActive then
-            cleanupGame()
+
+        state.pressure = math.clamp(state.pressure,0,CONFIG.MaxPressure)
+        updatePressureVisual(state.pressure/CONFIG.MaxPressure,inCenter)
+        updateTimer()
+
+        -- Distortion naturally decays.
+        state.distortion = math.max(0,state.distortion-dt*0.65)
+
+        -- Event scheduler
+        -- No random attacks during the six-second easy opening.
+        if not warmup and now >= state.nextEventAt then
+            local eventName = chooseEvent()
+            local fn = EVENT_FUNCTIONS[eventName]
+            if fn then
+                task.spawn(fn)
+            end
+            scheduleNextEvent(now)
+        end
+
+        if state.pressure <= 0 then
+            task.spawn(deathSequence)
             return
         end
-        
-        local currentTime = tick()
-        local delta = currentTime - lastUpdate
-        lastUpdate = currentTime
-        
-        local microShake = Vector2.new(
-            (math.random() - 0.5) * 0.0008,
-            (math.random() - 0.5) * 0.0008
-        )
-        ballVelocity = ballVelocity + microShake
-        
-        gameData.timeProgress = 1 - (gameData.remainingTime / gameData.gameDuration)
-        
-        if currentTime - gameData.lastSlamTime >= gameData.currentSlamInterval then
-            local slamForce = applySlamForce()
-            ballVelocity = ballVelocity + slamForce
-            gameData.lastSlamTime = currentTime
-            
-            local newInterval, currentMin, currentMax = updateSlamInterval(gameData.timeProgress)
-            gameData.currentSlamInterval = newInterval
-            
-            ui.CenterCircle.BorderColor3 = Color3.fromRGB(255, 100, 100)
-            ui.CenterCircle.BorderSizePixel = 4
-            wait(0.1)
-            ui.CenterCircle.BorderColor3 = Color3.fromRGB(180, 180, 180)
-            ui.CenterCircle.BorderSizePixel = 2
+
+        if state.remaining <= 0 then
+            task.spawn(surviveSequence)
+            return
         end
-        
-        ballVelocity = ballVelocity * 0.88
-        
-        local maxSpeed = 0.035
-        if ballVelocity.Magnitude > maxSpeed then
-            ballVelocity = ballVelocity.Unit * maxSpeed
+
+        last = now
+    end))
+end
+
+--// Safety cleanup if character disappears
+table.insert(state.connections, player.CharacterRemoving:Connect(function()
+    if state.active then
+        cleanup()
+        safeDestroy(ui.Gui)
+    end
+end))
+
+-- Integrated controller calls startGame() only for the selected target.
+
+_G.Z367StartSelectedMinigame = startGame
+
+
+--========================================================
+
+--========================================================
+-- Z-367 Lock Detection
+-- Only the player currently locked by Z-367 starts the minigame.
+-- Other players only receive music / Bang / camera effects.
+--========================================================
+local Z367LockedPlayer = nil
+local Z367EncounterStarted = false
+
+local function isPlayerAlive(player)
+    local char = player and player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+
+    if hum and hum.Health > 0 and root then
+        return true, root
+    end
+
+    return false, nil
+end
+
+local function getNearestAlivePlayer(position)
+    local nearest = nil
+    local nearestRoot = nil
+    local shortest = math.huge
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        local alive, root = isPlayerAlive(plr)
+
+        if alive and root then
+            local distance = (root.Position - position).Magnitude
+
+            if distance < shortest then
+                shortest = distance
+                nearest = plr
+                nearestRoot = root
+            end
         end
-        
-        lastBallPos = ballPos
-        
-        ballPos = ballPos + ballVelocity
-        
-        local hitBorder = false
-        local clampedX = math.clamp(ballPos.X, 0.05, 0.95)
-        local clampedY = math.clamp(ballPos.Y, 0.05, 0.95)
-        
-        if ballPos.X ~= clampedX or ballPos.Y ~= clampedY then
-            hitBorder = true
+    end
+
+    return nearest, nearestRoot, shortest
+end
+
+local function isThisPlayerLocked()
+    -- Use the LocalPlayer captured at the top of this script.
+    -- The old code referenced `LocalPlayer` before its later local declaration,
+    -- so Lua resolved it as a global (usually nil), preventing the minigame.
+    return Z367LockedPlayer == player
+end
+
+-- Z-367 TARGET / SPECTATOR CONTROLLER
+-- 不创建、不检测、不替换 spawner；直接沿用你原脚本里的生成器环境。
+--========================================================
+
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+local ENTITY_SPEED = 70
+local ACQUIRE_RANGE = 70
+local GAME_TRIGGER_DISTANCE = 3
+local HOLD_DISTANCE = 3
+local TARGET_LOCKED = false
+local SELECTED_PLAYER = nil
+local SELECTED_USER_ID = nil
+local entityModel = nil
+local chaseConnection = nil
+local encounterHoldConnection = nil
+local selectedPlayerDeathConnection = nil
+local departureConnection = nil
+local lockedDepartureDirection = nil
+local soundManagerConnection = nil
+local soundSystemActive = false
+local isShakingCamera = false
+local chaseStartTime = 0
+local BANG_VOLUME = 3.25
+local DEPART_SPEED = 90
+local DEPART_DISTANCE = 135
+local bangSounds = {}
+local attackSound = nil
+local pandemoniumEyesBeam = nil
+local resolved = false
+
+local function aliveCharacter(plr)
+    if not plr then return nil, nil, nil end
+    local char = plr.Character
+    if not char then return nil,nil,nil end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not hum or hum.Health <= 0 or not root then return nil,nil,nil end
+    return char, hum, root
+end
+
+local function nearestAlivePlayer(origin)
+    local best, bestRoot, bestDistance
+    for _, plr in ipairs(Players:GetPlayers()) do
+        local _, hum, root = aliveCharacter(plr)
+        if hum and root then
+            local d = (root.Position-origin).Magnitude
+            if (not bestDistance) or d < bestDistance then
+                best, bestRoot, bestDistance = plr, root, d
+            end
         end
-        
-        ballPos = Vector2.new(clampedX, clampedY)
-        
-        ui.Ball.Position = UDim2.new(ballPos.X, -15, ballPos.Y, -15)
-        
-        if hitBorder and (currentTime - lastBorderHit) >= minShakeInterval then
-            lastBorderHit = currentTime
-            
-            pcall(function()
-                local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
-                local camara = game.Workspace.CurrentCamera
-                local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-                    camara.CFrame = camara.CFrame * shakeCf
-                end)
-                camShake:Start()
-                camShake:ShakeOnce(8, 30, 0.1, 0.5, 5, 5)
+    end
+    return best, bestRoot, bestDistance
+end
+
+local function setEyes(enabled)
+    if pandemoniumEyesBeam and pandemoniumEyesBeam:IsA("Beam") then
+        pandemoniumEyesBeam.Enabled = enabled
+    end
+end
+
+local function findEntityAudio()
+    table.clear(bangSounds)
+    local zModel = entityModel or Workspace:FindFirstChild("Z-367")
+    if not zModel then return false end
+    local pandemoniumPart = zModel:FindFirstChild("Pandemonium")
+    if not pandemoniumPart then return false end
+
+    pandemoniumEyesBeam = pandemoniumPart:FindFirstChild("PandemoniumEyes")
+    setEyes(false)
+    attackSound = pandemoniumPart:FindFirstChild("Attack")
+
+    for i=1,4 do
+        local snd = pandemoniumPart:FindFirstChild("Bang"..i)
+        if snd and snd:IsA("Sound") then
+            snd.Volume = BANG_VOLUME
+            table.insert(bangSounds,snd)
+        end
+    end
+    return true
+end
+
+local function playRandomBang()
+    if #bangSounds == 0 then return end
+    local snd = bangSounds[math.random(1,#bangSounds)]
+    if snd then
+        pcall(function()
+            snd.Volume = BANG_VOLUME
+            snd.TimePosition = 0
+            snd:Play()
+        end)
+    end
+end
+
+-- Every major minigame shake can call this too.
+_G.Z367PlayModelBang = playRandomBang
+
+local function spectatorCameraShake()
+    local module = ReplicatedStorage:FindFirstChild("CameraShaker")
+    if module then
+        pcall(function()
+            local CameraShaker = require(module)
+            local shaker = CameraShaker.new(Enum.RenderPriority.Camera.Value,function(cf)
+                local cam=Workspace.CurrentCamera
+                if cam then cam.CFrame=cam.CFrame*cf end
             end)
-            
-            if ballPos.X == 0.05 or ballPos.X == 0.95 then
-                ballVelocity = Vector2.new(-ballVelocity.X * 0.7, ballVelocity.Y)
-            end
-            if ballPos.Y == 0.05 or ballPos.Y == 0.95 then
-                ballVelocity = Vector2.new(ballVelocity.X, -ballVelocity.Y * 0.7)
-            end
-            
-            ui.Ball.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-            wait(0.1)
-            ui.Ball.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-        end
-        
-        local center = Vector2.new(0.5, 0.5)
-        local distance = (ballPos - center).Magnitude
-        local isInCenter = distance < 0.05
-        
-        if isInCenter then
-            gameData.currentPressure = math.min(gameData.maxPressure, 
-                gameData.currentPressure + gameData.recoveryRate * delta)
-            ui.PressureFill.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-            ui.Ball.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-        else
-            gameData.currentPressure = gameData.currentPressure - gameData.drainRate * delta
-            ui.PressureFill.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-            ui.Ball.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-            
-            local distanceMultiplier = 1 + (distance - 0.05) * 5
-            gameData.currentPressure = gameData.currentPressure - (distanceMultiplier - 1) * delta
-        end
-        
-        local pressurePercent = gameData.currentPressure / gameData.maxPressure
-        ui.PressureFill.Size = UDim2.new(pressurePercent, 0, 1, 0)
-        ui.PressureText.Text = "Stay in the center!"
-        
-        gameData.remainingTime = gameData.remainingTime - delta
-        local seconds = math.max(0, math.ceil(gameData.remainingTime))
-        local minutes = math.floor(seconds / 60)
-        local remainingSeconds = seconds % 60
-        ui.Timer.Text = string.format("%02d:%02d", minutes, remainingSeconds)
-        
-        if not isInCenter then
-            local pulse = math.sin(currentTime * 8) * 0.3 + 0.7
-            ui.Ball.BackgroundTransparency = 1 - pulse
-        else
-            ui.Ball.BackgroundTransparency = 0
-        end
-        
-        if gameData.currentPressure <= 0 then
-            fadeOutUI(ui, "lose")
-            showKillEffect()
-            cleanupGame()
-        elseif gameData.remainingTime <= 0 then
-            fadeOutUI(ui, "win")
-            showSurviveEffect()
-            cleanupGame()
-        end
-        
-        if gameMusic and not gameMusic.IsPlaying and gameData.gameActive then
-            wait(0.5)
-            if gameMusic and gameMusic.Parent then
-                gameMusic:Destroy()
-                gameMusic = nil
+            shaker:Start()
+            shaker:ShakeOnce(12,80,0.08,0.32,1.1,0.25)
+            task.delay(.7,function() pcall(function() shaker:Stop() end) end)
+        end)
+    end
+end
+
+local function startSoundManager()
+    if soundManagerConnection then soundManagerConnection:Disconnect() end
+    local bangTimer=0
+    local nextBangInterval=math.random(2,6)
+
+    soundManagerConnection=RunService.Heartbeat:Connect(function(dt)
+        if not soundSystemActive then return end
+        local elapsed=os.clock()-chaseStartTime
+
+        -- Attack volume is reduced when Z-367 reaches the locked player.
+        -- Six seconds after music begins, Bang effects enter with the climax.
+        if elapsed >= 6 and elapsed < (CONFIG.Duration + 6) then
+            bangTimer += dt
+            if bangTimer >= nextBangInterval then
+                playRandomBang()
+                spectatorCameraShake()
+                bangTimer=0
+                nextBangInterval=math.random(2,6)
             end
         end
     end)
-    
-    return ui
 end
 
-local function main()
-    wait(2)
-    
-    if isPlayerAlive() then
-        if not gameData.gameActive then
-            startGame()
-        end
-    else
-        loadMusicOnly()
+local function startAmbientForEveryone()
+    if soundSystemActive then return end
+
+    soundSystemActive = true
+    chaseStartTime = os.clock()
+    Z367MusicStartedAt = chaseStartTime
+
+    -- Music was downloaded when this script loaded.
+    -- Start it ONLY after Z-367 has actually locked/approached a player.
+    if Z367_PRELOADED_MUSIC and Z367_PRELOADED_MUSIC.Parent then
+        pcall(function()
+            Z367_PRELOADED_MUSIC.Volume = Z367_MUSIC_VOLUME
+            Z367_PRELOADED_MUSIC.TimePosition = 0
+            Z367_PRELOADED_MUSIC:Play()
+        end)
+    end
+
+    startSoundManager()
+
+    -- No polling/waiting for music is used here.
+    -- If Z-367 never locks a player, this function is never called,
+    -- so the preloaded music remains stopped.
+end
+
+local function stopAmbient()
+    soundSystemActive=false
+    isShakingCamera=false
+
+    if soundManagerConnection then
+        soundManagerConnection:Disconnect()
+        soundManagerConnection=nil
+    end
+
+    if attackSound then
+        pcall(function() attackSound:Stop() end)
+        attackSound.Volume=1
+    end
+
+    for _,snd in ipairs(bangSounds) do
+        pcall(function() snd:Stop() end)
+    end
+
+    -- Keep the preloaded Sound in workspace permanently.
+    -- Only stop/reset playback between encounters.
+    if Z367_PRELOADED_MUSIC and Z367_PRELOADED_MUSIC.Parent then
+        pcall(function()
+            Z367_PRELOADED_MUSIC:Stop()
+            Z367_PRELOADED_MUSIC.TimePosition = 0
+            Z367_PRELOADED_MUSIC.Volume = Z367_MUSIC_VOLUME
+        end)
+    end
+
+    Z367MusicStartedAt = nil
+end
+
+local function stopZ367MusicOnly()
+    if Z367_PRELOADED_MUSIC and Z367_PRELOADED_MUSIC.Parent then
+        pcall(function()
+            Z367_PRELOADED_MUSIC:Stop()
+            Z367_PRELOADED_MUSIC.TimePosition = 0
+            Z367_PRELOADED_MUSIC.Volume = Z367_MUSIC_VOLUME
+        end)
+    end
+
+    Z367MusicStartedAt = nil
+end
+
+local function disconnectSelectedPlayerDeathWatcher()
+    if selectedPlayerDeathConnection then
+        selectedPlayerDeathConnection:Disconnect()
+        selectedPlayerDeathConnection = nil
     end
 end
-main()
+
+local function watchSelectedPlayerDeath(plr)
+    disconnectSelectedPlayerDeathWatcher()
+
+    if not plr then
+        return
+    end
+
+    local character = plr.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        return
+    end
+
+    -- IMPORTANT: only the player selected/locked by THIS Z-367 is watched.
+    -- Deaths of unrelated players do not affect the music.
+    selectedPlayerDeathConnection = humanoid.Died:Connect(function()
+        if SELECTED_PLAYER == plr or Z367LockedPlayer == plr then
+            -- Stop the persistent Z-367 music immediately on every client
+            -- that is running this encounter, even if this local player is
+            -- only a spectator and another player was the locked target.
+            stopZ367MusicOnly()
+        end
+    end)
+end
+
+local function disableCustomChase()
+    if chaseConnection then
+        chaseConnection:Disconnect()
+        chaseConnection=nil
+    end
+end
+
+local function disableEncounterHold()
+    if encounterHoldConnection then
+        encounterHoldConnection:Disconnect()
+        encounterHoldConnection=nil
+    end
+end
+
+local function startEncounterHold()
+    disableEncounterHold()
+
+    encounterHoldConnection = RunService.Heartbeat:Connect(function()
+        if not TARGET_LOCKED or resolved then return end
+        if not entityModel or not entityModel.Parent or not entityModel.PrimaryPart then return end
+        if not SELECTED_PLAYER then return end
+
+        local char = SELECTED_PLAYER.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if not root then
+            -- Keep the entity at its last position until the failure result releases it.
+            return
+        end
+
+        local frontPos = root.Position + root.CFrame.LookVector * HOLD_DISTANCE
+        entityModel:SetPrimaryPartCFrame(CFrame.lookAt(frontPos, root.Position))
+
+        -- Once held in front of the target, failure departure continues away
+        -- from the player in the same forward direction.
+        lockedDepartureDirection = root.CFrame.LookVector
+    end)
+end
+
+local function disableDeparture()
+    if departureConnection then
+        departureConnection:Disconnect()
+        departureConnection=nil
+    end
+end
+
+local function startDeparture(direction)
+    disableDeparture()
+
+    if not entityModel or not entityModel.Parent or not entityModel.PrimaryPart then
+        return
+    end
+
+    local dir = direction
+    if not dir or dir.Magnitude < 0.001 then
+        dir = entityModel.PrimaryPart.CFrame.LookVector
+    else
+        dir = dir.Unit
+    end
+
+    local travelled = 0
+
+    departureConnection = RunService.Heartbeat:Connect(function(dt)
+        if not entityModel or not entityModel.Parent or not entityModel.PrimaryPart then
+            disableDeparture()
+            return
+        end
+
+        local step = DEPART_SPEED * math.min(dt, 1/20)
+        travelled += step
+
+        local pos = entityModel.PrimaryPart.Position + dir * step
+        entityModel:SetPrimaryPartCFrame(CFrame.lookAt(pos, pos + dir))
+
+        if travelled >= DEPART_DISTANCE then
+            disableDeparture()
+            setEyes(false)
+        end
+    end)
+end
+
+local function removeZ367()
+    disableCustomChase()
+    disableEncounterHold()
+    disconnectSelectedPlayerDeathWatcher()
+    disableDeparture()
+    stopAmbient()
+    setEyes(false)
+    if entityModel and entityModel.Parent then
+        entityModel:Destroy()
+    else
+        local z=Workspace:FindFirstChild("Z-367")
+        if z then z:Destroy() end
+    end
+end
+
+local function releaseBackToSpawnerPath()
+    -- Failure/death: stop holding Z-367 in front of the target,
+    -- then let it continue forward and leave.
+    TARGET_LOCKED = true
+    resolved = true
+
+    disableCustomChase()
+    disableEncounterHold()
+    disconnectSelectedPlayerDeathWatcher()
+    stopAmbient()
+    setEyes(false)
+
+    local dir = lockedDepartureDirection
+    if (not dir or dir.Magnitude < 0.001) and entityModel and entityModel.PrimaryPart then
+        dir = entityModel.PrimaryPart.CFrame.LookVector
+    end
+
+    startDeparture(dir)
+end
+
+_G.Z367IntegratedResult=function(result)
+    if resolved then return end
+    resolved=true
+    if result=="win" then
+        removeZ367()
+    else
+        releaseBackToSpawnerPath()
+    end
+end
+
+local function beginSelectedPlayerEncounter()
+    if not SELECTED_PLAYER or resolved then return end
+
+    TARGET_LOCKED=true
+    Z367LockedPlayer = SELECTED_PLAYER
+
+    setEyes(true)
+
+    -- Everyone gets the atmosphere.
+    startAmbientForEveryone()
+
+    -- Only the locked target gets the actual game.
+    if isThisPlayerLocked() and not Z367EncounterStarted then
+        local starter = _G.Z367StartSelectedMinigame
+        if type(starter) == "function" then
+            Z367EncounterStarted = true
+            task.spawn(function()
+                local ok, err = pcall(starter)
+                if not ok then
+                    -- Allow retry instead of permanently marking the encounter as started.
+                    Z367EncounterStarted = false
+                    warn("[Z-367] Minigame failed to start:", err)
+
+                    -- Never leave an accidental fade over the player's screen.
+                    if ui and ui.IntroFade and ui.IntroFade.Parent then
+                        ui.IntroFade.BackgroundTransparency = 1
+                        ui.IntroFade.Visible = false
+                        ui.IntroFade.Active = false
+                    end
+                end
+            end)
+        end
+    end
+end
+
+local function playAttackOnTargetLock()
+    if not attackSound or not attackSound:IsA("Sound") then
+        return
+    end
+
+    pcall(function()
+        attackSound:Stop()
+        attackSound.TimePosition = 0
+        attackSound.Volume = 1
+        attackSound:Play()
+    end)
+end
+
+local function fadeAttackForEncounter()
+    if not attackSound or not attackSound:IsA("Sound") then
+        return
+    end
+
+    -- Z-367 has reached the player: keep Attack audible,
+    -- but smoothly push it into the background under the music.
+    pcall(function()
+        TweenService:Create(
+            attackSound,
+            TweenInfo.new(1.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Volume = 0.1}
+        ):Play()
+    end)
+end
+
+local function startNearestPlayerChase()
+    if not entityModel or not entityModel.PrimaryPart then return end
+    disableCustomChase()
+
+    chaseConnection=RunService.Heartbeat:Connect(function(dt)
+        if resolved or not entityModel or not entityModel.Parent or not entityModel.PrimaryPart then return end
+
+        -- Select exactly once. Dead players are ignored.
+        if not SELECTED_PLAYER then
+            local plr,root,d=getNearestAlivePlayer(entityModel.PrimaryPart.Position)
+
+            if plr and d and d <= ACQUIRE_RANGE then
+                SELECTED_PLAYER=plr
+                SELECTED_USER_ID=plr.UserId
+                Z367LockedPlayer=plr
+
+                -- Only this selected player is watched for death.
+                watchSelectedPlayerDeath(plr)
+
+                -- Attack starts only after Z-367 has actually acquired a player.
+                playAttackOnTargetLock()
+            else
+                setEyes(false)
+                return
+            end
+        end
+
+        local _,hum,targetRoot=aliveCharacter(SELECTED_PLAYER)
+        if not hum or not targetRoot then
+            -- Selected target died before the encounter: don't chase dead player.
+            -- Before lock, allow one fresh nearest-alive selection.
+            if not TARGET_LOCKED then
+                disconnectSelectedPlayerDeathWatcher()
+                SELECTED_PLAYER=nil
+                SELECTED_USER_ID=nil
+            else
+                releaseBackToSpawnerPath()
+            end
+            return
+        end
+
+        local pos=entityModel.PrimaryPart.Position
+        local target=targetRoot.Position
+        local delta=target-pos
+        local distance=delta.Magnitude
+
+        if distance <= GAME_TRIGGER_DISTANCE then
+            -- Lock once at roughly 3 studs, start the minigame, and keep
+            -- Z-367 held in front of THIS player for the whole minigame.
+            -- It only leaves after the player fails/dies.
+            lockedDepartureDirection = targetRoot.CFrame.LookVector
+
+            disableCustomChase()
+
+            -- Reaching the player's front starts the music/minigame;
+            -- Attack remains playing but fades down underneath them.
+            fadeAttackForEncounter()
+            beginSelectedPlayerEncounter()
+            startEncounterHold()
+            return
+        end
+
+        setEyes(true)
+        local dir=delta.Unit
+        local travel=math.min(ENTITY_SPEED*dt, math.max(0,distance-GAME_TRIGGER_DISTANCE))
+        local newPos=pos+dir*travel
+        entityModel:SetPrimaryPartCFrame(CFrame.new(newPos,target))
+    end)
+end
+
+local entity = spawner.Create({ 
+	Entity = { 
+		Name = "Z-367", 
+		Asset = "100118518576966", 
+HeightOffset = -3},Lights = {Flicker = {Enabled = true,Duration = 1.5},Shatter = false,Repair = false}, 
+Earthquake = {Enabled = false},CameraShake = {Enabled = false,Range = 20,Values = {1.5, 20, 0.1, 1}}, 
+Movement = {Speed = 50,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz", 
+Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 20,Amount = 0}, 
+Crucifixion = {Enabled = true,Range = 70,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Z-367 击败了...", "你该多练练准星!", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""} 
+}) 
+
+entity:SetCallback("OnSpawned",function()
+    disconnectSelectedPlayerDeathWatcher()
+
+    resolved = false
+    TARGET_LOCKED = false
+    Z367EncounterStarted = false
+    SELECTED_PLAYER = nil
+    SELECTED_USER_ID = nil
+    Z367LockedPlayer = nil
+    lockedDepartureDirection = nil
+    Z367MusicStartedAt = nil
+
+    -- Ensure the persistent music is silent before this new encounter.
+    if Z367_PRELOADED_MUSIC and Z367_PRELOADED_MUSIC.Parent then
+        pcall(function()
+            Z367_PRELOADED_MUSIC:Stop()
+            Z367_PRELOADED_MUSIC.TimePosition = 0
+            Z367_PRELOADED_MUSIC.Volume = Z367_MUSIC_VOLUME
+        end)
+    end
+
+    entityModel=entity.Model
+    if entityModel and not entityModel.PrimaryPart then
+        entityModel.PrimaryPart=entityModel:FindFirstChild("Main")
+            or entityModel:FindFirstChildWhichIsA("BasePart")
+    end
+    findEntityAudio()
+    startNearestPlayerChase()
+end)
+
+entity:SetCallback("OnDespawning",function()
+    disableCustomChase()
+    disableEncounterHold()
+    disconnectSelectedPlayerDeathWatcher()
+    disableDeparture()
+
+    -- If no player was ever locked, soundSystemActive is false and there
+    -- is nothing pending/waiting for music playback. The preloaded Sound
+    -- simply stays in workspace, stopped, ready for a future Z-367 call.
+    stopAmbient()
+    setEyes(false)
+end)
+
+entity:SetCallback("OnDamagePlayer",function(newHealth)
+    if newHealth==0 then
+        releaseBackToSpawnerPath()
+    end
+end)
+
+entity:SetCallback("OnRebounding",function(startOfRebound)
+    if not entityModel then return end
+    local main=entityModel:FindFirstChild("Main")
+    if not main then return end
+    local attachment=main:FindFirstChild("Attachment")
+    local attachmentSwitch=main:FindFirstChild("AttachmentSwitch")
+    if not attachment or not attachmentSwitch then return end
+
+    local footsteps=main:FindFirstChild("Footsteps")
+    local playSound=main:FindFirstChild("PlaySound")
+    local switch=main:FindFirstChild("Switch")
+    local switchBack=main:FindFirstChild("SwitchBack")
+
+    for _,c in ipairs(attachment:GetChildren()) do
+        pcall(function() c.Enabled=not startOfRebound end)
+    end
+    for _,c in ipairs(attachmentSwitch:GetChildren()) do
+        pcall(function() c.Enabled=startOfRebound end)
+    end
+
+    if startOfRebound then
+        if footsteps then footsteps.PlaybackSpeed=.35 end
+        if playSound then playSound.PlaybackSpeed=.25 end
+        if switch then switch:Play() end
+    else
+        if footsteps then footsteps.PlaybackSpeed=.25 end
+        if playSound then playSound.PlaybackSpeed=.16 end
+        if switchBack then switchBack:Play() end
+    end
+end)
+
+entity:Run()
 end
 
 function entityBehaviors.A60Ps1()

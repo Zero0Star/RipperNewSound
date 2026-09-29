@@ -2412,7 +2412,7 @@ local CONFIG = {
 }
 
 --// Runtime state
-state = {
+local state = {
     active = false,
     dead = false,
     ending = false,
@@ -2539,10 +2539,6 @@ end
 local function runFinalCameraShake()
     return runCameraShake(30, 200, 0.1, 0.2, 2, 0.5)
 end
-
--- Runtime state is forward-declared because the persistent camera shaker
--- callback needs to read state.active.
-local state
 
 -- Fallback visual shake if CameraShaker isn't present.
 local fallbackShake = {
@@ -4423,6 +4419,7 @@ local function startNearestPlayerChase()
     end)
 end
 
+local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entity = spawner.Create({ 
 	Entity = { 
 		Name = "Z-367", 

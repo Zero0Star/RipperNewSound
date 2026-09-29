@@ -2301,6 +2301,12 @@ local function preloadZ367Music()
         end
 
         sound.SoundId = getter(path)
+
+        -- Decode/cache the custom asset now so the first encounter does not
+        -- wait for the sound to become ready after a target is already locked.
+        pcall(function()
+            game:GetService("ContentProvider"):PreloadAsync({sound})
+        end)
     end)
 
     if not ok then
@@ -3668,8 +3674,8 @@ local function startGame()
     local gameStartedAt = Z367MusicStartedAt or os.clock()
     local warmupBurstPlayed = false
 
-    -- Start the independent micro shake now; it persists through the full 42 seconds.
-    runGameCameraShake()
+    -- The full 42-second micro shake is started by the shared encounter
+    -- ambience so locked players and spectators begin it at the same moment.
 
     -- Keep random events out of the first 6 seconds.
     -- Passing +2 here means the first normal event lands roughly at 6-8.2s.
@@ -3956,6 +3962,19 @@ local attackSound = nil
 local pandemoniumEyesBeam = nil
 local resolved = false
 
+-- Shared encounter generation. Incrementing this cancels delayed observer
+-- cleanup from an older encounter without leaving background tasks behind.
+local encounterSerial = 0
+
+-- Shared spectator/target camera shaker for the entire 42-second encounter.
+local ambientCameraShaker = nil
+local CachedCameraShaker = nil
+
+-- Forward declarations because target-death and spectator timeout callbacks
+-- need these functions before their bodies appear later in the file.
+local removeZ367
+local releaseBackToSpawnerPath
+
 local function aliveCharacter(plr)
     if not plr then return nil, nil, nil end
     local char = plr.Character
@@ -4004,6 +4023,23 @@ local function findEntityAudio()
             table.insert(bangSounds,snd)
         end
     end
+
+    -- Preload model sounds BEFORE chasing starts. This avoids the spectator
+    -- hearing Attack/Bang noticeably later than the locked player.
+    local preloadList = {}
+    if attackSound and attackSound:IsA("Sound") then
+        table.insert(preloadList, attackSound)
+    end
+    for _, snd in ipairs(bangSounds) do
+        table.insert(preloadList, snd)
+    end
+
+    if #preloadList > 0 then
+        pcall(function()
+            game:GetService("ContentProvider"):PreloadAsync(preloadList)
+        end)
+    end
+
     return true
 end
 
@@ -4022,40 +4058,165 @@ end
 -- Every major minigame shake can call this too.
 _G.Z367PlayModelBang = playRandomBang
 
-local function spectatorCameraShake()
+local function getCachedCameraShaker()
+    if CachedCameraShaker then
+        return CachedCameraShaker
+    end
+
     local module = ReplicatedStorage:FindFirstChild("CameraShaker")
-    if module then
+    if not module then
+        return nil
+    end
+
+    local ok, result = pcall(require, module)
+    if ok then
+        CachedCameraShaker = result
+        return result
+    end
+
+    return nil
+end
+
+local function stopAmbientMicroShake()
+    if ambientCameraShaker then
         pcall(function()
-            local CameraShaker = require(module)
-            local shaker = CameraShaker.new(Enum.RenderPriority.Camera.Value,function(cf)
-                local cam=Workspace.CurrentCamera
-                if cam then cam.CFrame=cam.CFrame*cf end
-            end)
-            shaker:Start()
-            shaker:ShakeOnce(12,80,0.08,0.32,1.1,0.25)
-            task.delay(.7,function() pcall(function() shaker:Stop() end) end)
+            ambientCameraShaker:Stop()
         end)
+        ambientCameraShaker = nil
     end
 end
 
+local function startAmbientMicroShake()
+    stopAmbientMicroShake()
+
+    local CameraShaker = getCachedCameraShaker()
+    if not CameraShaker then
+        return
+    end
+
+    pcall(function()
+        ambientCameraShaker = CameraShaker.new(
+            Enum.RenderPriority.Camera.Value,
+            function(cf)
+                if not soundSystemActive then
+                    return
+                end
+
+                local cam = Workspace.CurrentCamera
+                if cam then
+                    cam.CFrame = cam.CFrame * cf
+                end
+            end
+        )
+
+        ambientCameraShaker:Start()
+
+        -- Same requested low shake, but now it begins for EVERY client
+        -- at encounter start and lasts throughout the entire 42 seconds.
+        ambientCameraShaker:ShakeOnce(
+            10,
+            10,
+            0.1,
+            CONFIG.Duration,
+            2,
+            0.5
+        )
+    end)
+end
+
+local function spectatorCameraShake()
+    local CameraShaker = getCachedCameraShaker()
+    if not CameraShaker then return end
+
+    pcall(function()
+        local shaker = CameraShaker.new(
+            Enum.RenderPriority.Camera.Value,
+            function(cf)
+                local cam = Workspace.CurrentCamera
+                if cam then
+                    cam.CFrame = cam.CFrame * cf
+                end
+            end
+        )
+
+        shaker:Start()
+        shaker:ShakeOnce(12,80,0.08,0.32,1.1,0.25)
+        task.delay(.7,function()
+            pcall(function() shaker:Stop() end)
+        end)
+    end)
+end
+
+local function spectatorClimaxShake()
+    local CameraShaker = getCachedCameraShaker()
+    if not CameraShaker then return end
+
+    pcall(function()
+        local shaker = CameraShaker.new(
+            Enum.RenderPriority.Camera.Value,
+            function(cf)
+                local cam = Workspace.CurrentCamera
+                if cam then
+                    cam.CFrame = cam.CFrame * cf
+                end
+            end
+        )
+
+        shaker:Start()
+        shaker:ShakeOnce(
+            34,
+            220,
+            0.05,
+            0.62,
+            2.2,
+            0.55
+        )
+
+        task.delay(1.0,function()
+            pcall(function() shaker:Stop() end)
+        end)
+    end)
+end
+
 local function startSoundManager()
-    if soundManagerConnection then soundManagerConnection:Disconnect() end
-    local bangTimer=0
-    local nextBangInterval=math.random(2,6)
+    if soundManagerConnection then
+        soundManagerConnection:Disconnect()
+    end
 
-    soundManagerConnection=RunService.Heartbeat:Connect(function(dt)
+    local bangTimer = 0
+    local nextBangInterval = math.random(2,6)
+    local climaxStarted = false
+
+    soundManagerConnection = RunService.Heartbeat:Connect(function(dt)
         if not soundSystemActive then return end
-        local elapsed=os.clock()-chaseStartTime
 
-        -- Attack volume is reduced when Z-367 reaches the locked player.
-        -- Six seconds after music begins, Bang effects enter with the climax.
-        if elapsed >= 6 and elapsed < (CONFIG.Duration + 6) then
+        local elapsed = os.clock() - chaseStartTime
+
+        -- At six seconds the encounter enters its climax on EVERY client.
+        -- Fire one Bang immediately so spectator audio does not feel late.
+        if not climaxStarted and elapsed >= 6 then
+            climaxStarted = true
+            bangTimer = 0
+            nextBangInterval = math.random(2,6)
+
+            playRandomBang()
+
+            -- The locked player already gets the minigame's dedicated strong
+            -- six-second shake. Spectators receive the matching camera hit here.
+            if not isThisPlayerLocked() then
+                spectatorClimaxShake()
+            end
+        end
+
+        if climaxStarted and elapsed < (CONFIG.Duration + 6) then
             bangTimer += dt
+
             if bangTimer >= nextBangInterval then
                 playRandomBang()
                 spectatorCameraShake()
-                bangTimer=0
-                nextBangInterval=math.random(2,6)
+
+                bangTimer = 0
+                nextBangInterval = math.random(2,6)
             end
         end
     end)
@@ -4068,8 +4229,12 @@ local function startAmbientForEveryone()
     chaseStartTime = os.clock()
     Z367MusicStartedAt = chaseStartTime
 
-    -- Music was downloaded when this script loaded.
-    -- Start it ONLY after Z-367 has actually locked/approached a player.
+    encounterSerial += 1
+    local thisEncounter = encounterSerial
+
+    -- Music was downloaded and preloaded when this script loaded.
+    -- Every client starts it as soon as Z-367 reaches the selected player,
+    -- regardless of whether that client is the locked target or a spectator.
     if Z367_PRELOADED_MUSIC and Z367_PRELOADED_MUSIC.Parent then
         pcall(function()
             Z367_PRELOADED_MUSIC.Volume = Z367_MUSIC_VOLUME
@@ -4078,16 +4243,35 @@ local function startAmbientForEveryone()
         end)
     end
 
+    -- Full-duration micro shake also starts at the exact same encounter point.
+    startAmbientMicroShake()
     startSoundManager()
 
-    -- No polling/waiting for music is used here.
-    -- If Z-367 never locks a player, this function is never called,
-    -- so the preloaded music remains stopped.
+    -- Spectator clients do not run the minigame, so they need their own
+    -- encounter completion cleanup. At about the same moment the locked
+    -- player would survive the 42-second game, remove their local Z-367 too.
+    if not isThisPlayerLocked() then
+        task.delay(CONFIG.Duration + 0.10, function()
+            if encounterSerial ~= thisEncounter then return end
+            if resolved or not soundSystemActive then return end
+
+            resolved = true
+
+            if removeZ367 then
+                removeZ367()
+            end
+        end)
+    end
 end
 
 local function stopAmbient()
     soundSystemActive=false
     isShakingCamera=false
+
+    -- Cancel any pending observer-side 42 second cleanup from this encounter.
+    encounterSerial += 1
+
+    stopAmbientMicroShake()
 
     if soundManagerConnection then
         soundManagerConnection:Disconnect()
@@ -4152,10 +4336,14 @@ local function watchSelectedPlayerDeath(plr)
     -- Deaths of unrelated players do not affect the music.
     selectedPlayerDeathConnection = humanoid.Died:Connect(function()
         if SELECTED_PLAYER == plr or Z367LockedPlayer == plr then
-            -- Stop the persistent Z-367 music immediately on every client
-            -- that is running this encounter, even if this local player is
-            -- only a spectator and another player was the locked target.
+            -- Only the player selected by THIS Z-367 matters.
+            -- Their death immediately ends the encounter ambience on every
+            -- client and returns Z-367 to its normal spawner path.
             stopZ367MusicOnly()
+
+            if releaseBackToSpawnerPath then
+                releaseBackToSpawnerPath()
+            end
         end
     end)
 end
@@ -4240,7 +4428,7 @@ local function startDeparture(direction)
     end)
 end
 
-local function removeZ367()
+removeZ367 = function()
     disableCustomChase()
     disableEncounterHold()
     disconnectSelectedPlayerDeathWatcher()
@@ -4255,24 +4443,29 @@ local function removeZ367()
     end
 end
 
-local function releaseBackToSpawnerPath()
-    -- Failure/death: stop holding Z-367 in front of the target,
-    -- then let it continue forward and leave.
+releaseBackToSpawnerPath = function()
+    -- The selected/locked player died or failed.
+    -- Stop every custom movement override and let the original entity spawner
+    -- continue its normal path. This encounter is permanently resolved, so
+    -- Z-367 will NOT select another player afterwards.
     TARGET_LOCKED = true
     resolved = true
 
     disableCustomChase()
     disableEncounterHold()
+    disableDeparture()
     disconnectSelectedPlayerDeathWatcher()
     stopAmbient()
     setEyes(false)
 
-    local dir = lockedDepartureDirection
-    if (not dir or dir.Magnitude < 0.001) and entityModel and entityModel.PrimaryPart then
-        dir = entityModel.PrimaryPart.CFrame.LookVector
-    end
+    SELECTED_PLAYER = nil
+    SELECTED_USER_ID = nil
+    Z367LockedPlayer = nil
+    lockedDepartureDirection = nil
 
-    startDeparture(dir)
+    -- Intentionally DO NOT call startDeparture().
+    -- With our CFrame overrides disconnected, the original spawner movement
+    -- is free to resume from here.
 end
 
 _G.Z367IntegratedResult=function(result)
@@ -4378,15 +4571,9 @@ local function startNearestPlayerChase()
 
         local _,hum,targetRoot=aliveCharacter(SELECTED_PLAYER)
         if not hum or not targetRoot then
-            -- Selected target died before the encounter: don't chase dead player.
-            -- Before lock, allow one fresh nearest-alive selection.
-            if not TARGET_LOCKED then
-                disconnectSelectedPlayerDeathWatcher()
-                SELECTED_PLAYER=nil
-                SELECTED_USER_ID=nil
-            else
-                releaseBackToSpawnerPath()
-            end
+            -- Once Z-367 has selected somebody, losing that target ends this
+            -- encounter. Restore the normal path and never lock a replacement.
+            releaseBackToSpawnerPath()
             return
         end
 
@@ -4403,8 +4590,9 @@ local function startNearestPlayerChase()
 
             disableCustomChase()
 
-            -- Reaching the player's front starts the music/minigame;
-            -- Attack remains playing but fades down underneath them.
+            -- Reaching the selected player's front is the common sync point
+            -- on every client: Attack fades, music starts, Bang timing starts,
+            -- full-duration micro shake starts, and only the locked player gets UI.
             fadeAttackForEncounter()
             beginSelectedPlayerEncounter()
             startEncounterHold()
@@ -4433,6 +4621,8 @@ Crucifixion = {Enabled = true,Range = 70,Resist = false,Break = true},Death = {T
 
 entity:SetCallback("OnSpawned",function()
     disconnectSelectedPlayerDeathWatcher()
+    stopAmbientMicroShake()
+    encounterSerial += 1
 
     resolved = false
     TARGET_LOCKED = false

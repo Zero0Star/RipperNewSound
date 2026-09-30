@@ -1,4 +1,4 @@
-if workspace:FindFirstChild("HardcoreFour") then
+`if workspace:FindFirstChild("HardcoreFour") then
     return
 end
 local marker = Instance.new("BoolValue")
@@ -8323,6 +8323,261 @@ function entityBehaviors.MS()
     end
 end
 
+
+function entityBehaviors.MF()
+
+function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance("130785314054121", workspace)
+if not s then
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 5, -15)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
+        end
+    end
+end
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
+workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
+end)
+
+
+local pointLight = Instance.new("PointLight")
+pointLight.Color = Color3.new(255, 255, 255)
+pointLight.Range = 60
+pointLight.Brightness = 99999
+pointLight.Parent = entity
+
+tweenservice:Create(pointLight, TweenInfo.new(3), {
+    Brightness = 0
+}):Play()
+
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://137044859218769"
+sound.Looped = false
+sound.Volume = 5
+sound.Parent = s
+sound:Play()
+
+local frost = Instance.new("ColorCorrectionEffect")
+frost.Parent = game.Lighting
+tweenservice:Create(frost, TweenInfo.new(10), {
+    TintColor = Color3.fromRGB(217, 250, 255),
+    Saturation = -0.7,
+    Contrast = 0.2
+}):Play()
+
+for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
+    if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
+        entity.Attachment[v].Enabled = false
+    end
+end
+wait(8)
+local roomChanged = false
+local roomChangedConnection
+roomChangedConnection = game.ReplicatedStorage.GameData.LatestRoom.Changed:Connect(function()
+    roomChanged = true
+    if roomChangedConnection then
+        roomChangedConnection:Disconnect()
+    end
+end)
+for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
+    if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
+        entity.Attachment[v].Enabled = true
+    end
+end
+wait(2)
+
+if roomChanged then
+    for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
+        if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
+            entity.Attachment[v].Enabled = false
+        end
+    end
+    
+    pcall(function() entity.Ambience:Stop() end)
+    pcall(function() entity.AmbienceFar:Stop() end)
+    
+    local des = Instance.new("Sound")
+    des.SoundId = "rbxassetid://109891187801924"
+    des.Looped = false
+    des.Volume = 2.5
+    des.Parent = s
+    des:Play()
+    
+    wait(5)
+    s:Destroy()
+    
+    tweenservice:Create(frost, TweenInfo.new(5), {
+        TintColor = Color3.fromRGB(255, 255, 255),
+        Saturation = 0,
+        Contrast = 0
+    }):Play()
+    wait(5)
+    frost:Destroy()
+    return
+end
+pcall(function() entity.Ambience:Play() end)
+pcall(function() entity.AmbienceFar:Play() end)
+
+local dmg = true
+task.spawn(function()
+    while dmg and not roomChanged do
+        wait(1)
+        local lighter = chr:FindFirstChild("Lighter")
+        local safe = false
+        if lighter then
+            local handle = lighter:FindFirstChild("Handle")
+            if handle then
+                local holder = handle:FindFirstChild("EffectsHolder")
+                if holder then
+                    local attach = holder:FindFirstChild("AttachOn")
+                    if attach then
+                        local main = attach:FindFirstChild("MainLight")
+                        if main and main:IsA("PointLight") then
+                            safe = main.Enabled
+                        end
+                    end
+                end
+            end
+        end
+        if not safe and not roomChanged then
+            pcall(function()
+                chr.Humanoid.Health -= 5
+                game.ReplicatedStorage.GameStats["Player_" .. plr.Name].Total.DeathCause.Value = "Frostbite"
+                
+                firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
+                        "It's a bit cold here, isn't it?",
+                        "You froze to death by something.",
+                        "Maybe you need some cold prevention measures. I heard that humans are very sensitive to the cold..",
+                        "Try using your lighter to keep warm.",
+                        "This may be a bit tricky and noisy.",
+                        "You should try again.",
+                        "By the way, the name of the thing that killed you is Frostbite."
+                    }, "Yellow")
+            end)
+        end
+    end
+    dmg = false
+end)
+
+game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+dmg = false
+roomChanged = true
+
+if roomChangedConnection then
+    roomChangedConnection:Disconnect()
+end
+
+for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
+    if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
+        entity.Attachment[v].Enabled = false
+    end
+end
+
+pcall(function() entity.Ambience:Stop() end)
+pcall(function() entity.AmbienceFar:Stop() end)
+
+local des = Instance.new("Sound")
+des.SoundId = "rbxassetid://111715441853991"
+des.Looped = false
+des.Volume = 2.5
+des.Parent = s
+des:Play()
+
+wait(5)
+s:Destroy()
+
+tweenservice:Create(frost, TweenInfo.new(5), {
+    TintColor = Color3.fromRGB(255, 255, 255),
+    Saturation = 0,
+    Contrast = 0
+}):Play()
+wait(5)
+frost:Destroy()
+end
+
 function entityBehaviors.DeerGodTWO()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -8564,6 +8819,7 @@ local entityConfig = {
     ["rbxassetid://080"]  = entityBehaviors.MO,
     ["rbxassetid://081"]  = entityBehaviors.MM,
     ["rbxassetid://082"]  = entityBehaviors.MS,
+    ["rbxassetid://083"]  = entityBehaviors.MF,
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

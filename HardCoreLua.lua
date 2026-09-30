@@ -11040,12 +11040,12 @@ function entityBehaviors.MultiMonster()
 
     task.spawn(function()
         local sentences = {
-            "Good morning.",
-            "How are you?",
-            "Nice to meet you",
-            "It's just a joke",
-            "You won't mind.",
-            "Let's start with this"
+            "你好，又是我.",
+            "你过的很好?",
+            "无论在哪，我无处不在",
+            "无论在何时，总会想起一顿电流声。",
+            "门，压力，门与房间，硬核模式，房间重访问....",
+            "我希望你喜欢我给你带来的礼物，我无处不在。"
         }
 
         local timeout = 0

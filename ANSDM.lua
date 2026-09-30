@@ -437,7 +437,7 @@ end
 CreateFollowerSystem(1,89102835650735,"QWQ75321")
 CreateFollowerSystem(115878511638478,102779962756282,"goat_qiu")
 CreateFollowerSystem(137290604674399,114265802440184,"Nssys123")
-CreateFollowerSystem(14806821870,93658420501516,"sppvve")
+CreateFollowerSystem(14806821870,96998158567562,"sppvve")
 CreateFollowerSystem(135367832132409,90758493537987,"woshiniruier")
 CreateFollowerSystem(101318804217737,91496399485501,"A_Yun66")
 CreateFollowerSystem(115878511638478,72120706000846,"SOXIYU24")
@@ -452,7 +452,6 @@ local function MCRGlitch()
 		local Original = TextLabel.Text
 
 		local GlitchChars = {
-			"▓",
 			"█",
 			"▒",
 			"#",
@@ -462,9 +461,8 @@ local function MCRGlitch()
 			"1",
 			"7",
 			"X",
-			"?",
-			"∆",
-			"†"
+                        "&",
+			"?"
 		}
 
 
@@ -472,52 +470,74 @@ local function MCRGlitch()
 
 			while TextLabel.Parent do
 
-				local Result = ""
+				task.wait(
+					math.random(0.8,1.5)
+				)
 
 
-				for i = 1,#Original do
-
-					local Char =
-						Original:sub(i,i)
+				local duration =
+					math.random(8,12) / 10
 
 
-					if Char == " "
-					or Char == "'" then
+				local startTime = tick()
 
-						Result =
-							Result .. Char
 
-					else
+				while tick() - startTime < duration do
 
-						if math.random() < 0.55 then
+					if not TextLabel.Parent then
+						return
+					end
 
-							Result =
-								Result ..
-								GlitchChars[
-									math.random(
-										1,
-										#GlitchChars
-									)
-								]
 
-						else
+					local Result = ""
+
+
+					for i = 1,#Original do
+
+						local Char =
+							Original:sub(i,i)
+
+
+						if Char == " "
+						or Char == "'" then
 
 							Result =
 								Result .. Char
+
+						else
+
+							if math.random() < 0.45 then
+
+								Result =
+									Result ..
+									GlitchChars[
+										math.random(
+											1,
+											#GlitchChars
+										)
+									]
+
+							else
+
+								Result =
+									Result .. Char
+
+							end
 
 						end
 
 					end
 
+
+					TextLabel.Text = Result
+
+
+					task.wait(0.05)
+
 				end
 
 
-				TextLabel.Text = Result
-
-
-				task.wait(
-					math.random(3,8) / 100
-				)
+				TextLabel.Text = Original
 
 			end
 
@@ -536,33 +556,43 @@ local function MCRGlitch()
 
 
 				local NameUIV2 =
-					model:FindFirstChild("NameUIV2")
+					model:FindFirstChild(
+						"NameUIV2"
+					)
 
 
 				if NameUIV2 then
 
 					local Stuff =
-						NameUIV2:FindFirstChild("Stuff")
+						NameUIV2:FindFirstChild(
+							"Stuff"
+						)
 
 
 					if Stuff then
 
 						local Frame =
-							Stuff:FindFirstChild("Frame")
+							Stuff:FindFirstChild(
+								"Frame"
+							)
 
 
 						if Frame then
 
 							local MorphName =
-								Frame:FindFirstChild("MorphName")
+								Frame:FindFirstChild(
+									"MorphName"
+								)
 
 
 							if MorphName
 							and MorphName:IsA("TextLabel") then
 
+
 								StartGlitch(
 									MorphName
 								)
+
 
 								return
 
@@ -581,7 +611,9 @@ local function MCRGlitch()
 	end
 
 
+
 	FindMCR()
+
 
 
 	workspace.DescendantAdded:Connect(function(obj)

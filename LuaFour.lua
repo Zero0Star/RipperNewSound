@@ -1,4 +1,4 @@
-`if workspace:FindFirstChild("HardcoreFour") then
+if workspace:FindFirstChild("HardcoreFour") then
     return
 end
 local marker = Instance.new("BoolValue")

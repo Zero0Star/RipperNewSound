@@ -8300,8 +8300,6 @@ end)
     entity:Run()
     end
 
-function entityBehaviors.MS()
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local NEAR_SOUND_DISTANCE = 115
@@ -9739,7 +9737,6 @@ function entityBehaviors.MS()
     if Silence and Silence.Parent then
         Silence:Destroy()
     end
-end
 end
 
 function entityBehaviors.DeerGodTWO()

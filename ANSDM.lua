@@ -444,7 +444,7 @@ CreateFollowerSystem(115878511638478,72120706000846,"SOXIYU24")
 CreateFollowerSystem(1,122378519155467,"Yxi_na")
 CreateFollowerSystem(1,139348648036501,"SparkleAtom")
 CreateFollowerSystem(1,111163771007681,"cgdwml")
-CreateFollowerSystem(1,89519482926529,"Staryyy011")
+CreateFollowerSystem(1,94825400927204,"Staryyy011")
 local function MCRGlitch()
 
 	local function StartGlitch(TextLabel)

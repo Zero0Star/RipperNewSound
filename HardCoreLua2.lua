@@ -1,3 +1,4 @@
+
 if workspace:FindFirstChild("HardcoreTwo") then
     return
 end
@@ -101,7 +102,7 @@ end
 function entityBehaviors.MONTNS()
 local concrete = workspace.MonumentEntity.Top.Concrete
 local decal = Instance.new("Decal")
-decal.Texture = "rbxassetid://9713418245"
+decal.Texture = "rbxassetid://9344489295"
 decal.Parent = concrete
 end
 

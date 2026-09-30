@@ -8448,7 +8448,7 @@ end)
                 "十字架不能保证你的安全",
                 "下次见"
             },
-            Cause = ""
+            Cause = "Deer God"
         }
     })
 
@@ -10591,6 +10591,525 @@ else
 end
 end
 
+local ContentProvider = game:GetService("ContentProvider")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local MULTI_MONSTER_VOLUME = 2
+
+local MULTI_MONSTER_MUSIC = {
+    {
+        Name = "M1",
+        FileName = "MultiMonster1",
+        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster1.mp3?raw=true"
+    },
+    {
+        Name = "M2",
+        FileName = "MultiMonster2",
+        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster2.mp3?raw=true"
+    },
+    {
+        Name = "M3",
+        FileName = "MultiMonster3",
+        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster3.mp3?raw=true"
+    },
+    {
+        Name = "M4",
+        FileName = "MultiMonster4",
+        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster4.mp3?raw=true"
+    }
+}
+
+local function preloadMultiMonsterMusic(info)
+    local sound = workspace:FindFirstChild(info.Name)
+
+    if sound and not sound:IsA("Sound") then
+        sound:Destroy()
+        sound = nil
+    end
+
+    if not sound then
+        sound = Instance.new("Sound")
+        sound.Name = info.Name
+        sound.Parent = workspace
+    end
+
+    sound.Volume = MULTI_MONSTER_VOLUME
+    sound.Looped = false
+
+    pcall(function()
+        sound:Stop()
+        sound.TimePosition = 0
+    end)
+
+    local ok, err = pcall(function()
+        if type(writefile) ~= "function" or type(game.HttpGet) ~= "function" then
+            error("executor file/http functions unavailable")
+        end
+
+        local path = info.FileName .. ".mp3"
+        writefile(path, game:HttpGet(info.URL))
+
+        local getter = getcustomasset or getsynasset
+
+        if not getter then
+            error("getcustomasset/getsynasset unavailable")
+        end
+
+        sound.SoundId = getter(path)
+
+        pcall(function()
+            ContentProvider:PreloadAsync({sound})
+        end)
+    end)
+
+    if not ok then
+        warn("[MultiMonster] Failed to preload " .. info.Name .. ":", err)
+    end
+
+    return sound
+end
+
+local MULTI_MONSTER_SOUNDS = {}
+
+for _, info in ipairs(MULTI_MONSTER_MUSIC) do
+    MULTI_MONSTER_SOUNDS[info.Name] = preloadMultiMonsterMusic(info)
+end
+
+local GLITCH_CHARACTERS = {
+    "#", "$", "%", "&",
+    "0", "1", "3", "7",
+    "/", "\\", "<", ">",
+    "_", "-", "!", "?",
+    "[", "]", "{", "}",
+    "@", "*"
+}
+
+local function randomGlitchCharacter()
+    return GLITCH_CHARACTERS[math.random(1, #GLITCH_CHARACTERS)]
+end
+
+local function corruptText(original, chance)
+    local result = {}
+
+    for i = 1, #original do
+        local char = original:sub(i, i)
+
+        if char ~= " " and math.random() < chance then
+            result[#result + 1] = randomGlitchCharacter()
+        else
+            result[#result + 1] = char
+        end
+    end
+
+    return table.concat(result)
+end
+
+local function createMultiMonsterUI()
+    local player = Players.LocalPlayer
+
+    if not player then
+        return nil
+    end
+
+    local playerGui = player:WaitForChild("PlayerGui")
+    local old = playerGui:FindFirstChild("MultiMonsterGlitchUI")
+
+    if old then
+        old:Destroy()
+    end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "MultiMonsterGlitchUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 999999
+    gui.Parent = playerGui
+
+    local text = Instance.new("TextLabel")
+    text.Name = "GlitchText"
+    text.AnchorPoint = Vector2.new(0.5, 1)
+    text.Position = UDim2.new(0.5, 0, 0.88, 0)
+    text.Size = UDim2.new(0.85, 0, 0, 85)
+    text.BackgroundTransparency = 1
+    text.Text = ""
+    text.TextColor3 = Color3.fromRGB(255, 20, 20)
+    text.TextStrokeColor3 = Color3.fromRGB(35, 0, 0)
+    text.TextStrokeTransparency = 0.1
+    text.TextSize = 32
+    text.TextWrapped = true
+
+    pcall(function()
+        text.FontFace = Font.new("rbxassetid://11702779517")
+    end)
+
+    text.Parent = gui
+
+    local timerText = Instance.new("TextLabel")
+    timerText.Name = "TimerText"
+    timerText.AnchorPoint = Vector2.new(0.5, 0.5)
+    timerText.Position = UDim2.new(0.5, 0, -0.15, 0)
+    timerText.Size = UDim2.new(0, 420, 0, 60)
+    timerText.BackgroundTransparency = 1
+    timerText.Text = "Time : 315"
+    timerText.TextColor3 = Color3.fromRGB(255, 20, 20)
+    timerText.TextStrokeColor3 = Color3.fromRGB(35, 0, 0)
+    timerText.TextStrokeTransparency = 0.05
+    timerText.TextSize = 30
+    timerText.Visible = false
+
+    pcall(function()
+        timerText.FontFace = Font.new("rbxassetid://11702779517")
+    end)
+
+    timerText.Parent = gui
+
+    local glitchLines = {}
+
+    for i = 1, 7 do
+        local line = Instance.new("Frame")
+        line.Name = "GlitchLine_" .. i
+        line.BorderSizePixel = 0
+        line.BackgroundColor3 = Color3.fromRGB(math.random(180, 255), 0, 0)
+        line.BackgroundTransparency = 0.55
+        line.Size = UDim2.new(
+            math.random(8, 35) / 100,
+            0,
+            0,
+            math.random(1, 3)
+        )
+        line.Position = UDim2.new(
+            math.random(5, 80) / 100,
+            0,
+            math.random(65, 92) / 100,
+            0
+        )
+        line.Visible = false
+        line.Parent = gui
+
+        table.insert(glitchLines, line)
+    end
+
+    local timerLines = {}
+
+    for i = 1, 4 do
+        local line = Instance.new("Frame")
+        line.Name = "TimerGlitchLine_" .. i
+        line.BorderSizePixel = 0
+        line.BackgroundColor3 = Color3.fromRGB(math.random(190, 255), 0, 0)
+        line.BackgroundTransparency = 0.45
+        line.Size = UDim2.new(0, math.random(50, 160), 0, math.random(1, 2))
+        line.Position = UDim2.new(0.5, math.random(-170, 170), 0.08, math.random(-10, 10))
+        line.Visible = false
+        line.Parent = gui
+
+        table.insert(timerLines, line)
+    end
+
+    return gui, text, glitchLines, timerText, timerLines
+end
+
+local function showGlitchSentence(label, lines, sentence, duration)
+    if not label then
+        return
+    end
+
+    local running = true
+    local originalPosition = UDim2.new(0.5, 0, 0.88, 0)
+
+    label.Text = sentence
+    label.Visible = true
+    label.TextTransparency = 0
+
+    task.spawn(function()
+        while running and label.Parent do
+            label.Position = UDim2.new(
+                0.5,
+                math.random(-2, 2),
+                0.88,
+                math.random(-1, 1)
+            )
+
+            if math.random() < 0.26 then
+                label.Text = corruptText(sentence, 0.08)
+            else
+                label.Text = sentence
+            end
+
+            if math.random() < 0.11 then
+                label.TextTransparency = math.random(15, 50) / 100
+            else
+                label.TextTransparency = 0
+            end
+
+            for _, line in ipairs(lines) do
+                line.Visible = math.random() < 0.11
+
+                if line.Visible then
+                    line.Position = UDim2.new(
+                        math.random(8, 82) / 100,
+                        0,
+                        math.random(68, 92) / 100,
+                        0
+                    )
+
+                    line.Size = UDim2.new(
+                        math.random(8, 30) / 100,
+                        0,
+                        0,
+                        math.random(1, 3)
+                    )
+                end
+            end
+
+            task.wait(math.random(4, 10) / 100)
+        end
+    end)
+
+    task.wait(duration)
+
+    running = false
+    label.Text = sentence
+    label.TextTransparency = 0
+    label.Position = originalPosition
+
+    for _, line in ipairs(lines) do
+        line.Visible = false
+    end
+end
+
+local function dropTimer(timerText)
+    if not timerText then
+        return
+    end
+
+    timerText.Visible = true
+    timerText.Position = UDim2.new(0.38, 0, -0.18, 0)
+
+    local points = {
+        UDim2.new(0.42, 0, -0.05, 0),
+        UDim2.new(0.57, 0, 0.015, 0),
+        UDim2.new(0.46, 0, 0.055, 0),
+        UDim2.new(0.52, 0, 0.075, 0),
+        UDim2.new(0.5, 0, 0.08, 0)
+    }
+
+    local times = {
+        0.12,
+        0.14,
+        0.12,
+        0.1,
+        0.1
+    }
+
+    for i, point in ipairs(points) do
+        local tween = TweenService:Create(
+            timerText,
+            TweenInfo.new(
+                times[i],
+                Enum.EasingStyle.Quad,
+                Enum.EasingDirection.Out
+            ),
+            {
+                Position = point
+            }
+        )
+
+        tween:Play()
+        tween.Completed:Wait()
+    end
+
+    timerText.Position = UDim2.new(0.5, 0, 0.08, 0)
+end
+
+local function startMultiMonsterTimer(timerText, timerLines)
+    if not timerText then
+        return
+    end
+
+    dropTimer(timerText)
+
+    task.spawn(function()
+        for timeLeft = 315, 0, -1 do
+            if not timerText or not timerText.Parent then
+                return
+            end
+
+            local normalText = "Time : " .. timeLeft
+            local secondStart = os.clock()
+
+            while os.clock() - secondStart < 1 do
+                if not timerText.Parent then
+                    return
+                end
+
+                timerText.Position = UDim2.new(
+                    0.5,
+                    math.random(-2, 2),
+                    0.08,
+                    math.random(-1, 1)
+                )
+
+                if math.random() < 0.3 then
+                    timerText.Text = corruptText(normalText, 0.1)
+                else
+                    timerText.Text = normalText
+                end
+
+                if math.random() < 0.1 then
+                    timerText.TextTransparency = math.random(10, 40) / 100
+                else
+                    timerText.TextTransparency = 0
+                end
+
+                if math.random() < 0.07 then
+                    timerText.TextColor3 = Color3.fromRGB(255, 90, 90)
+                else
+                    timerText.TextColor3 = Color3.fromRGB(255, 20, 20)
+                end
+
+                for _, line in ipairs(timerLines or {}) do
+                    line.Visible = math.random() < 0.12
+
+                    if line.Visible then
+                        line.Position = UDim2.new(
+                            0.5,
+                            math.random(-180, 180),
+                            0.08,
+                            math.random(-18, 18)
+                        )
+
+                        line.Size = UDim2.new(
+                            0,
+                            math.random(40, 170),
+                            0,
+                            math.random(1, 2)
+                        )
+                    end
+                end
+
+                task.wait(math.random(4, 9) / 100)
+            end
+        end
+
+        if timerText and timerText.Parent then
+            timerText.Text = "Time : 0"
+            timerText.Position = UDim2.new(0.5, 0, 0.08, 0)
+            timerText.TextTransparency = 0
+            timerText.TextColor3 = Color3.fromRGB(255, 20, 20)
+        end
+
+        for _, line in ipairs(timerLines or {}) do
+            line.Visible = false
+        end
+    end)
+end
+
+local function playSoundAndWait(sound)
+    if not sound then
+        return
+    end
+
+    sound:Stop()
+    sound.TimePosition = 0
+    sound:Play()
+    sound.Ended:Wait()
+end
+
+function entityBehaviors.MultiMonster()
+    local M1 = MULTI_MONSTER_SOUNDS.M1
+    local M2 = MULTI_MONSTER_SOUNDS.M2
+    local M3 = MULTI_MONSTER_SOUNDS.M3
+    local M4 = MULTI_MONSTER_SOUNDS.M4
+
+    if not M1 or not M2 or not M3 or not M4 then
+        warn("[MultiMonster] Sounds are missing.")
+        return
+    end
+
+    for _, sound in ipairs({M1, M2, M3, M4}) do
+        pcall(function()
+            sound:Stop()
+            sound.TimePosition = 0
+        end)
+    end
+
+    local gui, glitchText, glitchLines, timerText, timerLines = createMultiMonsterUI()
+
+    M1:Play()
+
+    task.spawn(function()
+        local sentences = {
+            "Good morning.",
+            "How are you?",
+            "Nice to meet you",
+            "It's just a joke",
+            "You won't mind.",
+            "Let's start with this"
+        }
+
+        local timeout = 0
+
+        while M1.TimeLength <= 0 and timeout < 5 do
+            timeout += 0.05
+            task.wait(0.05)
+        end
+
+        local totalTime = M1.TimeLength
+
+        if totalTime <= 0 then
+            totalTime = 18
+        end
+
+        local sentenceDuration = math.max(2, totalTime / #sentences)
+
+        for _, sentence in ipairs(sentences) do
+            if not M1.IsPlaying then
+                break
+            end
+
+            showGlitchSentence(
+                glitchText,
+                glitchLines,
+                sentence,
+                sentenceDuration
+            )
+        end
+    end)
+
+    M1.Ended:Wait()
+
+    if glitchText then
+        glitchText.Text = ""
+        glitchText.Visible = false
+    end
+
+    for _, line in ipairs(glitchLines or {}) do
+        line.Visible = false
+    end
+
+    M2:Stop()
+    M2.TimePosition = 0
+    M2:Play()
+
+    task.spawn(function()
+        startMultiMonsterTimer(timerText, timerLines)
+    end)
+
+    M2.Ended:Wait()
+
+    playSoundAndWait(M2)
+
+    playSoundAndWait(M3)
+    playSoundAndWait(M3)
+
+    playSoundAndWait(M4)
+
+    if gui then
+        gui:Destroy()
+    end
+end
+
 function entityBehaviors.LightOSs()
  function GetRoom()
     local gruh = workspace.CurrentRooms
@@ -10811,6 +11330,7 @@ local entityConfig = {
     ["rbxassetid://104"] = entityBehaviors.DeergodDDH,
     ["rbxassetid://9999"] = entityBehaviors.SEEKEYES,
     ["rbxassetid://8888"] = entityBehaviors.HATREDJN,
+    ["rbxassetid://43857"] = entityBehaviors.MultiMonster,
     ["rbxassetid://135376180128296"] = entityBehaviors.Silence
 }
 local checkedEntities = {}

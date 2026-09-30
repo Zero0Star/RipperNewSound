@@ -3322,22 +3322,6 @@ end
 EnhancedBeamEffect()
 end
 
-function entityBehaviors.burgermunci()
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("在这次试炼中，你表现出了巨大的勇气。",true)
-wait(5)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("请原谅我，这可能有点突然。",true)
-wait(5)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("为了表达歉意。",true)
-wait(2)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("我将送你一个礼物。",true)
-wait(5)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("我非常理解你的心情，我已记录你在这场试炼的表现。",true)
-wait(5)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("我们在城堡后见。",true)
-wait(5)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("再见。",true)
-end
-
 function entityBehaviors.SILENCECUR()
 local silence = workspace:FindFirstChild("Silence")
 if silence and silence:IsA("Model") then
@@ -4265,6 +4249,4058 @@ function entityBehaviors.TOUSHI()
     end
 end
 
+function GitAud(soundgit, filename)
+    local fileName = filename or "temp_audio"
+    local fullFileName = fileName .. ".mp3"
+
+    local success, audioData = pcall(function()
+        return game:HttpGet(soundgit)
+    end)
+
+    if not success then
+        return nil
+    end
+
+    local writeSuccess = pcall(function()
+        writefile(fullFileName, audioData)
+    end)
+
+    if not writeSuccess then
+        return nil
+    end
+
+    if getsynasset then
+        return getsynasset(fullFileName)
+    elseif getcustomasset then
+        return getcustomasset(fullFileName)
+    end
+
+    return nil
+end
+
+local githubAudioUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonsterRipper.mp3?raw=true"
+local explosionSoundUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/RipperDoorend.mp3?raw=true"
+
+local backgroundSoundPath = GitAud(
+    githubAudioUrl,
+    "RipperBackgroundSound"
+)
+
+local explosionSoundPath = GitAud(
+    explosionSoundUrl,
+    "RipperExplosionSound"
+)
+
+if backgroundSoundPath then
+    local oldBackgroundSound = workspace:FindFirstChild(
+        "RipperBackgroundSound"
+    )
+
+    if oldBackgroundSound then
+        oldBackgroundSound:Destroy()
+    end
+
+    local backgroundSound = Instance.new("Sound")
+    backgroundSound.Name = "RipperBackgroundSound"
+    backgroundSound.SoundId = backgroundSoundPath
+    backgroundSound.Volume = 2
+    backgroundSound.Looped = false
+    backgroundSound.Parent = workspace
+end
+
+if explosionSoundPath then
+    local oldExplosionSound = workspace:FindFirstChild(
+        "RipperExplosionSound"
+    )
+
+    if oldExplosionSound then
+        oldExplosionSound:Destroy()
+    end
+
+    local explosionSound = Instance.new("Sound")
+    explosionSound.Name = "RipperExplosionSound"
+    explosionSound.SoundId = explosionSoundPath
+    explosionSound.Volume = 5
+    explosionSound.Looped = false
+    explosionSound.Parent = workspace
+end
+
+function entityBehaviors.MR()
+    local backgroundSound = workspace:FindFirstChild(
+        "RipperBackgroundSound"
+    )
+
+    if backgroundSound then
+        backgroundSound:Stop()
+        backgroundSound.TimePosition = 0
+        backgroundSound:Play()
+    end
+
+    local TweenService = game:GetService("TweenService")
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+
+    local targetColor = Color3.fromRGB(255, 93, 93)
+    local fadeDuration = 1
+
+    local fadeInfo = TweenInfo.new(
+        fadeDuration,
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.Out
+    )
+
+    local function createFadeTween(object)
+        if object:IsA("BasePart") or object:IsA("Light") then
+            local tween = TweenService:Create(
+                object,
+                fadeInfo,
+                {
+                    Color = targetColor
+                }
+            )
+
+            tween:Play()
+            return tween
+        end
+
+        return nil
+    end
+
+    local function modifyObjectsWithTween()
+        local currentRooms = workspace:FindFirstChild("CurrentRooms")
+
+        if not currentRooms then
+            return
+        end
+
+        for _, room in ipairs(currentRooms:GetChildren()) do
+            if room:IsA("Model") then
+                local assets = room:FindFirstChild("Assets")
+
+                if assets then
+                    for _, chandelier in ipairs(assets:GetChildren()) do
+                        if chandelier:IsA("Model")
+                            and chandelier.Name == "Chandelier"
+                        then
+                            local lightFixture =
+                                chandelier:FindFirstChild("LightFixture")
+
+                            if lightFixture then
+                                local pointLight =
+                                    lightFixture:FindFirstChild("PointLight")
+
+                                local spotLight =
+                                    lightFixture:FindFirstChild("SpotLight")
+
+                                local neon =
+                                    lightFixture:FindFirstChild("Neon")
+
+                                if pointLight
+                                    and pointLight:IsA("PointLight")
+                                then
+                                    createFadeTween(pointLight)
+                                end
+
+                                if spotLight
+                                    and spotLight:IsA("SpotLight")
+                                then
+                                    createFadeTween(spotLight)
+                                end
+
+                                if neon and neon:IsA("BasePart") then
+                                    createFadeTween(neon)
+                                end
+                            end
+                        end
+                    end
+
+                    local lightFixtures =
+                        assets:FindFirstChild("Light_Fixtures")
+
+                    if lightFixtures then
+                        for _, lightStand in ipairs(
+                            lightFixtures:GetChildren()
+                        ) do
+                            if lightStand:IsA("Model")
+                                and lightStand.Name == "LightStand"
+                            then
+                                local lightFixture =
+                                    lightStand:FindFirstChild(
+                                        "LightFixture"
+                                    )
+
+                                if lightFixture then
+                                    local pointLight =
+                                        lightFixture:FindFirstChild(
+                                            "PointLight"
+                                        )
+
+                                    local neon =
+                                        lightFixture:FindFirstChild("Neon")
+
+                                    if pointLight
+                                        and pointLight:IsA("PointLight")
+                                    then
+                                        createFadeTween(pointLight)
+                                    end
+
+                                    if neon and neon:IsA("BasePart") then
+                                        createFadeTween(neon)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    task.spawn(modifyObjectsWithTween)
+
+    local activeRipperTween = nil
+    local isJumpScaring = false
+    local ripper = nil
+    local ripperAsset = nil
+
+    local function StopRipperMovement()
+        if activeRipperTween then
+            activeRipperTween:Cancel()
+            activeRipperTween = nil
+        end
+    end
+
+    local function LoadDeathModel()
+        local DEATH_MODEL_ID = "104190508011063"
+
+        local success, loadedModels = pcall(function()
+            return game:GetObjects(
+                "rbxassetid://" .. DEATH_MODEL_ID
+            )
+        end)
+
+        if success and loadedModels and loadedModels[1] then
+            local deathModel = loadedModels[1]
+            deathModel.Name = "Death"
+            deathModel.Parent = workspace
+            return deathModel
+        end
+
+        return nil
+    end
+
+    local function TriggerRipperJumpScare(
+        currentRipper,
+        playerChar,
+        snapshottedRipperPosition
+    )
+        if isJumpScaring then
+            return
+        end
+
+        StopRipperMovement()
+        isJumpScaring = true
+
+        if ripperAsset and ripperAsset.Parent then
+            ripperAsset:Destroy()
+            ripperAsset = nil
+        end
+
+        local player = Players:GetPlayerFromCharacter(playerChar)
+
+        if not player then
+            isJumpScaring = false
+            return
+        end
+
+        local playerGui = player:FindFirstChild("PlayerGui")
+
+        if not playerGui then
+            playerGui = player:WaitForChild("PlayerGui", 5)
+        end
+
+        if not playerGui then
+            isJumpScaring = false
+            return
+        end
+
+        local noiseGui = Instance.new("ScreenGui")
+        noiseGui.Name = "Noise"
+        noiseGui.IgnoreGuiInset = true
+        noiseGui.ResetOnSpawn = false
+        noiseGui.Parent = playerGui
+
+        local staticImg = Instance.new("ImageLabel")
+        staticImg.BackgroundTransparency = 1
+        staticImg.Size = UDim2.new(1, 0, 1, 0)
+        staticImg.Image = "rbxassetid://236542974"
+        staticImg.ImageTransparency = 1
+        staticImg.Parent = noiseGui
+
+        local images = {
+            "rbxassetid://236542974",
+            "rbxassetid://12784032030"
+        }
+
+        local imgIndex = 1
+
+        task.spawn(function()
+            while staticImg and staticImg.Parent do
+                staticImg.Image = images[imgIndex]
+                imgIndex = imgIndex % #images + 1
+                task.wait(0.03)
+            end
+        end)
+
+        local deathModel = workspace:FindFirstChild("Death")
+
+        if not deathModel then
+            deathModel = LoadDeathModel()
+        end
+
+        if not deathModel
+            or not deathModel:FindFirstChild("Ripe")
+        then
+            noiseGui:Destroy()
+            isJumpScaring = false
+            return
+        end
+
+        local originalRipe = deathModel:FindFirstChild("Ripe")
+        local ripClone = originalRipe:Clone()
+        ripClone.Parent = workspace
+
+        if ripClone:IsA("BasePart") then
+            ripClone.Position = originalRipe.Position
+        elseif ripClone:IsA("Model") then
+            ripClone:PivotTo(originalRipe:GetPivot())
+        end
+
+        local ripeObject = ripClone:FindFirstChild("ripe")
+
+        if ripeObject then
+            local particleEmitter =
+                ripeObject:FindFirstChild("ParticleEmitter")
+
+            if particleEmitter
+                and particleEmitter:IsA("ParticleEmitter")
+            then
+                particleEmitter.Texture =
+                    "rbxassetid://11816152645"
+            end
+        end
+
+        for _, desc in ipairs(ripClone:GetDescendants()) do
+            if desc:IsA("ParticleEmitter") then
+                task.spawn(function()
+                    desc.Rate = 9999
+                    task.wait(0.25)
+
+                    if desc and desc.Parent then
+                        desc.TimeScale = 0
+                    end
+                end)
+            elseif desc:IsA("Sound") then
+                desc.Volume = 0
+            end
+        end
+
+        originalRipe:Destroy()
+
+        local screamSound = Instance.new("Sound")
+        screamSound.SoundId = "rbxassetid://372770465"
+        screamSound.Volume = 10
+        screamSound.PlaybackSpeed = 0.7
+        screamSound.Parent = workspace
+
+        local explodeSound = Instance.new("Sound")
+        local explosionSound = workspace:FindFirstChild(
+            "RipperExplosionSound"
+        )
+
+        if explosionSound then
+            explodeSound.SoundId = explosionSound.SoundId
+        end
+
+        explodeSound.Volume = 10
+        explodeSound.PlaybackSpeed = 1
+        explodeSound.Parent = workspace
+
+        local camera = workspace.CurrentCamera
+        local rootPart =
+            playerChar:FindFirstChild("HumanoidRootPart")
+
+        local humanoid =
+            playerChar:FindFirstChildWhichIsA("Humanoid")
+
+        if rootPart then
+            rootPart.Anchored = true
+        end
+
+        explodeSound:Play()
+
+        local cameraShakerModule =
+            game.ReplicatedStorage:FindFirstChild(
+                "CameraShaker"
+            )
+
+        if cameraShakerModule then
+            local explosionCameraShaker =
+                require(cameraShakerModule)
+
+            local explosionCamShake =
+                explosionCameraShaker.new(
+                    Enum.RenderPriority.Camera.Value,
+                    function(shakeCf)
+                        if camera then
+                            camera.CFrame =
+                                camera.CFrame * shakeCf
+                        end
+                    end
+                )
+
+            explosionCamShake:Start()
+            explosionCamShake:ShakeOnce(
+                50,
+                400,
+                0.1,
+                0.7,
+                2,
+                1
+            )
+        end
+
+        local originalCameraType = camera.CameraType
+        camera.CameraType = Enum.CameraType.Scriptable
+
+        local targetPart = Instance.new("Part")
+        targetPart.Transparency = 1
+        targetPart.CanCollide = false
+        targetPart.CanTouch = false
+        targetPart.CanQuery = false
+        targetPart.Anchored = true
+        targetPart.Position = snapshottedRipperPosition
+        targetPart.Parent = workspace
+
+        local visualDeathModel = LoadDeathModel()
+
+        if visualDeathModel then
+            visualDeathModel:PivotTo(
+                CFrame.lookAt(
+                    targetPart.Position,
+                    targetPart.Position
+                        + Vector3.new(0, 180, 0)
+                )
+            )
+        end
+
+        local camFocus = Instance.new("Part")
+        camFocus.Transparency = 1
+        camFocus.CanCollide = false
+        camFocus.CanTouch = false
+        camFocus.CanQuery = false
+        camFocus.Anchored = true
+        camFocus.CFrame = camera.CFrame
+        camFocus.Parent = workspace
+
+        local turnTween = TweenService:Create(
+            camFocus,
+            TweenInfo.new(
+                0.69,
+                Enum.EasingStyle.Circular,
+                Enum.EasingDirection.InOut
+            ),
+            {
+                CFrame = CFrame.lookAt(
+                    camFocus.Position,
+                    targetPart.Position
+                )
+            }
+        )
+
+        local renderConnection
+
+        renderConnection =
+            RunService.RenderStepped:Connect(function()
+                if camFocus
+                    and camFocus.Parent
+                    and camera
+                then
+                    camera.CFrame = camFocus.CFrame
+                elseif renderConnection then
+                    renderConnection:Disconnect()
+                end
+            end)
+
+        turnTween:Play()
+        turnTween.Completed:Wait()
+
+        task.wait(1)
+
+        screamSound.Volume = 0
+        screamSound:Play()
+
+        TweenService:Create(
+            screamSound,
+            TweenInfo.new(3),
+            {
+                Volume = 10
+            }
+        ):Play()
+
+        task.wait(3)
+
+        TweenService:Create(
+            staticImg,
+            TweenInfo.new(2),
+            {
+                ImageTransparency = 0
+            }
+        ):Play()
+
+        task.wait(2)
+
+        TweenService:Create(
+            staticImg,
+            TweenInfo.new(1),
+            {
+                ImageTransparency = 1
+            }
+        ):Play()
+
+        TweenService:Create(
+            screamSound,
+            TweenInfo.new(1),
+            {
+                Volume = 0
+            }
+        ):Play()
+
+        task.wait(1)
+
+        if rootPart and rootPart.Parent then
+            rootPart.Anchored = false
+        end
+
+        if humanoid and humanoid.Parent then
+            humanoid:TakeDamage(100)
+        end
+
+        if renderConnection then
+            renderConnection:Disconnect()
+        end
+
+        if camera then
+            camera.CameraType = originalCameraType
+        end
+
+        if noiseGui then
+            noiseGui:Destroy()
+        end
+
+        if targetPart then
+            targetPart:Destroy()
+        end
+
+        if camFocus then
+            camFocus:Destroy()
+        end
+
+        if ripClone then
+            ripClone:Destroy()
+        end
+
+        if screamSound then
+            screamSound:Destroy()
+        end
+
+        if explodeSound then
+            explodeSound:Destroy()
+        end
+
+        if deathModel then
+            deathModel:Destroy()
+        end
+
+        if visualDeathModel then
+            visualDeathModel:Destroy()
+        end
+
+        if currentRipper and currentRipper.Parent then
+            currentRipper:Destroy()
+        end
+
+        ripper = nil
+
+        local remotesFolder =
+            game.ReplicatedStorage:FindFirstChild(
+                "RemotesFolder"
+            )
+
+        if remotesFolder then
+            local deathHint =
+                remotesFolder:FindFirstChild("DeathHint")
+
+            if deathHint then
+                firesignal(
+                    deathHint.OnClientEvent,
+                    {
+                        "你死于MultiMonster...",
+                        "我认为它不属于这里.",
+                        "它的变化随时间推移将越来越危险,等待我的持续观察."
+                    },
+                    "Yellow"
+                )
+            end
+        end
+
+        local gameStats =
+            game.ReplicatedStorage:FindFirstChild(
+                "GameStats"
+            )
+
+        if gameStats then
+            local playerStat = gameStats:FindFirstChild(
+                "Player_" .. player.Name
+            )
+
+            if playerStat then
+                local total =
+                    playerStat:FindFirstChild("Total")
+
+                if total then
+                    local deathCause =
+                        total:FindFirstChild("DeathCause")
+
+                    if deathCause then
+                        deathCause.Value = "Ripper"
+                    end
+                end
+            end
+        end
+    end
+
+    local function getOrderedRooms()
+        local currentRooms =
+            workspace:FindFirstChild("CurrentRooms")
+
+        local orderedRooms = {}
+
+        if not currentRooms then
+            return orderedRooms
+        end
+
+        for _, room in ipairs(currentRooms:GetChildren()) do
+            if room:IsA("Model") then
+                local roomNumber = tonumber(room.Name)
+
+                if roomNumber then
+                    table.insert(
+                        orderedRooms,
+                        {
+                            Number = roomNumber,
+                            Room = room
+                        }
+                    )
+                end
+            end
+        end
+
+        table.sort(
+            orderedRooms,
+            function(a, b)
+                return a.Number < b.Number
+            end
+        )
+
+        return orderedRooms
+    end
+
+    local function getOrderedNodes(pathfindNodes)
+        local orderedNodes = {}
+
+        for _, node in ipairs(
+            pathfindNodes:GetChildren()
+        ) do
+            if node:IsA("BasePart") then
+                table.insert(orderedNodes, node)
+            end
+        end
+
+        table.sort(
+            orderedNodes,
+            function(a, b)
+                local numberA = tonumber(a.Name)
+                local numberB = tonumber(b.Name)
+
+                if numberA and numberB then
+                    return numberA < numberB
+                elseif numberA then
+                    return true
+                elseif numberB then
+                    return false
+                end
+
+                return a.Name < b.Name
+            end
+        )
+
+        return orderedNodes
+    end
+
+    local function moveRipperTo(
+        targetCFrame,
+        speedFactor
+    )
+        if isJumpScaring
+            or not ripper
+            or not ripper.Parent
+        then
+            return false
+        end
+
+        local distance = (
+            ripper.Position - targetCFrame.Position
+        ).Magnitude
+
+        local duration =
+            math.max(distance / speedFactor, 0.01)
+
+        local tween = TweenService:Create(
+            ripper,
+            TweenInfo.new(
+                duration,
+                Enum.EasingStyle.Linear,
+                Enum.EasingDirection.InOut
+            ),
+            {
+                CFrame = targetCFrame
+            }
+        )
+
+        activeRipperTween = tween
+        tween:Play()
+
+        local playbackState =
+            tween.Completed:Wait()
+
+        if activeRipperTween == tween then
+            activeRipperTween = nil
+        end
+
+        return playbackState
+                == Enum.PlaybackState.Completed
+            and not isJumpScaring
+            and ripper
+            and ripper.Parent ~= nil
+    end
+
+    local function ExecuteRipperPathfinding()
+        local RIPPER_MODEL_ID = "127021565298754"
+
+        local success, loadedAsset = pcall(function()
+            return game:GetObjects(
+                "rbxassetid://" .. RIPPER_MODEL_ID
+            )[1]
+        end)
+
+        if not success or not loadedAsset then
+            ripperAsset = nil
+            return
+        end
+
+        ripperAsset = loadedAsset
+
+        local basePart =
+            ripperAsset:FindFirstChildWhichIsA(
+                "BasePart",
+                true
+            )
+
+        if not basePart then
+            ripperAsset:Destroy()
+            ripperAsset = nil
+            return
+        end
+
+        ripper = basePart:Clone()
+        ripper.Anchored = true
+        ripper.Parent = workspace
+
+        local orderedRooms = getOrderedRooms()
+
+        if #orderedRooms == 0 then
+            ripper:Destroy()
+            ripper = nil
+            ripperAsset:Destroy()
+            ripperAsset = nil
+            return
+        end
+
+        local startRoom = orderedRooms[1].Room
+        local startNode = nil
+        local startPathfindNodes =
+            startRoom:FindFirstChild("PathfindNodes")
+
+        if startPathfindNodes then
+            local startNodes =
+                getOrderedNodes(startPathfindNodes)
+
+            startNode = startNodes[1]
+        end
+
+        if not startNode then
+            startNode =
+                startRoom:FindFirstChild("RoomExit")
+        end
+
+        if not startNode
+            or not startNode:IsA("BasePart")
+        then
+            ripper:Destroy()
+            ripper = nil
+            ripperAsset:Destroy()
+            ripperAsset = nil
+            return
+        end
+
+        local heightOffset = Vector3.new(0, 1, 0)
+        local speedFactor = 89
+
+        ripper.CFrame =
+            startNode.CFrame + heightOffset
+
+        local cameraShaker = nil
+        local cameraShakerModule =
+            game.ReplicatedStorage:FindFirstChild(
+                "CameraShaker"
+            )
+
+        if cameraShakerModule then
+            local CameraShakerModule =
+                require(cameraShakerModule)
+
+            local camera = workspace.CurrentCamera
+
+            cameraShaker = CameraShakerModule.new(
+                Enum.RenderPriority.Camera.Value,
+                function(shakerTransform)
+                    if camera then
+                        camera.CFrame =
+                            camera.CFrame
+                            * shakerTransform
+                    end
+                end
+            )
+
+            cameraShaker:Start()
+        end
+
+        local hasShaken = false
+
+        task.spawn(function()
+            while ripper
+                and ripper.Parent
+                and not isJumpScaring
+            do
+                RunService.RenderStepped:Wait()
+
+                local player = Players.LocalPlayer
+
+                if player and player.Character then
+                    local character = player.Character
+
+                    local humanoid =
+                        character:FindFirstChildWhichIsA(
+                            "Humanoid"
+                        )
+
+                    local rootPart =
+                        character:FindFirstChild(
+                            "HumanoidRootPart"
+                        )
+
+                    if humanoid
+                        and rootPart
+                        and humanoid.Health > 0
+                        and not character:GetAttribute(
+                            "Hiding"
+                        )
+                    then
+                        local origin = ripper.Position
+                        local target = rootPart.Position
+
+                        local distance = (
+                            origin - target
+                        ).Magnitude
+
+                        if distance < 213
+                            and cameraShaker
+                        then
+                            if not hasShaken then
+                                local amplitude =
+                                    math.max(
+                                        0,
+                                        21
+                                            * (
+                                                1
+                                                - distance
+                                                    / 152
+                                            )
+                                    )
+
+                                cameraShaker:ShakeOnce(
+                                    amplitude,
+                                    14,
+                                    5,
+                                    1,
+                                    1,
+                                    6
+                                )
+
+                                hasShaken = true
+                            end
+                        else
+                            hasShaken = false
+                        end
+
+                        local difference =
+                            target - origin
+
+                        if difference.Magnitude > 0 then
+                            local raycastParams =
+                                RaycastParams.new()
+
+                            raycastParams.FilterType =
+                                Enum.RaycastFilterType.Exclude
+
+                            raycastParams.FilterDescendantsInstances =
+                                {
+                                    ripper
+                                }
+
+                            local raycastResult =
+                                workspace:Raycast(
+                                    origin,
+                                    difference.Unit * 66,
+                                    raycastParams
+                                )
+
+                            if raycastResult
+                                and raycastResult.Instance
+                                and raycastResult.Instance:IsDescendantOf(
+                                    character
+                                )
+                            then
+                                TriggerRipperJumpScare(
+                                    ripper,
+                                    character,
+                                    ripper.Position
+                                )
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+
+        local targetRoomIndex =
+            math.max(1, #orderedRooms - 1)
+
+        local reachedFinalRoom = false
+        local completedRoomIndex = 0
+
+        for roomIndex = 1, targetRoomIndex do
+            if isJumpScaring
+                or not ripper
+                or not ripper.Parent
+            then
+                break
+            end
+
+            local roomData =
+                orderedRooms[roomIndex]
+
+            local room =
+                roomData and roomData.Room
+
+            if not room or not room.Parent then
+                local refreshDeadline =
+                    os.clock() + 5
+
+                repeat
+                    task.wait(0.1)
+
+                    orderedRooms =
+                        getOrderedRooms()
+
+                    roomData =
+                        orderedRooms[roomIndex]
+
+                    room =
+                        roomData and roomData.Room
+                until room
+                    or os.clock()
+                        >= refreshDeadline
+                    or isJumpScaring
+                    or not ripper
+                    or not ripper.Parent
+            end
+
+            if not room or not room.Parent then
+                break
+            end
+
+            local roomCompleted = false
+            local pathfindNodes =
+                room:FindFirstChild(
+                    "PathfindNodes"
+                )
+
+            if pathfindNodes then
+                local orderedNodes =
+                    getOrderedNodes(
+                        pathfindNodes
+                    )
+
+                if #orderedNodes > 0 then
+                    roomCompleted = true
+
+                    for _, node in ipairs(
+                        orderedNodes
+                    ) do
+                        if isJumpScaring
+                            or not ripper
+                            or not ripper.Parent
+                        then
+                            roomCompleted = false
+                            break
+                        end
+
+                        local moved =
+                            moveRipperTo(
+                                node.CFrame
+                                    + heightOffset,
+                                speedFactor
+                            )
+
+                        if not moved then
+                            roomCompleted = false
+                            break
+                        end
+                    end
+                end
+            end
+
+            if not roomCompleted then
+                local roomExit =
+                    room:FindFirstChild(
+                        "RoomExit"
+                    )
+
+                if roomExit
+                    and roomExit:IsA(
+                        "BasePart"
+                    )
+                then
+                    roomCompleted =
+                        moveRipperTo(
+                            roomExit.CFrame
+                                + heightOffset,
+                            speedFactor
+                        )
+                end
+            end
+
+            if not roomCompleted then
+                break
+            end
+
+            completedRoomIndex = roomIndex
+
+            if roomIndex
+                == targetRoomIndex
+            then
+                reachedFinalRoom = true
+            end
+        end
+
+        activeRipperTween = nil
+
+        if isJumpScaring
+            or not ripper
+            or not ripper.Parent
+        then
+            ripper = nil
+            ripperAsset = nil
+            return
+        end
+
+        if not reachedFinalRoom
+            or completedRoomIndex
+                < targetRoomIndex
+        then
+            if ripper and ripper.Parent then
+                ripper:Destroy()
+            end
+
+            if ripperAsset
+                and ripperAsset.Parent
+            then
+                ripperAsset:Destroy()
+            end
+
+            ripper = nil
+            ripperAsset = nil
+            return
+        end
+
+        local NEAR_EXPLOSION_DISTANCE = 80
+        local FAR_EXPLOSION_DISTANCE = 220
+        local SHAKE_MAX_DISTANCE = 350
+        local MAX_EXPLOSION_SHAKE = 300
+
+        local localPlayer = Players.LocalPlayer
+        local playerRoot = nil
+
+        if localPlayer and localPlayer.Character then
+            playerRoot =
+                localPlayer.Character:FindFirstChild(
+                    "HumanoidRootPart"
+                )
+        end
+
+        local ripperDistance = math.huge
+
+        if playerRoot and ripper and ripper.Parent then
+            ripperDistance =
+                (
+                    playerRoot.Position
+                    - ripper.Position
+                ).Magnitude
+        end
+
+        -- The moving Ripper is a cloned BasePart. In this asset that part
+        -- can itself be RushNew, so check it first, then fall back to the
+        -- original loaded asset in case RushNew lives deeper in the model.
+        local rushNew = nil
+
+        if ripper and ripper.Parent then
+            if ripper.Name == "RushNew" then
+                rushNew = ripper
+            else
+                rushNew =
+                    ripper:FindFirstChild(
+                        "RushNew",
+                        true
+                    )
+            end
+        end
+
+        if not rushNew
+            and ripperAsset
+            and ripperAsset.Parent
+        then
+            rushNew =
+                ripperAsset:FindFirstChild(
+                    "RushNew",
+                    true
+                )
+        end
+
+        local explodeSound = nil
+
+        if ripperDistance
+            <= NEAR_EXPLOSION_DISTANCE
+        then
+            -- Very close: keep the original explosion sound.
+            local explosionSound =
+                workspace:FindFirstChild(
+                    "RipperExplosionSound"
+                )
+
+            if explosionSound
+                and explosionSound:IsA("Sound")
+            then
+                explodeSound = Instance.new("Sound")
+                explodeSound.SoundId =
+                    explosionSound.SoundId
+                explodeSound.Volume = 5
+                explodeSound.PlaybackSpeed =
+                    explosionSound.PlaybackSpeed
+                explodeSound.Parent = ripper
+            end
+        elseif ripperDistance
+            <= FAR_EXPLOSION_DISTANCE
+        then
+            -- Mid distance: use RushNew.Despawn2 at Volume 10.
+            local despawn2 =
+                rushNew
+                and rushNew:FindFirstChild(
+                    "Despawn2"
+                )
+
+            if despawn2
+                and despawn2:IsA("Sound")
+            then
+                explodeSound = despawn2:Clone()
+                explodeSound.Volume = 10
+                explodeSound.Parent = ripper
+            end
+        else
+            -- Very far: use RushNew.Despawn3 at Volume 10.
+            local despawn3 =
+                rushNew
+                and rushNew:FindFirstChild(
+                    "Despawn3"
+                )
+
+            if despawn3
+                and despawn3:IsA("Sound")
+            then
+                explodeSound = despawn3:Clone()
+                explodeSound.Volume = 10
+                explodeSound.Parent = ripper
+            end
+        end
+
+        -- Safety fallback if Despawn2 / Despawn3 is missing from the asset.
+        if not explodeSound then
+            local explosionSound =
+                workspace:FindFirstChild(
+                    "RipperExplosionSound"
+                )
+
+            if explosionSound
+                and explosionSound:IsA("Sound")
+            then
+                explodeSound = Instance.new("Sound")
+                explodeSound.SoundId =
+                    explosionSound.SoundId
+                explodeSound.Volume = 5
+                explodeSound.PlaybackSpeed =
+                    explosionSound.PlaybackSpeed
+                explodeSound.Parent = ripper
+            end
+        end
+
+        if explodeSound then
+            explodeSound:Play()
+        end
+
+        -- Keep the original 300 shake while very close. Beyond the near
+        -- range, smoothly fade the amplitude to 0 by SHAKE_MAX_DISTANCE.
+        local shakeAmplitude = 0
+
+        if ripperDistance
+            <= NEAR_EXPLOSION_DISTANCE
+        then
+            shakeAmplitude = MAX_EXPLOSION_SHAKE
+        elseif ripperDistance
+            < SHAKE_MAX_DISTANCE
+        then
+            local alpha =
+                1
+                - (
+                    ripperDistance
+                    - NEAR_EXPLOSION_DISTANCE
+                )
+                / (
+                    SHAKE_MAX_DISTANCE
+                    - NEAR_EXPLOSION_DISTANCE
+                )
+
+            shakeAmplitude =
+                MAX_EXPLOSION_SHAKE
+                * math.clamp(alpha, 0, 1)
+        end
+
+        if cameraShakerModule
+            and shakeAmplitude > 0
+        then
+            local endExplosionCameraShaker =
+                require(cameraShakerModule)
+
+            local endExplosionCam =
+                workspace.CurrentCamera
+
+            local endExplosionCamShake =
+                endExplosionCameraShaker.new(
+                    Enum.RenderPriority.Camera.Value,
+                    function(shakeCf)
+                        if endExplosionCam then
+                            endExplosionCam.CFrame =
+                                endExplosionCam.CFrame
+                                * shakeCf
+                        end
+                    end
+                )
+
+            endExplosionCamShake:Start()
+
+            endExplosionCamShake:ShakeOnce(
+                shakeAmplitude,
+                400,
+                0.1,
+                0.7,
+                2,
+                1
+            )
+        end
+
+        task.wait(1)
+
+        local finalRipperPosition = nil
+
+        if ripper and ripper.Parent then
+            finalRipperPosition =
+                ripper.Position
+
+            ripper.Anchored = false
+            ripper.CanCollide = false
+            ripper.CanTouch = false
+            ripper.CanQuery = false
+        end
+
+        if ripperAsset
+            and ripperAsset.Parent
+        then
+            ripperAsset:Destroy()
+            ripperAsset = nil
+        end
+
+        if isJumpScaring
+            or not ripper
+            or not ripper.Parent
+        then
+            ripper = nil
+            return
+        end
+
+        local player = Players.LocalPlayer
+
+        if player and player.Character then
+            local character = player.Character
+
+            local humanoid =
+                character:FindFirstChildWhichIsA(
+                    "Humanoid"
+                )
+
+            if humanoid
+                and humanoid.Health > 0
+                and not character:GetAttribute(
+                    "Hiding"
+                )
+                and finalRipperPosition
+            then
+                TriggerRipperJumpScare(
+                    ripper,
+                    character,
+                    finalRipperPosition
+                )
+
+                return
+            end
+        end
+
+        local fallingRipper = ripper
+
+        ripper = nil
+        ripperAsset = nil
+
+        task.delay(10, function()
+            if fallingRipper
+                and fallingRipper.Parent
+            then
+                fallingRipper:Destroy()
+            end
+        end)
+    end
+
+    task.spawn(function()
+        task.wait(7)
+        ExecuteRipperPathfinding()
+    end)
+
+    local function runFinalCameraShake()
+        local cameraShakerModule =
+            game.ReplicatedStorage:FindFirstChild(
+                "CameraShaker"
+            )
+
+        if not cameraShakerModule then
+            return
+        end
+
+        local CameraShaker =
+            require(cameraShakerModule)
+
+        local camera =
+            workspace.CurrentCamera
+
+        local camShake =
+            CameraShaker.new(
+                Enum.RenderPriority.Camera.Value,
+                function(shakeCf)
+                    if camera then
+                        camera.CFrame =
+                            camera.CFrame
+                            * shakeCf
+                    end
+                end
+            )
+
+        camShake:Start()
+
+        camShake:ShakeOnce(
+            10,
+            200,
+            0.1,
+            6,
+            2,
+            0.5
+        )
+    end
+    runFinalCameraShake()
+end
+
+function GitAud(soundgit, filename)
+    local fileName = filename or "temp_audio"
+    local fullFileName = fileName .. ".mp3"
+
+    local success, audioData = pcall(function()
+        return game:HttpGet(soundgit)
+    end)
+
+    if not success then
+        return nil
+    end
+
+    local writeSuccess = pcall(function()
+        writefile(fullFileName, audioData)
+    end)
+
+    if not writeSuccess then
+        return nil
+    end
+
+    if getsynasset then
+        return getsynasset(fullFileName)
+    elseif getcustomasset then
+        return getcustomasset(fullFileName)
+    end
+
+    return nil
+end
+
+local MR = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonsterRipper.mp3?raw=true"
+local MRD = "https://github.com/Zero0Star/RipperNewSound/blob/master/RipperDoorend.mp3?raw=true"
+
+local backgroundSoundPath = GitAud(
+    MR,
+    "MRS"
+)
+
+local explosionSoundPath = GitAud(
+    MRD,
+    "MRD"
+)
+
+if backgroundSoundPath then
+    local oldBackgroundSound = workspace:FindFirstChild(
+        "MRS"
+    )
+
+    if oldBackgroundSound then
+        oldBackgroundSound:Destroy()
+    end
+
+    local backgroundSound = Instance.new("Sound")
+    backgroundSound.Name = "MRS"
+    backgroundSound.SoundId = backgroundSoundPath
+    backgroundSound.Volume = 2
+    backgroundSound.Looped = false
+    backgroundSound.Parent = workspace
+end
+
+if explosionSoundPath then
+    local oldExplosionSound = workspace:FindFirstChild(
+        "MRD"
+    )
+
+    if oldExplosionSound then
+        oldExplosionSound:Destroy()
+    end
+
+    local explosionSound = Instance.new("Sound")
+    explosionSound.Name = "MRD"
+    explosionSound.SoundId = explosionSoundPath
+    explosionSound.Volume = 5
+    explosionSound.Looped = false
+    explosionSound.Parent = workspace
+end
+
+function entityBehaviors.MR()
+    local backgroundSound = workspace:FindFirstChild(
+        "MRS"
+    )
+
+    if backgroundSound then
+        backgroundSound:Stop()
+        backgroundSound.TimePosition = 0
+        backgroundSound:Play()
+    end
+
+    local TweenService = game:GetService("TweenService")
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+
+    local targetColor = Color3.fromRGB(255, 93, 93)
+    local fadeDuration = 1
+
+    local fadeInfo = TweenInfo.new(
+        fadeDuration,
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.Out
+    )
+
+    local function createFadeTween(object)
+        if object:IsA("BasePart") or object:IsA("Light") then
+            local tween = TweenService:Create(
+                object,
+                fadeInfo,
+                {
+                    Color = targetColor
+                }
+            )
+
+            tween:Play()
+            return tween
+        end
+
+        return nil
+    end
+
+    local function modifyObjectsWithTween()
+        local currentRooms = workspace:FindFirstChild("CurrentRooms")
+
+        if not currentRooms then
+            return
+        end
+
+        for _, room in ipairs(currentRooms:GetChildren()) do
+            if room:IsA("Model") then
+                local assets = room:FindFirstChild("Assets")
+
+                if assets then
+                    for _, chandelier in ipairs(assets:GetChildren()) do
+                        if chandelier:IsA("Model")
+                            and chandelier.Name == "Chandelier"
+                        then
+                            local lightFixture =
+                                chandelier:FindFirstChild("LightFixture")
+
+                            if lightFixture then
+                                local pointLight =
+                                    lightFixture:FindFirstChild("PointLight")
+
+                                local spotLight =
+                                    lightFixture:FindFirstChild("SpotLight")
+
+                                local neon =
+                                    lightFixture:FindFirstChild("Neon")
+
+                                if pointLight
+                                    and pointLight:IsA("PointLight")
+                                then
+                                    createFadeTween(pointLight)
+                                end
+
+                                if spotLight
+                                    and spotLight:IsA("SpotLight")
+                                then
+                                    createFadeTween(spotLight)
+                                end
+
+                                if neon and neon:IsA("BasePart") then
+                                    createFadeTween(neon)
+                                end
+                            end
+                        end
+                    end
+
+                    local lightFixtures =
+                        assets:FindFirstChild("Light_Fixtures")
+
+                    if lightFixtures then
+                        for _, lightStand in ipairs(
+                            lightFixtures:GetChildren()
+                        ) do
+                            if lightStand:IsA("Model")
+                                and lightStand.Name == "LightStand"
+                            then
+                                local lightFixture =
+                                    lightStand:FindFirstChild(
+                                        "LightFixture"
+                                    )
+
+                                if lightFixture then
+                                    local pointLight =
+                                        lightFixture:FindFirstChild(
+                                            "PointLight"
+                                        )
+
+                                    local neon =
+                                        lightFixture:FindFirstChild("Neon")
+
+                                    if pointLight
+                                        and pointLight:IsA("PointLight")
+                                    then
+                                        createFadeTween(pointLight)
+                                    end
+
+                                    if neon and neon:IsA("BasePart") then
+                                        createFadeTween(neon)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    task.spawn(modifyObjectsWithTween)
+
+    local activeRipperTween = nil
+    local isJumpScaring = false
+    local ripper = nil
+    local ripperAsset = nil
+
+    local function StopRipperMovement()
+        if activeRipperTween then
+            activeRipperTween:Cancel()
+            activeRipperTween = nil
+        end
+    end
+
+    local function LoadDeathModel()
+        local DEATH_MODEL_ID = "104190508011063"
+
+        local success, loadedModels = pcall(function()
+            return game:GetObjects(
+                "rbxassetid://" .. DEATH_MODEL_ID
+            )
+        end)
+
+        if success and loadedModels and loadedModels[1] then
+            local deathModel = loadedModels[1]
+            deathModel.Name = "Death"
+            deathModel.Parent = workspace
+            return deathModel
+        end
+
+        return nil
+    end
+
+    local function TriggerRipperJumpScare(
+        currentRipper,
+        playerChar,
+        snapshottedRipperPosition
+    )
+        if isJumpScaring then
+            return
+        end
+
+        StopRipperMovement()
+        isJumpScaring = true
+
+        if ripperAsset and ripperAsset.Parent then
+            ripperAsset:Destroy()
+            ripperAsset = nil
+        end
+
+        local player = Players:GetPlayerFromCharacter(playerChar)
+
+        if not player then
+            isJumpScaring = false
+            return
+        end
+
+        local playerGui = player:FindFirstChild("PlayerGui")
+
+        if not playerGui then
+            playerGui = player:WaitForChild("PlayerGui", 5)
+        end
+
+        if not playerGui then
+            isJumpScaring = false
+            return
+        end
+
+        local noiseGui = Instance.new("ScreenGui")
+        noiseGui.Name = "Noise"
+        noiseGui.IgnoreGuiInset = true
+        noiseGui.ResetOnSpawn = false
+        noiseGui.Parent = playerGui
+
+        local staticImg = Instance.new("ImageLabel")
+        staticImg.BackgroundTransparency = 1
+        staticImg.Size = UDim2.new(1, 0, 1, 0)
+        staticImg.Image = "rbxassetid://236542974"
+        staticImg.ImageTransparency = 1
+        staticImg.Parent = noiseGui
+
+        local images = {
+            "rbxassetid://236542974",
+            "rbxassetid://12784032030"
+        }
+
+        local imgIndex = 1
+
+        task.spawn(function()
+            while staticImg and staticImg.Parent do
+                staticImg.Image = images[imgIndex]
+                imgIndex = imgIndex % #images + 1
+                task.wait(0.03)
+            end
+        end)
+
+        local deathModel = workspace:FindFirstChild("Death")
+
+        if not deathModel then
+            deathModel = LoadDeathModel()
+        end
+
+        if not deathModel
+            or not deathModel:FindFirstChild("Ripe")
+        then
+            noiseGui:Destroy()
+            isJumpScaring = false
+            return
+        end
+
+        local originalRipe = deathModel:FindFirstChild("Ripe")
+        local ripClone = originalRipe:Clone()
+        ripClone.Parent = workspace
+
+        if ripClone:IsA("BasePart") then
+            ripClone.Position = originalRipe.Position
+        elseif ripClone:IsA("Model") then
+            ripClone:PivotTo(originalRipe:GetPivot())
+        end
+
+        local ripeObject = ripClone:FindFirstChild("ripe")
+
+        if ripeObject then
+            local particleEmitter =
+                ripeObject:FindFirstChild("ParticleEmitter")
+
+            if particleEmitter
+                and particleEmitter:IsA("ParticleEmitter")
+            then
+                particleEmitter.Texture =
+                    "rbxassetid://11816152645"
+            end
+        end
+
+        for _, desc in ipairs(ripClone:GetDescendants()) do
+            if desc:IsA("ParticleEmitter") then
+                task.spawn(function()
+                    desc.Rate = 9999
+                    task.wait(0.25)
+
+                    if desc and desc.Parent then
+                        desc.TimeScale = 0
+                    end
+                end)
+            elseif desc:IsA("Sound") then
+                desc.Volume = 0
+            end
+        end
+
+        originalRipe:Destroy()
+
+        local screamSound = Instance.new("Sound")
+        screamSound.SoundId = "rbxassetid://372770465"
+        screamSound.Volume = 10
+        screamSound.PlaybackSpeed = 0.7
+        screamSound.Parent = workspace
+
+        local explodeSound = Instance.new("Sound")
+        local explosionSound = workspace:FindFirstChild(
+            "MRD"
+        )
+
+        if explosionSound then
+            explodeSound.SoundId = explosionSound.SoundId
+        end
+
+        explodeSound.Volume = 10
+        explodeSound.PlaybackSpeed = 1
+        explodeSound.Parent = workspace
+
+        local camera = workspace.CurrentCamera
+        local rootPart =
+            playerChar:FindFirstChild("HumanoidRootPart")
+
+        local humanoid =
+            playerChar:FindFirstChildWhichIsA("Humanoid")
+
+        if rootPart then
+            rootPart.Anchored = true
+        end
+
+        explodeSound:Play()
+
+        local cameraShakerModule =
+            game.ReplicatedStorage:FindFirstChild(
+                "CameraShaker"
+            )
+
+        if cameraShakerModule then
+            local explosionCameraShaker =
+                require(cameraShakerModule)
+
+            local explosionCamShake =
+                explosionCameraShaker.new(
+                    Enum.RenderPriority.Camera.Value,
+                    function(shakeCf)
+                        if camera then
+                            camera.CFrame =
+                                camera.CFrame * shakeCf
+                        end
+                    end
+                )
+
+            explosionCamShake:Start()
+            explosionCamShake:ShakeOnce(
+                50,
+                400,
+                0.1,
+                0.7,
+                2,
+                1
+            )
+        end
+
+        local originalCameraType = camera.CameraType
+        camera.CameraType = Enum.CameraType.Scriptable
+
+        local targetPart = Instance.new("Part")
+        targetPart.Transparency = 1
+        targetPart.CanCollide = false
+        targetPart.CanTouch = false
+        targetPart.CanQuery = false
+        targetPart.Anchored = true
+        targetPart.Position = snapshottedRipperPosition
+        targetPart.Parent = workspace
+
+        local visualDeathModel = LoadDeathModel()
+
+        if visualDeathModel then
+            visualDeathModel:PivotTo(
+                CFrame.lookAt(
+                    targetPart.Position,
+                    targetPart.Position
+                        + Vector3.new(0, 180, 0)
+                )
+            )
+        end
+
+        local camFocus = Instance.new("Part")
+        camFocus.Transparency = 1
+        camFocus.CanCollide = false
+        camFocus.CanTouch = false
+        camFocus.CanQuery = false
+        camFocus.Anchored = true
+        camFocus.CFrame = camera.CFrame
+        camFocus.Parent = workspace
+
+        local turnTween = TweenService:Create(
+            camFocus,
+            TweenInfo.new(
+                0.69,
+                Enum.EasingStyle.Circular,
+                Enum.EasingDirection.InOut
+            ),
+            {
+                CFrame = CFrame.lookAt(
+                    camFocus.Position,
+                    targetPart.Position
+                )
+            }
+        )
+
+        local renderConnection
+
+        renderConnection =
+            RunService.RenderStepped:Connect(function()
+                if camFocus
+                    and camFocus.Parent
+                    and camera
+                then
+                    camera.CFrame = camFocus.CFrame
+                elseif renderConnection then
+                    renderConnection:Disconnect()
+                end
+            end)
+
+        turnTween:Play()
+        turnTween.Completed:Wait()
+
+        task.wait(1)
+
+        screamSound.Volume = 0
+        screamSound:Play()
+
+        TweenService:Create(
+            screamSound,
+            TweenInfo.new(3),
+            {
+                Volume = 10
+            }
+        ):Play()
+
+        task.wait(3)
+
+        TweenService:Create(
+            staticImg,
+            TweenInfo.new(2),
+            {
+                ImageTransparency = 0
+            }
+        ):Play()
+
+        task.wait(2)
+
+        TweenService:Create(
+            staticImg,
+            TweenInfo.new(1),
+            {
+                ImageTransparency = 1
+            }
+        ):Play()
+
+        TweenService:Create(
+            screamSound,
+            TweenInfo.new(1),
+            {
+                Volume = 0
+            }
+        ):Play()
+
+        task.wait(1)
+
+        if rootPart and rootPart.Parent then
+            rootPart.Anchored = false
+        end
+
+        if humanoid and humanoid.Parent then
+            humanoid:TakeDamage(100)
+        end
+
+        if renderConnection then
+            renderConnection:Disconnect()
+        end
+
+        if camera then
+            camera.CameraType = originalCameraType
+        end
+
+        if noiseGui then
+            noiseGui:Destroy()
+        end
+
+        if targetPart then
+            targetPart:Destroy()
+        end
+
+        if camFocus then
+            camFocus:Destroy()
+        end
+
+        if ripClone then
+            ripClone:Destroy()
+        end
+
+        if screamSound then
+            screamSound:Destroy()
+        end
+
+        if explodeSound then
+            explodeSound:Destroy()
+        end
+
+        if deathModel then
+            deathModel:Destroy()
+        end
+
+        if visualDeathModel then
+            visualDeathModel:Destroy()
+        end
+
+        if currentRipper and currentRipper.Parent then
+            currentRipper:Destroy()
+        end
+
+        ripper = nil
+
+        local remotesFolder =
+            game.ReplicatedStorage:FindFirstChild(
+                "RemotesFolder"
+            )
+
+        if remotesFolder then
+            local deathHint =
+                remotesFolder:FindFirstChild("DeathHint")
+
+            if deathHint then
+                firesignal(
+                    deathHint.OnClientEvent,
+                    {
+                        "你死于MultiMonster...",
+                        "我认为它不属于这里.",
+                        "它的变化随时间推移将越来越危险,等待我的持续观察."
+                    },
+                    "Yellow"
+                )
+            end
+        end
+
+        local gameStats =
+            game.ReplicatedStorage:FindFirstChild(
+                "GameStats"
+            )
+
+        if gameStats then
+            local playerStat = gameStats:FindFirstChild(
+                "Player_" .. player.Name
+            )
+
+            if playerStat then
+                local total =
+                    playerStat:FindFirstChild("Total")
+
+                if total then
+                    local deathCause =
+                        total:FindFirstChild("DeathCause")
+
+                    if deathCause then
+                        deathCause.Value = "Ripper"
+                    end
+                end
+            end
+        end
+    end
+
+    local function getOrderedRooms()
+        local currentRooms =
+            workspace:FindFirstChild("CurrentRooms")
+
+        local orderedRooms = {}
+
+        if not currentRooms then
+            return orderedRooms
+        end
+
+        for _, room in ipairs(currentRooms:GetChildren()) do
+            if room:IsA("Model") then
+                local roomNumber = tonumber(room.Name)
+
+                if roomNumber then
+                    table.insert(
+                        orderedRooms,
+                        {
+                            Number = roomNumber,
+                            Room = room
+                        }
+                    )
+                end
+            end
+        end
+
+        table.sort(
+            orderedRooms,
+            function(a, b)
+                return a.Number < b.Number
+            end
+        )
+
+        return orderedRooms
+    end
+
+    local function getOrderedNodes(pathfindNodes)
+        local orderedNodes = {}
+
+        for _, node in ipairs(
+            pathfindNodes:GetChildren()
+        ) do
+            if node:IsA("BasePart") then
+                table.insert(orderedNodes, node)
+            end
+        end
+
+        table.sort(
+            orderedNodes,
+            function(a, b)
+                local numberA = tonumber(a.Name)
+                local numberB = tonumber(b.Name)
+
+                if numberA and numberB then
+                    return numberA < numberB
+                elseif numberA then
+                    return true
+                elseif numberB then
+                    return false
+                end
+
+                return a.Name < b.Name
+            end
+        )
+
+        return orderedNodes
+    end
+
+    local function moveRipperTo(
+        targetCFrame,
+        speedFactor
+    )
+        if isJumpScaring
+            or not ripper
+            or not ripper.Parent
+        then
+            return false
+        end
+
+        local distance = (
+            ripper.Position - targetCFrame.Position
+        ).Magnitude
+
+        local duration =
+            math.max(distance / speedFactor, 0.01)
+
+        local tween = TweenService:Create(
+            ripper,
+            TweenInfo.new(
+                duration,
+                Enum.EasingStyle.Linear,
+                Enum.EasingDirection.InOut
+            ),
+            {
+                CFrame = targetCFrame
+            }
+        )
+
+        activeRipperTween = tween
+        tween:Play()
+
+        local playbackState =
+            tween.Completed:Wait()
+
+        if activeRipperTween == tween then
+            activeRipperTween = nil
+        end
+
+        return playbackState
+                == Enum.PlaybackState.Completed
+            and not isJumpScaring
+            and ripper
+            and ripper.Parent ~= nil
+    end
+
+    local function ExecuteRipperPathfinding()
+        local RIPPER_MODEL_ID = "127021565298754"
+
+        local success, loadedAsset = pcall(function()
+            return game:GetObjects(
+                "rbxassetid://" .. RIPPER_MODEL_ID
+            )[1]
+        end)
+
+        if not success or not loadedAsset then
+            ripperAsset = nil
+            return
+        end
+
+        ripperAsset = loadedAsset
+
+        local basePart =
+            ripperAsset:FindFirstChildWhichIsA(
+                "BasePart",
+                true
+            )
+
+        if not basePart then
+            ripperAsset:Destroy()
+            ripperAsset = nil
+            return
+        end
+
+        ripper = basePart:Clone()
+        ripper.Anchored = true
+        ripper.Parent = workspace
+
+        local orderedRooms = getOrderedRooms()
+
+        if #orderedRooms == 0 then
+            ripper:Destroy()
+            ripper = nil
+            ripperAsset:Destroy()
+            ripperAsset = nil
+            return
+        end
+
+        local startRoom = orderedRooms[1].Room
+        local startNode = nil
+        local startPathfindNodes =
+            startRoom:FindFirstChild("PathfindNodes")
+
+        if startPathfindNodes then
+            local startNodes =
+                getOrderedNodes(startPathfindNodes)
+
+            startNode = startNodes[1]
+        end
+
+        if not startNode then
+            startNode =
+                startRoom:FindFirstChild("RoomExit")
+        end
+
+        if not startNode
+            or not startNode:IsA("BasePart")
+        then
+            ripper:Destroy()
+            ripper = nil
+            ripperAsset:Destroy()
+            ripperAsset = nil
+            return
+        end
+
+        local heightOffset = Vector3.new(0, 1, 0)
+        local speedFactor = 89
+
+        ripper.CFrame =
+            startNode.CFrame + heightOffset
+
+        local cameraShaker = nil
+        local cameraShakerModule =
+            game.ReplicatedStorage:FindFirstChild(
+                "CameraShaker"
+            )
+
+        if cameraShakerModule then
+            local CameraShakerModule =
+                require(cameraShakerModule)
+
+            local camera = workspace.CurrentCamera
+
+            cameraShaker = CameraShakerModule.new(
+                Enum.RenderPriority.Camera.Value,
+                function(shakerTransform)
+                    if camera then
+                        camera.CFrame =
+                            camera.CFrame
+                            * shakerTransform
+                    end
+                end
+            )
+
+            cameraShaker:Start()
+        end
+
+        local hasShaken = false
+
+        task.spawn(function()
+            while ripper
+                and ripper.Parent
+                and not isJumpScaring
+            do
+                RunService.RenderStepped:Wait()
+
+                local player = Players.LocalPlayer
+
+                if player and player.Character then
+                    local character = player.Character
+
+                    local humanoid =
+                        character:FindFirstChildWhichIsA(
+                            "Humanoid"
+                        )
+
+                    local rootPart =
+                        character:FindFirstChild(
+                            "HumanoidRootPart"
+                        )
+
+                    if humanoid
+                        and rootPart
+                        and humanoid.Health > 0
+                        and not character:GetAttribute(
+                            "Hiding"
+                        )
+                    then
+                        local origin = ripper.Position
+                        local target = rootPart.Position
+
+                        local distance = (
+                            origin - target
+                        ).Magnitude
+
+                        if distance < 213
+                            and cameraShaker
+                        then
+                            if not hasShaken then
+                                local amplitude =
+                                    math.max(
+                                        0,
+                                        21
+                                            * (
+                                                1
+                                                - distance
+                                                    / 152
+                                            )
+                                    )
+
+                                cameraShaker:ShakeOnce(
+                                    amplitude,
+                                    14,
+                                    5,
+                                    1,
+                                    1,
+                                    6
+                                )
+
+                                hasShaken = true
+                            end
+                        else
+                            hasShaken = false
+                        end
+
+                        local difference =
+                            target - origin
+
+                        if difference.Magnitude > 0 then
+                            local raycastParams =
+                                RaycastParams.new()
+
+                            raycastParams.FilterType =
+                                Enum.RaycastFilterType.Exclude
+
+                            raycastParams.FilterDescendantsInstances =
+                                {
+                                    ripper
+                                }
+
+                            local raycastResult =
+                                workspace:Raycast(
+                                    origin,
+                                    difference.Unit * 66,
+                                    raycastParams
+                                )
+
+                            if raycastResult
+                                and raycastResult.Instance
+                                and raycastResult.Instance:IsDescendantOf(
+                                    character
+                                )
+                            then
+                                TriggerRipperJumpScare(
+                                    ripper,
+                                    character,
+                                    ripper.Position
+                                )
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+
+        local targetRoomIndex =
+            math.max(1, #orderedRooms - 1)
+
+        local reachedFinalRoom = false
+        local completedRoomIndex = 0
+
+        for roomIndex = 1, targetRoomIndex do
+            if isJumpScaring
+                or not ripper
+                or not ripper.Parent
+            then
+                break
+            end
+
+            local roomData =
+                orderedRooms[roomIndex]
+
+            local room =
+                roomData and roomData.Room
+
+            if not room or not room.Parent then
+                local refreshDeadline =
+                    os.clock() + 5
+
+                repeat
+                    task.wait(0.1)
+
+                    orderedRooms =
+                        getOrderedRooms()
+
+                    roomData =
+                        orderedRooms[roomIndex]
+
+                    room =
+                        roomData and roomData.Room
+                until room
+                    or os.clock()
+                        >= refreshDeadline
+                    or isJumpScaring
+                    or not ripper
+                    or not ripper.Parent
+            end
+
+            if not room or not room.Parent then
+                break
+            end
+
+            local roomCompleted = false
+            local pathfindNodes =
+                room:FindFirstChild(
+                    "PathfindNodes"
+                )
+
+            if pathfindNodes then
+                local orderedNodes =
+                    getOrderedNodes(
+                        pathfindNodes
+                    )
+
+                if #orderedNodes > 0 then
+                    roomCompleted = true
+
+                    for _, node in ipairs(
+                        orderedNodes
+                    ) do
+                        if isJumpScaring
+                            or not ripper
+                            or not ripper.Parent
+                        then
+                            roomCompleted = false
+                            break
+                        end
+
+                        local moved =
+                            moveRipperTo(
+                                node.CFrame
+                                    + heightOffset,
+                                speedFactor
+                            )
+
+                        if not moved then
+                            roomCompleted = false
+                            break
+                        end
+                    end
+                end
+            end
+
+            if not roomCompleted then
+                local roomExit =
+                    room:FindFirstChild(
+                        "RoomExit"
+                    )
+
+                if roomExit
+                    and roomExit:IsA(
+                        "BasePart"
+                    )
+                then
+                    roomCompleted =
+                        moveRipperTo(
+                            roomExit.CFrame
+                                + heightOffset,
+                            speedFactor
+                        )
+                end
+            end
+
+            if not roomCompleted then
+                break
+            end
+
+            completedRoomIndex = roomIndex
+
+            if roomIndex
+                == targetRoomIndex
+            then
+                reachedFinalRoom = true
+            end
+        end
+
+        activeRipperTween = nil
+
+        if isJumpScaring
+            or not ripper
+            or not ripper.Parent
+        then
+            ripper = nil
+            ripperAsset = nil
+            return
+        end
+
+        if not reachedFinalRoom
+            or completedRoomIndex
+                < targetRoomIndex
+        then
+            if ripper and ripper.Parent then
+                ripper:Destroy()
+            end
+
+            if ripperAsset
+                and ripperAsset.Parent
+            then
+                ripperAsset:Destroy()
+            end
+
+            ripper = nil
+            ripperAsset = nil
+            return
+        end
+
+        -- Distance-based despawn sound + camera shake.
+        -- Near: original explosion sound / original strong shake.
+        -- Mid:  RushNew.Despawn2, Volume = 10.
+        -- Far:  RushNew.Despawn3, Volume = 10.
+        -- Shake fades with distance after the near range.
+        local NEAR_EXPLOSION_DISTANCE = 80
+        local FAR_EXPLOSION_DISTANCE = 220
+        local SHAKE_MAX_DISTANCE = 350
+        local MAX_EXPLOSION_SHAKE = 300
+
+        local localPlayer = Players.LocalPlayer
+        local playerRoot = nil
+
+        if localPlayer and localPlayer.Character then
+            playerRoot =
+                localPlayer.Character:FindFirstChild(
+                    "HumanoidRootPart"
+                )
+        end
+
+        local ripperDistance = math.huge
+
+        if playerRoot and ripper and ripper.Parent then
+            ripperDistance =
+                (
+                    playerRoot.Position
+                    - ripper.Position
+                ).Magnitude
+        end
+
+        -- The moving Ripper is a cloned BasePart. In this asset that part
+        -- can itself be RushNew, so check it first, then fall back to the
+        -- original loaded asset in case RushNew lives deeper in the model.
+        local rushNew = nil
+
+        if ripper and ripper.Parent then
+            if ripper.Name == "RushNew" then
+                rushNew = ripper
+            else
+                rushNew =
+                    ripper:FindFirstChild(
+                        "RushNew",
+                        true
+                    )
+            end
+        end
+
+        if not rushNew
+            and ripperAsset
+            and ripperAsset.Parent
+        then
+            rushNew =
+                ripperAsset:FindFirstChild(
+                    "RushNew",
+                    true
+                )
+        end
+
+        local explodeSound = nil
+
+        if ripperDistance
+            <= NEAR_EXPLOSION_DISTANCE
+        then
+            -- Very close: keep the original explosion sound.
+            local explosionSound =
+                workspace:FindFirstChild(
+                    "MRD"
+                )
+
+            if explosionSound
+                and explosionSound:IsA("Sound")
+            then
+                explodeSound = Instance.new("Sound")
+                explodeSound.SoundId =
+                    explosionSound.SoundId
+                explodeSound.Volume = 5
+                explodeSound.PlaybackSpeed =
+                    explosionSound.PlaybackSpeed
+                explodeSound.Parent = ripper
+            end
+        elseif ripperDistance
+            <= FAR_EXPLOSION_DISTANCE
+        then
+            -- Mid distance: use RushNew.Despawn2 at Volume 10.
+            local despawn2 =
+                rushNew
+                and rushNew:FindFirstChild(
+                    "Despawn2"
+                )
+
+            if despawn2
+                and despawn2:IsA("Sound")
+            then
+                explodeSound = despawn2:Clone()
+                explodeSound.Volume = 10
+                explodeSound.Parent = ripper
+            end
+        else
+            -- Very far: use RushNew.Despawn3 at Volume 10.
+            local despawn3 =
+                rushNew
+                and rushNew:FindFirstChild(
+                    "Despawn3"
+                )
+
+            if despawn3
+                and despawn3:IsA("Sound")
+            then
+                explodeSound = despawn3:Clone()
+                explodeSound.Volume = 10
+                explodeSound.Parent = ripper
+            end
+        end
+
+        -- Safety fallback if Despawn2 / Despawn3 is missing from the asset.
+        if not explodeSound then
+            local explosionSound =
+                workspace:FindFirstChild(
+                    "MRD"
+                )
+
+            if explosionSound
+                and explosionSound:IsA("Sound")
+            then
+                explodeSound = Instance.new("Sound")
+                explodeSound.SoundId =
+                    explosionSound.SoundId
+                explodeSound.Volume = 5
+                explodeSound.PlaybackSpeed =
+                    explosionSound.PlaybackSpeed
+                explodeSound.Parent = ripper
+            end
+        end
+
+        if explodeSound then
+            explodeSound:Play()
+        end
+
+        -- Keep the original 300 shake while very close. Beyond the near
+        -- range, smoothly fade the amplitude to 0 by SHAKE_MAX_DISTANCE.
+        local shakeAmplitude = 0
+
+        if ripperDistance
+            <= NEAR_EXPLOSION_DISTANCE
+        then
+            shakeAmplitude = MAX_EXPLOSION_SHAKE
+        elseif ripperDistance
+            < SHAKE_MAX_DISTANCE
+        then
+            local alpha =
+                1
+                - (
+                    ripperDistance
+                    - NEAR_EXPLOSION_DISTANCE
+                )
+                / (
+                    SHAKE_MAX_DISTANCE
+                    - NEAR_EXPLOSION_DISTANCE
+                )
+
+            shakeAmplitude =
+                MAX_EXPLOSION_SHAKE
+                * math.clamp(alpha, 0, 1)
+        end
+
+        if cameraShakerModule
+            and shakeAmplitude > 0
+        then
+            local endExplosionCameraShaker =
+                require(cameraShakerModule)
+
+            local endExplosionCam =
+                workspace.CurrentCamera
+
+            local endExplosionCamShake =
+                endExplosionCameraShaker.new(
+                    Enum.RenderPriority.Camera.Value,
+                    function(shakeCf)
+                        if endExplosionCam then
+                            endExplosionCam.CFrame =
+                                endExplosionCam.CFrame
+                                * shakeCf
+                        end
+                    end
+                )
+
+            endExplosionCamShake:Start()
+
+            endExplosionCamShake:ShakeOnce(
+                shakeAmplitude,
+                400,
+                0.1,
+                0.7,
+                2,
+                1
+            )
+        end
+
+        task.wait(1)
+
+        local finalRipperPosition = nil
+
+        if ripper and ripper.Parent then
+            finalRipperPosition =
+                ripper.Position
+
+            ripper.Anchored = false
+            ripper.CanCollide = false
+            ripper.CanTouch = false
+            ripper.CanQuery = false
+        end
+
+        if ripperAsset
+            and ripperAsset.Parent
+        then
+            ripperAsset:Destroy()
+            ripperAsset = nil
+        end
+
+        if isJumpScaring
+            or not ripper
+            or not ripper.Parent
+        then
+            ripper = nil
+            return
+        end
+
+        local player = Players.LocalPlayer
+
+        if player and player.Character then
+            local character = player.Character
+
+            local humanoid =
+                character:FindFirstChildWhichIsA(
+                    "Humanoid"
+                )
+
+            if humanoid
+                and humanoid.Health > 0
+                and not character:GetAttribute(
+                    "Hiding"
+                )
+                and finalRipperPosition
+            then
+                TriggerRipperJumpScare(
+                    ripper,
+                    character,
+                    finalRipperPosition
+                )
+
+                return
+            end
+        end
+
+        local fallingRipper = ripper
+
+        ripper = nil
+        ripperAsset = nil
+
+        task.delay(10, function()
+            if fallingRipper
+                and fallingRipper.Parent
+            then
+                fallingRipper:Destroy()
+            end
+        end)
+    end
+
+    task.spawn(function()
+        task.wait(7)
+        ExecuteRipperPathfinding()
+    end)
+
+    local function runFinalCameraShake()
+        local cameraShakerModule =
+            game.ReplicatedStorage:FindFirstChild(
+                "CameraShaker"
+            )
+
+        if not cameraShakerModule then
+            return
+        end
+
+        local CameraShaker =
+            require(cameraShakerModule)
+
+        local camera =
+            workspace.CurrentCamera
+
+        local camShake =
+            CameraShaker.new(
+                Enum.RenderPriority.Camera.Value,
+                function(shakeCf)
+                    if camera then
+                        camera.CFrame =
+                            camera.CFrame
+                            * shakeCf
+                    end
+                end
+            )
+
+        camShake:Start()
+
+        camShake:ShakeOnce(
+            10,
+            200,
+            0.1,
+            6,
+            2,
+            0.5
+        )
+    end
+    runFinalCameraShake()
+end
+
+local function PreloadReboundSounds()
+    if workspace:FindFirstChild("MultiMonsterRebound_Preloaded") and workspace:FindFirstChild("MultiMonstermovings_Preloaded") then
+        return
+    end
+    
+    local function DownloadAndStoreSound(url, soundName)
+        local fullFileName = soundName .. ".mp3"
+
+        local success, audioData = pcall(function()
+            return game:HttpGet(url)
+        end)
+        
+        if not success then
+            return nil
+        end
+
+        local writeSuccess = pcall(function()
+            writefile(fullFileName, audioData)
+        end)
+        
+        if not writeSuccess then
+            return nil
+        end
+
+        local assetPath
+        if getsynasset then
+            assetPath = getsynasset(fullFileName)
+        elseif getcustomasset then
+            assetPath = getcustomasset(fullFileName)
+        end
+        
+        if not assetPath then
+            return nil
+        end
+
+        local sound = Instance.new("Sound")
+        sound.SoundId = assetPath
+        sound.Name = soundName .. "_Preloaded"
+        sound.Parent = workspace
+        sound.Volume = 0
+        sound:Play()
+        sound:Stop()
+        
+        return sound
+    end
+
+    DownloadAndStoreSound("https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonsterRebound.mp3?raw=true", "MultiMonsterRebound")
+
+    DownloadAndStoreSound("https://github.com/Zero0Star/RipperMPSound/blob/master/ReboundMovings.mp3?raw=true", "MultiMonstermovings")
+end
+
+PreloadReboundSounds()
+
+local entityBehaviors = {}
+function entityBehaviors.MRB()
+    local testModelId = 93023894774010
+
+    local function PlayPreloadedSound(soundName, volume)
+        volume = volume or 1
+        local sound = workspace:FindFirstChild(soundName .. "_Preloaded")
+        
+        if sound then
+            sound.Volume = volume
+            sound:Play()
+            return sound
+        end
+        return nil
+    end
+
+    local function GetMaxExistingRoom()
+        local rooms = workspace.CurrentRooms:GetChildren()
+        local maxNum = 0
+        for _, room in ipairs(rooms) do
+            local num = tonumber(room.Name)
+            if num and num > maxNum then
+                maxNum = num
+            end
+        end
+        return maxNum
+    end
+
+    function SpawnReboundEntity(startRoomType)
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj.Name == "Rebound" then
+                pcall(function() obj:Destroy() end)
+            end
+        end
+
+        local success, modelResult = pcall(function()
+            return game:GetObjects("rbxassetid://" .. testModelId)[1]
+        end)
+
+        if not success or not modelResult then
+            return
+        end
+
+        local testEntity = modelResult:Clone()
+        testEntity.Parent = workspace
+        testEntity.Name = "Rebound"
+
+        local primaryPart = testEntity.PrimaryPart or testEntity:FindFirstChildWhichIsA("BasePart")
+        if not primaryPart then
+            testEntity:Destroy()
+            return
+        end
+
+        primaryPart.Anchored = true
+        primaryPart.CanCollide = false
+
+        spawn(function()
+            local targetRoom
+            if startRoomType == "start" then
+                targetRoom = workspace.CurrentRooms:FindFirstChild("0")
+            else
+                local maxRoom = GetMaxExistingRoom()
+                targetRoom = workspace.CurrentRooms:FindFirstChild(tostring(maxRoom))
+            end
+            
+            if targetRoom then
+                local targetCFrame
+                if targetRoom:FindFirstChild("Nodes") then
+                    targetCFrame = (targetRoom:FindFirstChild("RoomEntrance") or targetRoom:FindFirstChild("RoomExit")).CFrame
+                else
+                    targetCFrame = targetRoom.RoomExit.CFrame
+                end
+                primaryPart.CFrame = targetCFrame + Vector3.new(0, 1, 0)
+            end
+            
+            wait(2)
+            StartEntityLogic(primaryPart, startRoomType)
+        end)
+    end
+
+    function StartEntityLogic(primaryPart, startRoomType)
+        local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+        local camera = workspace.CurrentCamera
+        local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(cf)
+            camera.CFrame = camera.CFrame * cf
+        end)
+        camShake:Start()
+
+        local v305 = 2
+        local v306 = 1
+        local v307 = Vector3.new(0, 1, 0)
+        local v310 = workspace.CurrentRooms
+
+        local detectedPlayer = false
+        local shakeCooldown = 0
+        
+        local function CheckLineOfSight(entityPart, player, maxDistance)
+            if not entityPart or not player or not player.Character then
+                return false
+            end
+            if player.Character:GetAttribute("Hiding") then
+                return false
+            end
+            
+            local hum = player.Character:FindFirstChildWhichIsA("Humanoid")
+            if not hum or hum.Health <= 0 then
+                return false
+            end
+            
+            local origin = entityPart.Position
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then return false end
+            
+            local targetPos = hrp.Position
+            local distance = (targetPos - origin).Magnitude
+            
+            local direction = (targetPos - origin).Unit * maxDistance
+            local ray = Ray.new(origin, direction)
+            local hitPart, _ = workspace:FindPartOnRay(ray, entityPart)
+            
+            return hitPart and hitPart:IsDescendantOf(player.Character)
+        end
+
+        local function ExecutePlayer()
+            if detectedPlayer then return end
+            detectedPlayer = true
+
+            local vu321 = Instance.new("ScreenGui")
+            local vu322 = Instance.new("ImageLabel")
+            local v323 = Instance.new("ImageLabel")
+            local v324 = Instance.new("ImageLabel")
+            
+            vu321.Name = "TestEntityJs"
+            vu321.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+            
+            vu322.Name = "Static"
+            vu322.Parent = vu321
+            vu322.BackgroundColor3 = Color3.fromRGB(0, 63, 139)
+            vu322.BackgroundTransparency = 1
+            vu322.BorderSizePixel = 0
+            vu322.Size = UDim2.new(1, 0, 1, 0)
+            vu322.Image = "rbxassetid://236543215"
+            vu322.ImageColor3 = Color3.fromRGB(0, 255, 255)
+            vu322.ImageTransparency = 1
+            
+            v323.Name = "TestEntity"
+            v323.Parent = vu321
+            v323.BackgroundTransparency = 1
+            v323.Position = UDim2.new(0.486631036, 0, 0.479363143, 0)
+            v323.Size = UDim2.new(0.0267379656, 0, 0.0387096703, 0)
+            v323.Image = "rbxassetid://79906427468430"
+            
+            v324.Name = "JSSIZE"
+            v324.Parent = vu321
+            v324.BackgroundTransparency = 1
+            v324.Position = UDim2.new(-0.586452842, 0, -1.25140607, 0)
+            v324.Size = UDim2.new(2.12834215, 0, 3.08128953, 0)
+            v324.Visible = false
+            v324.Image = "rbxassetid://10914800940"
+
+            local function v326()
+                local v325 = Instance.new("LocalScript", vu322)
+                while v325.Parent and v325.Parent.Parent do
+                    v325.Parent.Image = "rbxassetid://236543215"
+                    wait(0.002)
+                    v325.Parent.Rotation = 0
+                    wait(0.002)
+                    v325.Parent.Rotation = 180
+                    wait(0.002)
+                    v325.Parent.Image = "rbxassetid://236777652"
+                    wait(0.002)
+                    v325.Parent.Rotation = 0
+                    wait(0.002)
+                    v325.Parent.Rotation = 180
+                    wait(0.002)
+                end
+            end
+            coroutine.wrap(v326)()
+
+            local v327 = Instance.new("LocalScript", vu321)
+            local vu328 = game.ReplicatedStorage
+            local vu329 = game.Players.LocalPlayer
+            local vu330 = v327.Parent
+            local vu331 = vu330.Static
+            local vu332 = vu330.TestEntity
+            
+            local killSound = Instance.new("Sound")
+            killSound.SoundId = "rbxassetid://94785993416953"
+            killSound.Parent = workspace
+            killSound.Volume = 2
+
+            (function()
+                game.TweenService:Create(vu331, TweenInfo.new(0.5), {
+                    BackgroundTransparency = 0,
+                    ImageTransparency = 0.8
+                }):Play()
+                
+                game.TweenService:Create(vu332, TweenInfo.new(0.5), {
+                    Size = v324.Size,
+                    Position = v324.Position
+                }):Play()
+                
+                killSound:Play()
+                
+                spawn(function()
+                    wait(0.3)
+                    local char = vu329.Character
+                    if char then
+                        local hum = char:FindFirstChildWhichIsA("Humanoid")
+                        if hum then
+                            hum:TakeDamage(100)
+                            if vu328.GameStats["Player_" .. vu329.Name] then
+                                vu328.GameStats["Player_" .. vu329.Name].Total.DeathCause.Value = "Rebound"
+                            end
+
+firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
+    "你死于MultiMonster...",
+    "MultiMonster?...",
+    "..."
+}, "Blue")
+                        end
+                    end
+                end)
+                
+                wait(0.5)
+                game.TweenService:Create(vu331, TweenInfo.new(1), {
+                    BackgroundTransparency = 1,
+                    ImageTransparency = 1
+                }):Play()
+                game.TweenService:Create(vu332, TweenInfo.new(0.3), {
+                    ImageTransparency = 1
+                }):Play()
+                wait(1)
+                killSound:Destroy()
+                vu330:Destroy()
+            end)()
+        end
+
+        spawn(function()
+            local player = game.Players.LocalPlayer
+            while primaryPart and primaryPart.Parent do
+                wait(0.5)
+                if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
+                    break
+                end
+
+                if CheckLineOfSight(primaryPart, player, 100) then
+                    ExecutePlayer()
+                end
+            end
+        end)
+
+        if startRoomType == "start" then
+            local currentRoom = 0
+            local maxRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
+
+            while currentRoom <= maxRoom do
+                if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
+                    break
+                end
+
+                local targetRoom = v310:FindFirstChild(currentRoom)
+                if targetRoom then
+                    local targetCFrame
+                    if targetRoom:FindFirstChild("Nodes") then
+                        targetCFrame = (targetRoom:FindFirstChild("RoomEntrance") or targetRoom:FindFirstChild("RoomExit")).CFrame
+                    else
+                        targetCFrame = targetRoom.RoomExit.CFrame
+                    end
+
+                    game.TweenService:Create(primaryPart, TweenInfo.new(v305), {
+                        CFrame = targetCFrame + v307
+                    }):Play()
+                    
+                    wait(v306)
+                end
+
+                maxRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
+                currentRoom = currentRoom + 1
+            end
+        else
+            local currentRoom = GetMaxExistingRoom()
+            local minRoom = math.max(0, currentRoom - 7)
+
+            while currentRoom >= minRoom do
+                if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
+                    break
+                end
+
+                local targetRoom = v310:FindFirstChild(currentRoom)
+                if targetRoom then
+                    local targetCFrame
+                    if targetRoom:FindFirstChild("Nodes") then
+                        targetCFrame = (targetRoom:FindFirstChild("RoomEntrance") or targetRoom:FindFirstChild("RoomExit")).CFrame
+                    else
+                        targetCFrame = targetRoom.RoomExit.CFrame
+                    end
+
+                    game.TweenService:Create(primaryPart, TweenInfo.new(v305), {
+                        CFrame = targetCFrame + v307
+                    }):Play()
+                    
+                    wait(v306)
+                end
+
+                currentRoom = currentRoom - 1
+            end
+        end
+
+        primaryPart.Anchored = false
+        primaryPart.CanCollide = false
+    end
+
+    for _, obj in pairs(workspace:GetChildren()) do
+        if obj.Name == "Rebound" or obj.Name == "Bound" or 
+           (obj.Name:find("MultiMonstermovings") and not obj.Name:find("_Preloaded")) or 
+           (obj.Name:find("MultiMonsterRebound") and not obj.Name:find("_Preloaded")) then
+            pcall(function() obj:Destroy() end)
+        end
+    end
+
+    pcall(function() delfile("MultiMonstermovings.mp3") end)
+    pcall(function() delfile("MultiMonsterRebound.mp3") end)
+
+    local sweepSound = PlayPreloadedSound("MultiMonsterRebound", 2)
+    
+    local part = Instance.new("Part")
+    part.Name = "Bound_" .. tick()
+    part.Parent = workspace
+    game.Lighting.MainColorCorrection.TintColor = Color3.fromRGB(61, 171, 98)
+    game.Lighting.MainColorCorrection.Contrast = 0.2
+    game.Lighting.MainColorCorrection.Saturation = -0.7
+
+    local tween = game:GetService("TweenService")
+    tween:Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {Contrast = 0}):Play()
+    tween:Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {Saturation = 0}):Play()
+    local TW = tween:Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {TintColor = Color3.fromRGB(255, 255, 255)})
+    TW:Play()
+
+    local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+    local camara = game.Workspace.CurrentCamera
+    local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+        camara.CFrame = camara.CFrame * shakeCf
+    end)
+    camShake:Start()
+    camShake:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+
+    wait(3)
+
+    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/DOORS-Entity-Spawner-V2/main/init.luau"))()
+
+    SpawnReboundEntity("latest")
+
+    local sound1 = PlayPreloadedSound("MultiMonstermovings", 3)
+    if sound1 then
+        repeat
+            wait()
+        until sound1.IsPlaying == false
+    end
+    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+    SpawnReboundEntity("start")
+
+    local CameraShaker2 = require(game.ReplicatedStorage.CameraShaker)
+    local camara2 = game.Workspace.CurrentCamera
+    local camShake2 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+        camara2.CFrame = camara2.CFrame * shakeCf
+    end)
+    camShake2:Start()
+    camShake2:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+    local sound2 = PlayPreloadedSound("MultiMonstermovings", 3)
+    if sound2 then
+        repeat
+            wait()
+        until sound2.IsPlaying == false
+    end
+    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+    SpawnReboundEntity("latest")
+
+    local CameraShaker3 = require(game.ReplicatedStorage.CameraShaker)
+    local camara3 = game.Workspace.CurrentCamera
+    local camShake3 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+        camara3.CFrame = camara3.CFrame * shakeCf
+    end)
+    camShake3:Start()
+    camShake3:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+    local sound3 = PlayPreloadedSound("MultiMonstermovings", 3)
+    if sound3 then
+        repeat
+            wait()
+        until sound3.IsPlaying == false
+    end
+    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+    SpawnReboundEntity("start")
+
+    local CameraShaker4 = require(game.ReplicatedStorage.CameraShaker)
+    local camara4 = game.Workspace.CurrentCamera
+    local camShake4 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+        camara4.CFrame = camara4.CFrame * shakeCf
+    end)
+    camShake4:Start()
+    camShake4:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+    local sound4 = PlayPreloadedSound("MultiMonstermovings", 3)
+    if sound4 then
+        repeat
+            wait()
+        until sound4.IsPlaying == false
+    end
+end
+
+function entityBehaviors.MO()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+local function isPlayerLookingAtEntity1(entity)
+    local player = Players.LocalPlayer
+    local character = player.Character
+    if not character then return false end
+    
+    local head = character:FindFirstChild("Head")
+    if not head then return false end
+    
+    local entityPosition
+    if entity:IsA("Model") then
+        local primary = entity.PrimaryPart or entity:FindFirstChildWhichIsA("BasePart")
+        if not primary then return false end
+        entityPosition = primary.Position
+    else
+        entityPosition = entity.Position
+    end
+    
+    local cameraDirection = Camera.CFrame.LookVector
+    local toEntity = (entityPosition - head.Position).Unit
+    
+    local dot = cameraDirection:Dot(toEntity)
+    return dot > 0.7
+end
+local damageConnection
+local function startDamageLoop1(entity)
+    if damageConnection then
+        damageConnection:Disconnect()
+    end
+    
+    local lastDamageTime = 0
+    damageConnection = RunService.Heartbeat:Connect(function(deltaTime)
+        if not entity or not entity.Parent then
+            damageConnection:Disconnect()
+            return
+        end
+
+        if not isPlayerLookingAtEntity1(entity) then
+            lastDamageTime = lastDamageTime + deltaTime
+            if lastDamageTime >= 0.5 then
+                lastDamageTime = 0
+
+                local Player = Players.LocalPlayer
+                local Character = Player.Character or Player.CharacterAdded:Wait()
+                local Humanoid = Character:WaitForChild("Humanoid")
+
+                local NewHealth = Humanoid.Health - 10
+
+                Humanoid.Health = NewHealth
+
+                if NewHealth <= 0 then
+                    Player:SetAttribute("Alive", false)
+                    if game.ReplicatedStorage:FindFirstChild("Kill") then
+                        game.ReplicatedStorage.Kill:FireServer(Player)
+                    end
+                end
+            end
+        end
+    end)
+end
+function GetRoom()
+    return workspace.CurrentRooms:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local function LoadCustomInstance1(source)
+    local model
+    
+    if tonumber(source) then
+        local success, result = pcall(function()
+            return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+        end)
+        if success and result then
+            model = result
+        end
+    end
+    
+    if model then
+        model.Parent = workspace
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            end
+        end
+    end
+    
+    return model
+end
+
+local s = LoadCustomInstance1(132340371653318)
+if not s then
+    return
+end
+
+if s:IsA("Model") then
+    if s.PrimaryPart then
+        s:SetPrimaryPartCFrame(GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(5, 0.8, -15))
+    else
+        local primary = s:FindFirstChildWhichIsA("BasePart")
+        if primary then
+            s.PrimaryPart = primary
+            s:SetPrimaryPartCFrame(GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(5, 0.8, -15))
+        end
+    end
+else
+    local entity = s:FindFirstChildWhichIsA("BasePart")
+    if entity then
+        entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(5, 0.8, -15)
+        if entity:FindFirstChild("Part") then
+            entity.Part.CFrame = entity.CFrame
+        end
+    end
+end
+local Obsession = s:FindFirstChild("Obsession")
+if not Obsession and s.Name == "Obsession" then
+    Obsession = s
+end
+
+startDamageLoop1(s)
+
+game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+s:Destroy()
+if damageConnection then
+    damageConnection:Disconnect()
+end
+end
+
+function entityBehaviors.MM()
+local entity = spawner.Create({Entity = {Name = "MultiMonster",Asset = "114092014360320",HeightOffset = 1},Lights = {Flicker = {Enabled = true,Duration = 0.1},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 40,Values = {50, 20, 0.5, 0.5}},Movement = {Speed = 400,Delay = 1,Reversed = false},Rebounding = {Enabled = true,Type = "Ambush",Min = 1,Max = 1},Damage = {Enabled = true,Range = 50,Amount = 125},Crucifixion = {Enabled = false,Range = 50,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于MultiMonster", "它正在与你玩一场猫与老鼠的游戏。", "请时刻做好准备。", "它的变化随着时间更改。"},Cause = "MultiMonster"}})
+entity:SetCallback("OnRebounding", function(startOfRebound)
+	local entityModel = entity.Model
+	local main = entityModel:WaitForChild("Main")
+	local attachment = main:WaitForChild("Attachment")
+	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+	local sounds = {
+		footsteps = main:WaitForChild("Footsteps"),
+		playSound = main:WaitForChild("PlaySound"),
+		switch = main:WaitForChild("Switch"),
+		switchBack = main:WaitForChild("SwitchBack")
+	}
+	for _, c in attachment:GetChildren() do
+		c.Enabled = (not startOfRebound)
+	end
+	for _, c in AttachmentSwitch:GetChildren() do
+		c.Enabled = startOfRebound
+	end
+	if startOfRebound == true then
+		sounds.footsteps.PlaybackSpeed = 0.35
+		sounds.playSound.PlaybackSpeed = 0.25
+		sounds.switch:Play()
+	else
+		sounds.footsteps.PlaybackSpeed = 0.25
+		sounds.playSound.PlaybackSpeed = 0.16
+		sounds.switchBack:Play()
+	end
+	
+end)
+entity:Run()
+end
+
+function entityBehaviors.MC()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "LightRoom",
+    {
+        ["Light Color"] = Color3.new(1, 0, 0)
+    }
+)
+local entity = spawner.Create({Entity = {Name = "Cease",Asset = "82545318629891",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 140,Delay = 5,Reversed = false},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 100,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"CEASE", "你该学会辨别", "听取周围的声音", "反复进柜子躲避它"},Cause = ""}})
+entity:SetCallback("OnRebounding", function(startOfRebound)
+
+	local entityModel = entity.Model
+	local main = entityModel:WaitForChild("Main")
+	local attachment = main:WaitForChild("Attachment")
+	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+	local sounds = {
+		footsteps = main:WaitForChild("Footsteps"),
+		playSound = main:WaitForChild("PlaySound"),
+		switch = main:WaitForChild("Switch"),
+		switchBack = main:WaitForChild("SwitchBack")
+	}
+
+	for _, c in attachment:GetChildren() do
+		c.Enabled = (not startOfRebound)
+	end
+	for _, c in AttachmentSwitch:GetChildren() do
+		c.Enabled = startOfRebound
+	end
+
+	if startOfRebound == true then
+		sounds.footsteps.PlaybackSpeed = 0.35
+		sounds.playSound.PlaybackSpeed = 0.25
+		sounds.switch:Play()
+	else
+		sounds.footsteps.PlaybackSpeed = 0.25
+		sounds.playSound.PlaybackSpeed = 0.16
+		sounds.switchBack:Play()
+	end
+	
+end)
+entity:Run()
+wait(7)
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "LightRoom",
+    {
+        ["Light Color"] = Color3.new(0, 0, 0)
+    }
+)
+end
+
+function entityBehaviors.MT()
+local damageCooldown = false
+
+local function Damage1(Amount)
+    if damageCooldown then
+        return
+    end
+
+    damageCooldown = true
+
+    local Players = game:GetService("Players")
+    local Player = Players.LocalPlayer
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    local Humanoid = Character:WaitForChild("Humanoid")
+    local DamageAmount = (Amount / 100) * Humanoid.MaxHealth
+    local NewHealth = Humanoid.Health - DamageAmount
+    if NewHealth <= 0 then
+        Player:SetAttribute("Alive", false)
+        replicatesignal(Player.Kill)
+    else
+        Humanoid.Health = NewHealth
+    end
+
+    task.delay(2, function()
+        damageCooldown = false
+    end)
+end
+
+local function LoadCustomInstance1(source)
+    local model
+    if tonumber(source) then
+        local success, result = pcall(function()
+            return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+        end)
+        if success and result then
+            model = result
+        end
+    end
+    if model then
+        model.Parent = workspace
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            end
+        end
+    end
+    return model
+end
+
+local function MainExecution1()
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then
+        character = player.CharacterAdded:Wait()
+    end
+    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then
+        return
+    end
+    local chasingEntity = LoadCustomInstance1(90750780922717)
+    if not chasingEntity then
+        return
+    end
+    task.spawn(function()
+        wait(30)
+        if chasingEntity and chasingEntity.Parent then
+            chasingEntity:Destroy()
+        end
+    end)
+    local entityPart
+    if chasingEntity:IsA("Model") then
+        if chasingEntity.PrimaryPart then
+            entityPart = chasingEntity.PrimaryPart
+        else
+            entityPart = chasingEntity:FindFirstChildWhichIsA("BasePart")
+        end
+    else
+        entityPart = chasingEntity:FindFirstChildWhichIsA("BasePart")
+    end
+    if not entityPart then
+        chasingEntity:Destroy()
+        return
+    end
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    entityPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, 0, 40)
+    local function TriggerSimpleJumpscare1()
+        local jumpscareGui = Instance.new("ScreenGui")
+        jumpscareGui.Name = "SimpleJumpscare"
+        jumpscareGui.Parent = player:WaitForChild("PlayerGui")
+        jumpscareGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        local jumpscareImage = Instance.new("ImageLabel")
+        jumpscareImage.Name = "JumpscareImage"
+        jumpscareImage.Parent = jumpscareGui
+        jumpscareImage.BackgroundTransparency = 1
+        jumpscareImage.Position = UDim2.new(0.5, 0, 0.5, 0)
+        jumpscareImage.AnchorPoint = Vector2.new(0.5, 0.5)
+        jumpscareImage.Size = UDim2.new(0.01, 0, 0.01, 0)
+        jumpscareImage.Image = "rbxassetid://2142657118"
+        jumpscareImage.ImageColor3 = Color3.fromRGB(203, 73, 208)
+        jumpscareImage.ImageTransparency = 1
+        local killSound = Instance.new("Sound")
+        killSound.SoundId = "rbxassetid://139300381946118"
+        killSound.Volume = 3
+        killSound.Parent = workspace
+        local tweenService = game:GetService("TweenService")
+        local function ExecuteJumpscareSequence()
+            tweenService:Create(jumpscareImage, TweenInfo.new(0.5), {
+                ImageTransparency = 0
+            }):Play()
+            tweenService:Create(jumpscareImage, TweenInfo.new(0.5), {
+                Size = UDim2.new(0.8, 0, 0.8, 0),
+                Position = UDim2.new(0.5, 0, 0.5, 0)
+            }):Play()
+            killSound:Play()
+            spawn(function()
+                wait(0.3)
+                local char = player.Character
+                if char then
+                    local hum = char:FindFirstChildWhichIsA("Humanoid")
+                    if hum then
+                        hum:TakeDamage1(90)
+                        if game.ReplicatedStorage.GameStats["Player_" .. player.Name] then
+                            game.ReplicatedStorage.GameStats["Player_" .. player.Name].Total.DeathCause.Value = "Threat"
+                        end
+                        firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
+                            "你死于Threat...",
+                            "威胁如影随形...",
+                            "在它看见你之前躲起来..."
+                        }, "Blue")
+                    end
+                end
+            end)
+            wait(0.5)
+            tweenService:Create(jumpscareImage, TweenInfo.new(1), {
+                ImageTransparency = 1
+            }):Play()
+            wait(1)
+            killSound:Destroy()
+            jumpscareGui:Destroy()
+        end
+        ExecuteJumpscareSequence()
+    end
+    local function StartRaycastDamage1()
+        while true do
+            local char = player.Character
+            if char then
+                local hum = char:FindFirstChildWhichIsA("Humanoid")
+                if hum and hum.Health > 0 then
+                    local rayOrigin = Vector3.new(
+                        math.random(-50, 50),
+                        math.random(5, 20),
+                        math.random(-50, 50)
+                    )
+                    local rayDirection = (char.HumanoidRootPart.Position - rayOrigin).Unit * 10
+                    local raycastResult = workspace:Raycast(rayOrigin, rayDirection)
+                    if raycastResult and raycastResult.Instance:IsDescendantOf(char) then
+                        Damage1(90)
+                        TriggerSimpleJumpscare1()
+                        if chasingEntity and chasingEntity.Parent then
+                            chasingEntity:Destroy()
+                        end
+                        break
+                    end
+                end
+            end
+            wait(0.5)
+        end
+    end
+    local function SetupCollisionDetection1()
+        if entityPart then
+            entityPart.Touched:Connect(function(hit)
+                local hitCharacter = hit:FindFirstAncestorWhichIsA("Model")
+                if hitCharacter and hitCharacter == character then
+                    if not character:GetAttribute("Hiding") then
+                        Damage1(90)
+                        TriggerSimpleJumpscare1()
+                        if chasingEntity and chasingEntity.Parent then
+                            chasingEntity:Destroy()
+                        end
+                    end
+                end
+            end)
+        end
+    end
+    local function StartChasing1()
+        local RunService = game:GetService("RunService")
+        local chasingSpeed = 11
+        local isChasing = true
+        local detectionInterval = 0.5
+        local lastDetectionTime = 0
+        local chaseConnection
+        chaseConnection = RunService.RenderStepped:Connect(function(deltaTime)
+            if not isChasing or not chasingEntity or not chasingEntity.Parent then
+                if chaseConnection then
+                    chaseConnection:Disconnect()
+                end
+                return
+            end
+            local currentCharacter = player.Character
+            if not currentCharacter then
+                if chasingEntity and chasingEntity.Parent then
+                    chasingEntity:Destroy()
+                end
+                isChasing = false
+                if chaseConnection then
+                    chaseConnection:Disconnect()
+                end
+                return
+            end
+            local currentHumanoid = currentCharacter:FindFirstChildWhichIsA("Humanoid")
+            if not currentHumanoid or currentHumanoid.Health <= 0 then
+                if chasingEntity and chasingEntity.Parent then
+                    chasingEntity:Destroy()
+                end
+                isChasing = false
+                if chaseConnection then
+                    chaseConnection:Disconnect()
+                end
+                return
+            end
+            local target = currentCharacter.HumanoidRootPart
+            if not target then
+                return
+            end
+            local direction = (target.Position - entityPart.Position).Unit
+            local moveVector = direction * chasingSpeed * deltaTime
+            entityPart.Position = entityPart.Position + moveVector
+            entityPart.CFrame = CFrame.lookAt(entityPart.Position, target.Position)
+            local currentTime = tick()
+            if currentTime - lastDetectionTime >= detectionInterval then
+                lastDetectionTime = currentTime
+                local rayOrigin = entityPart.Position
+                local rayDirection = (target.Position - rayOrigin).Unit * 10
+                local ray = Ray.new(rayOrigin, rayDirection)
+                local hit = workspace:FindPartOnRay(ray, chasingEntity)
+                if hit and hit:IsDescendantOf(currentCharacter) and not currentCharacter:GetAttribute("Hiding") then
+                    isChasing = false
+                    Damage1(90)
+                    TriggerSimpleJumpscare1()
+                    if chasingEntity and chasingEntity.Parent then
+                        chasingEntity:Destroy()
+                    end
+                    if chaseConnection then
+                        chaseConnection:Disconnect()
+                    end
+                end
+            end
+            local distance = (entityPart.Position - target.Position).Magnitude
+            if distance < 2 then
+                isChasing = false
+                Damage1(90)
+                TriggerSimpleJumpscare1()
+                if chasingEntity and chasingEntity.Parent then
+                    chasingEntity:Destroy()
+                end
+                if chaseConnection then
+                    chaseConnection:Disconnect()
+                end
+            end
+        end)
+        return chaseConnection
+    end
+    local function Cleanup1()
+        if chasingEntity and chasingEntity.Parent then
+            chasingEntity:Destroy()
+        end
+    end
+    game:GetService("Players").PlayerRemoving:Connect(function(leavingPlayer)
+        if leavingPlayer == player then
+            Cleanup1()
+        end
+    end)
+    humanoid.Died:Connect(function()
+        Cleanup1()
+    end)
+    SetupCollisionDetection1()
+    StartChasing1()
+    task.spawn(StartRaycastDamage1)
+end
+MainExecution1()
+end
+
+function entityBehaviors.MD()
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+    local entityModel
+    local chaseConnection = nil
+    local customSpeed = 20
+    local activationRange = 75
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local ids = {"rbxassetid://8116159092","rbxassetid://435812828","rbxassetid://860440643"}
+
+local gui = Instance.new("ScreenGui",player:WaitForChild("PlayerGui"))
+gui.Name = "SnowGlitchEnhanced"
+gui.IgnoreGuiInset = true
+
+local mainImg = Instance.new("ImageLabel",gui)
+mainImg.Size = UDim2.new(1,0,1,0)
+mainImg.BackgroundTransparency = 1
+mainImg.ImageTransparency = 0.88
+mainImg.Image = ids[math.random(#ids)]
+mainImg.ScaleType = Enum.ScaleType.Tile
+mainImg.TileSize = UDim2.new(0,64,0,64)
+
+local flashFrame = Instance.new("Frame",gui)
+flashFrame.Size = UDim2.new(1,0,1,0)
+flashFrame.BackgroundColor3 = Color3.new(1,1,1)
+flashFrame.BackgroundTransparency = 1
+flashFrame.BorderSizePixel = 0
+
+local start = tick()
+local lastFlash = tick()
+local flashInterval = 0.15
+local flashDuration = 0.05
+
+local conn = RunService.RenderStepped:Connect(function()
+    local elapsed = tick() - start
+    if elapsed >= 60 then
+        conn:Disconnect()
+        gui:Destroy()
+        return
+    end
+    
+    mainImg.Image = ids[math.random(#ids)]
+    mainImg.ImageTransparency = 0.78 + math.random()*0.18
+    local sz = 48 + math.random(0,32)
+    mainImg.TileSize = UDim2.new(0,sz,0,sz)
+    local r = math.random(80,120)/100
+    local g = math.random(70,110)/100
+    local b = math.random(90,130)/100
+    mainImg.ImageColor3 = Color3.new(r,g,b)
+    
+    if tick() - lastFlash >= flashInterval then
+        flashFrame.BackgroundTransparency = 0.65 + math.random()*0.25
+        lastFlash = tick()
+    else
+        flashFrame.BackgroundTransparency = 1
+    end
+    
+    if math.random() < 0.03 then
+        local x = math.random(0,800)
+        local y = math.random(0,600)
+        local w = math.random(20,80)
+        local h = math.random(10,40)
+        local highlight = Instance.new("Frame",gui)
+        highlight.Size = UDim2.new(0,w,0,h)
+        highlight.Position = UDim2.new(0,x,0,y)
+        highlight.BackgroundColor3 = Color3.new(1,1,1)
+        highlight.BackgroundTransparency = 0.5 + math.random()*0.3
+        highlight.BorderSizePixel = 0
+        game:GetService("Debris"):AddItem(highlight,0.06)
+    end
+end)
+    local entity = spawner.Create({
+        Entity = {
+            Name = "Deer god",
+            Asset = "124669690938872",
+            HeightOffset = 1.2
+        },
+        Lights = {
+            Flicker = { Enabled = true, Duration = 50 },
+            Shatter = true,
+            Repair = false
+        },
+        Earthquake = { Enabled = false },
+        CameraShake = {
+            Enabled = true,
+            Range = 1500,
+            Values = {0.5, 5, 0.1, 1}
+        },
+        Movement = {
+            Speed = 25,
+            Delay = 2,
+            Reversed = false
+        },
+        Rebounding = {
+            Enabled = false,
+            Type = "Blitz",
+            Min = 1,
+            Max = math.random(1, 2),
+            Delay = math.random(10, 30) / 10
+        },
+        Damage = {
+            Enabled = true,
+            Range = 10,
+            Amount = 200
+        },
+        Crucifixion = {
+            Enabled = true,
+            Range = 40,
+            Resist = true,
+            Break = true
+        },
+        Death = {
+            Type = "Curious",
+            Hints = {
+                "MultiMonster", 
+                "MultiMonster"
+            },
+            Cause = "MultiMonster"
+        }
+    })
+
+    local function startChaseSystem()
+        if not entityModel or not entityModel.PrimaryPart then
+            return
+        end
+
+        if chaseConnection then
+            chaseConnection:Disconnect()
+            chaseConnection = nil
+        end
+
+        chaseConnection = RunService.Heartbeat:Connect(function(dt)
+            if not entityModel 
+                or not entityModel.PrimaryPart 
+            then 
+                return 
+            end
+
+            local nearestPlayer = nil
+            local nearestDist = math.huge
+            local entityPos = entityModel.PrimaryPart.Position
+
+            for _, player in ipairs(Players:GetPlayers()) do
+                local char = player.Character
+                if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                    local humanoid = char.Humanoid
+                    if humanoid.Health > 0 then
+                        local targetRoot = char.HumanoidRootPart
+                        local dist = (targetRoot.Position - entityPos).Magnitude
+                        if dist < nearestDist then
+                            nearestDist = dist
+                            nearestPlayer = player
+                        end
+                    end
+                end
+            end
+
+            if not nearestPlayer then return end
+
+            local targetChar = nearestPlayer.Character
+            if not targetChar then return end
+
+            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+            if not targetRoot then return end
+
+            local pos = entityModel.PrimaryPart.Position
+            local target = targetRoot.Position
+            local distance = (target - pos).Magnitude
+
+            if distance <= activationRange then
+                local dir = (target - pos).Unit
+                local moveVec = dir * customSpeed * dt
+                local newCFrame = CFrame.new(pos + moveVec, target)
+                entityModel:SetPrimaryPartCFrame(newCFrame)
+            end
+        end)
+    end
+
+    entity:SetCallback("OnSpawned", function()
+        entityModel = entity.Model
+        if entityModel then
+            if not entityModel.PrimaryPart then
+                local primaryPart = entityModel:FindFirstChild("Main") or entityModel:FindFirstChildWhichIsA("BasePart")
+                if primaryPart then
+                    entityModel.PrimaryPart = primaryPart
+                end
+            end
+        end
+        startChaseSystem()
+    end)
+
+    entity:SetCallback("OnDespawning", function()
+        if chaseConnection then
+            chaseConnection:Disconnect()
+            chaseConnection = nil
+        end
+    end)
+
+    entity:SetCallback("OnDamagePlayer", function(newHealth)
+        if newHealth == 0 then
+            if chaseConnection then
+                chaseConnection:Disconnect()
+                chaseConnection = nil
+            end
+            if entityModel and entityModel.PrimaryPart then
+                local currentPos = entityModel.PrimaryPart.Position
+                local forwardDir = entityModel.PrimaryPart.CFrame.LookVector
+                local targetPos = currentPos + forwardDir * 10
+                entityModel:SetPrimaryPartCFrame(CFrame.new(currentPos, targetPos))
+            end
+        end
+    end)
+
+    entity:SetCallback("OnRebounding", function(startOfRebound)
+        if not entityModel then return end
+        
+        local main = entityModel:FindFirstChild("Main")
+        if not main then return end
+        
+        local attachment = main:WaitForChild("Attachment")
+        local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+        local sounds = {
+            footsteps = main:WaitForChild("Footsteps"),
+            playSound = main:WaitForChild("PlaySound"),
+            switch = main:WaitForChild("Switch"),
+            switchBack = main:WaitForChild("SwitchBack")
+        }
+
+        for _, c in attachment:GetChildren() do
+            c.Enabled = (not startOfRebound)
+        end
+        for _, c in AttachmentSwitch:GetChildren() do
+            c.Enabled = startOfRebound
+        end
+
+        if startOfRebound == true then
+            sounds.footsteps.PlaybackSpeed = 0.35
+            sounds.playSound.PlaybackSpeed = 0.25
+            sounds.switch:Play()
+        else
+            sounds.footsteps.PlaybackSpeed = 0.25
+            sounds.playSound.PlaybackSpeed = 0.16
+            sounds.switchBack:Play()
+        end
+    end)
+
+    entity:Run()
+    end
+
 function entityBehaviors.DeerGodTWO()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -4487,7 +8523,6 @@ local entityConfig = {
     ["rbxassetid://22"]  = entityBehaviors.Muffler1,
     ["rbxassetid://32"]  = entityBehaviors.Muffler2,
     ["rbxassetid://33"]  = entityBehaviors.Muffler3,
-    ["rbxassetid://23"]  = entityBehaviors.burgermunci,
     ["rbxassetid://31"]  = entityBehaviors.DeerGodTWO,
     ["rbxassetid://32"]  = entityBehaviors.SILENCECUR,
     ["rbxassetid://33"]  = entityBehaviors.HUNGERCUR,
@@ -4499,6 +8534,14 @@ local entityConfig = {
     ["rbxassetid://99"]  = entityBehaviors.TOUSHI,
     ["rbxassetid://888"]  = entityBehaviors.WHATTHIS,
     ["rbxassetid://580"]  = entityBehaviors.SHOOPFY,
+    ["rbxassetid://085"]  = entityBehaviors.MR,
+    ["rbxassetid://086"]  = entityBehaviors.MRB,
+    ["rbxassetid://087"]  = entityBehaviors.MC,
+    ["rbxassetid://088"]  = entityBehaviors.MT,
+    ["rbxassetid://089"]  = entityBehaviors.MD,
+    ["rbxassetid://080"]  = entityBehaviors.MO,
+    ["rbxassetid://081"]  = entityBehaviors.MM,
+    ["rbxassetid://082"]  = entityBehaviors.M,
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

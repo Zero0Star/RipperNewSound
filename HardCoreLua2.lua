@@ -23,7 +23,6 @@ local function CustomGitSound(soundlink, vol, filename)
 end
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entityBehaviors = {}
-
 local soundUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/BossTime.mp3?raw=true"
 local soundName = "BOSSTIME"
 local loadedSound
@@ -818,7 +817,7 @@ end)
                 "十字架不能保证你的安全",
                 "下次见"
             },
-            Cause = ""
+            Cause = "Deer God"
         }
     })
 
@@ -5801,7 +5800,6 @@ do
     end
 end
 
-entityBehaviors = entityBehaviors or {}
 _G.entityBehaviors = entityBehaviors
 if type(getgenv) == "function" then
     getgenv().entityBehaviors = entityBehaviors

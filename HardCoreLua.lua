@@ -10751,7 +10751,7 @@ local function createMultiMonsterUI()
     timerText.Position = UDim2.new(0.5, 0, -0.15, 0)
     timerText.Size = UDim2.new(0, 420, 0, 60)
     timerText.BackgroundTransparency = 1
-    timerText.Text = "Time : 315"
+    timerText.Text = "Time : 304"
     timerText.TextColor3 = Color3.fromRGB(255, 20, 20)
     timerText.TextStrokeColor3 = Color3.fromRGB(35, 0, 0)
     timerText.TextStrokeTransparency = 0.05
@@ -11040,8 +11040,8 @@ function entityBehaviors.MultiMonster()
 
     task.spawn(function()
         local sentences = {
-            "你很固执吗?",
-            "我曾经警告过你。",
+            "你永远学不会教训。",
+            "一次又一次。",
             "我无处不在。",
             "无论在何时，总会想起一顿电流声。",
             "我不喜欢讲废话。",

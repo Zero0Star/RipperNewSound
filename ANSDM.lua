@@ -462,7 +462,9 @@ local function MCRGlitch()
 			"1",
 			"7",
 			"X",
-			"?"
+			"?",
+			"∆",
+			"†"
 		}
 
 
@@ -470,74 +472,52 @@ local function MCRGlitch()
 
 			while TextLabel.Parent do
 
-				task.wait(
-					math.random(1,2)
-				)
+				local Result = ""
 
 
-				local duration =
-					math.random(8,12) / 10
+				for i = 1,#Original do
+
+					local Char =
+						Original:sub(i,i)
 
 
-				local startTime = tick()
+					if Char == " "
+					or Char == "'" then
 
+						Result =
+							Result .. Char
 
-				while tick() - startTime < duration do
+					else
 
-					if not TextLabel.Parent then
-						return
-					end
-
-
-					local Result = ""
-
-
-					for i = 1,#Original do
-
-						local Char =
-							Original:sub(i,i)
-
-
-						if Char == " "
-						or Char == "'" then
+						if math.random() < 0.55 then
 
 							Result =
-								Result .. Char
+								Result ..
+								GlitchChars[
+									math.random(
+										1,
+										#GlitchChars
+									)
+								]
 
 						else
 
-							if math.random() < 0.45 then
-
-								Result =
-									Result ..
-									GlitchChars[
-										math.random(
-											1,
-											#GlitchChars
-										)
-									]
-
-							else
-
-								Result =
-									Result .. Char
-
-							end
+							Result =
+								Result .. Char
 
 						end
 
 					end
 
-
-					TextLabel.Text = Result
-
-
-					task.wait(0.05)
-
 				end
 
 
-				TextLabel.Text = Original
+				TextLabel.Text = Result
+
+
+				task.wait(
+					math.random(3,8) / 100
+				)
 
 			end
 
@@ -556,43 +536,33 @@ local function MCRGlitch()
 
 
 				local NameUIV2 =
-					model:FindFirstChild(
-						"NameUIV2"
-					)
+					model:FindFirstChild("NameUIV2")
 
 
 				if NameUIV2 then
 
 					local Stuff =
-						NameUIV2:FindFirstChild(
-							"Stuff"
-						)
+						NameUIV2:FindFirstChild("Stuff")
 
 
 					if Stuff then
 
 						local Frame =
-							Stuff:FindFirstChild(
-								"Frame"
-							)
+							Stuff:FindFirstChild("Frame")
 
 
 						if Frame then
 
 							local MorphName =
-								Frame:FindFirstChild(
-									"MorphName"
-								)
+								Frame:FindFirstChild("MorphName")
 
 
 							if MorphName
 							and MorphName:IsA("TextLabel") then
 
-
 								StartGlitch(
 									MorphName
 								)
-
 
 								return
 
@@ -611,9 +581,7 @@ local function MCRGlitch()
 	end
 
 
-
 	FindMCR()
-
 
 
 	workspace.DescendantAdded:Connect(function(obj)

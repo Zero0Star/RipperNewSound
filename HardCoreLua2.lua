@@ -68,6 +68,359 @@ end
 
 loadedSound = DownloadSound(soundUrl, soundName)
 
+function entityBehaviors.MOSCJ()
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local Red = Color3.fromRGB(255, 7, 11)
+local function PlaySound(parent, soundId, volume)
+	local sound = Instance.new("Sound")
+	sound.SoundId = soundId
+	sound.Volume = volume or 1
+	sound.Parent = parent
+	task.spawn(function()
+		task.wait(0.1)
+		sound:Play()
+		sound.Ended:Wait()
+		sound:Destroy()
+	end)
+
+end
+local function GlitchText(TextLabel, Duration)
+
+	if not TextLabel then
+		return
+	end
+
+	local Original = TextLabel.Text
+
+	local GlitchChars = {
+		"▓",
+		"█",
+		"▒",
+		"#",
+		"%",
+		"@",
+		"0",
+		"1",
+		"7",
+		"X",
+		"?"
+	}
+	task.spawn(function()
+		local Start = tick()
+		while tick() - Start < Duration do
+			if not TextLabel.Parent then
+				return
+			end
+			local Result = ""
+			for n = 1,#Original do
+				local Char = Original:sub(n,n)
+				if Char == " " or Char == "'" then
+
+					Result = Result .. Char
+
+				else
+					if math.random() < 0.45 then
+						Result =
+							Result ..
+							GlitchChars[
+								math.random(
+									1,
+									#GlitchChars
+								)
+							]
+
+					else
+
+						Result =
+							Result .. Char
+
+					end
+
+				end
+
+			end
+
+			TextLabel.Text = Result
+
+			task.wait(0.08)
+
+		end
+
+
+		if TextLabel.Parent then
+			TextLabel.Text = Original
+		end
+
+	end)
+
+end
+
+
+
+local function ApplyRedTheme(Achievement)
+
+	for _,v in ipairs(Achievement:GetDescendants()) do
+
+		if v:IsA("TextLabel") then
+			v.TextColor3 = Red
+		end
+
+
+		if v:IsA("UIStroke") then
+			v.Color = Red
+		end
+
+
+		if v:IsA("Frame") then
+			v.BorderColor3 = Red
+		end
+
+	end
+
+end
+
+
+
+local function DoorsNotify(NotifyOptions)
+
+	NotifyOptions = NotifyOptions or {}
+
+
+	local PlayerGui =
+		LocalPlayer:WaitForChild("PlayerGui")
+
+
+	local UIContainer =
+		PlayerGui:FindFirstChild("GlobalUI")
+		or
+		PlayerGui:FindFirstChild("MainUI")
+
+
+	if not UIContainer then
+		return
+	end
+
+
+	local AchievementsHolder =
+		UIContainer:FindFirstChild("AchievementsHolder")
+
+
+	if not AchievementsHolder then
+		return
+	end
+
+
+	local Template =
+		AchievementsHolder:FindFirstChild("Achievement")
+
+
+	if not Template then
+		return
+	end
+
+
+	local Achievement = Template:Clone()
+
+
+	Achievement.Size =
+		UDim2.new(0,0,0,0)
+
+
+	Achievement.Frame.Position =
+		UDim2.new(1.1,0,0,0)
+
+
+	Achievement.Name =
+		"LiveAchievement"
+
+
+	Achievement.Visible = true
+
+
+
+	Achievement.Frame.TextLabel.Text =
+		NotifyOptions.Style
+		or
+		"NOTIFICATION"
+
+
+
+	Achievement.Frame.Details.Title.Text =
+		NotifyOptions.Title
+		or
+		"Sem Título"
+
+
+
+	Achievement.Frame.Details.Desc.Text =
+		NotifyOptions.Description
+		or
+		"Sem Descrição"
+
+
+
+	Achievement.Frame.Details.Reason.Text =
+		NotifyOptions.Reason
+		or ""
+
+
+
+	Achievement.Frame.ImageLabel.Image =
+		(
+			NotifyOptions.Image
+			and
+			NotifyOptions.Image ~= ""
+		)
+		and
+		NotifyOptions.Image
+		or
+		"rbxassetid://0"
+
+
+
+	ApplyRedTheme(Achievement)
+
+
+	Achievement.Parent =
+		AchievementsHolder
+
+
+
+	PlaySound(
+		AchievementsHolder,
+		"rbxassetid://10469938989",
+		1
+	)
+
+
+
+	task.spawn(function()
+
+		task.wait(0.1)
+
+		GlitchText(
+			Achievement.Frame.Details.Title,
+			NotifyOptions.Time or 5
+		)
+
+	end)
+
+
+
+	task.spawn(function()
+
+
+		Achievement:TweenSize(
+			UDim2.new(1,0,0.2,0),
+			Enum.EasingDirection.In,
+			Enum.EasingStyle.Quad,
+			0.8,
+			true
+		)
+
+
+		task.wait(0.8)
+
+
+		Achievement.Frame:TweenPosition(
+			UDim2.new(0,0,0,0),
+			Enum.EasingDirection.Out,
+			Enum.EasingStyle.Quad,
+			0.5,
+			true
+		)
+
+
+
+		local Glow =
+			Achievement.Frame:FindFirstChild("Glow")
+
+
+		if Glow then
+
+			TweenService:Create(
+				Glow,
+				TweenInfo.new(
+					1,
+					Enum.EasingStyle.Quad,
+					Enum.EasingDirection.In
+				),
+				{
+					ImageTransparency = 1
+				}
+			):Play()
+
+		end
+
+
+
+		if typeof(NotifyOptions.Time) == "Instance" then
+
+			NotifyOptions.Time.Destroying:Wait()
+
+		else
+
+			task.wait(
+				NotifyOptions.Time or 5
+			)
+
+		end
+
+
+
+		if not Achievement.Parent then
+			return
+		end
+
+
+
+		Achievement.Frame:TweenPosition(
+			UDim2.new(1.1,0,0,0),
+			Enum.EasingDirection.In,
+			Enum.EasingStyle.Quad,
+			0.5,
+			true
+		)
+
+
+
+		task.wait(0.5)
+
+
+
+		Achievement:TweenSize(
+			UDim2.new(1,0,-0.1,0),
+			Enum.EasingDirection.InOut,
+			Enum.EasingStyle.Quad,
+			0.5,
+			true
+		)
+
+
+
+		task.wait(0.5)
+
+
+		Achievement:Destroy()
+
+	end)
+
+end
+
+
+
+DoorsNotify({
+	Style = "Done!",
+	Title = "Someone Else's Turn",
+	Description = "Survive The MultiMonsters",
+	Reason = "No matter where you are, there's always a buzzing sound following you...",
+	Image = "rbxassetid://100946605902758",
+	Time = 6
+})
+end
+
 function entityBehaviors.GrimReaper()
     if loadedSound then
         loadedSound.Volume = 1
@@ -9678,6 +10031,7 @@ local entityConfig = {
     ["rbxassetid://9000"]  = entityBehaviors.MONTNS,
     ["rbxassetid://654"]  = entityBehaviors.DeergodFromthefront,
     ["rbxassetid://98465"]  = entityBehaviors.Silence22,
+    ["rbxassetid://98464"]  = entityBehaviors.MOSCJ,
     ["rbxassetid://139371088930869"]  = entityBehaviors.GUIDINGNEW
 }
 local checkedEntities = {}

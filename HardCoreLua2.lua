@@ -104,7 +104,7 @@ local RunService = game:GetService("RunService")
 local NEAR_SOUND_DISTANCE = 115
 local FAR_MAX_DISTANCE = 360
 local FAR_MIN_VOLUME = 0.02
-local MODEL_Y_OFFSET = -20
+local MODEL_Y_OFFSET = -15
 local SOUND_CONFIRM_TIME = 0.08
 local function GitAud1(soundgit, filename)
     local url = soundgit

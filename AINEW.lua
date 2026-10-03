@@ -1,6 +1,2 @@
-local d = workspace.JeffTheKiller.Head:FindFirstChildWhichIsA("Decal")
-if d then d.Texture = "rbxassetid://632395634" else
-    local n = Instance.new("Decal")
-    n.Texture = "rbxassetid://632395634"
-    n.Parent = workspace.JeffTheKiller.Head
-end
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("任务: 摆脱真菌肉块",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).titlelocation("蔓延事件",true)

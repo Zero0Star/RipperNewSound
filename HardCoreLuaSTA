@@ -38,6 +38,62 @@ local OS = Instance.new("UIStroke")
 OS.Color = Color3.fromRGB(255, 222, 189)
 OS.Thickness = 6
 OS.Parent = MC
+
+-- Changelog Window
+local CL = Instance.new("Frame")
+CL.Name = "ChangelogContainer"
+CL.Size = UDim2.new(0.22, 0, 0.7, 0)
+CL.Position = UDim2.new(0.72, 0, 1.2, 0)
+CL.BackgroundColor3 = Color3.fromRGB(25,20,20)
+CL.BackgroundTransparency = 1
+CL.BorderSizePixel = 0
+CL.ZIndex = 2
+CL.Parent = SG
+
+local CLCorner = Instance.new("UICorner")
+CLCorner.CornerRadius = UDim.new(0.05,0)
+CLCorner.Parent = CL
+
+local CLStroke = Instance.new("UIStroke")
+CLStroke.Color = Color3.fromRGB(255,222,189)
+CLStroke.Thickness = 6
+CLStroke.Transparency = 1
+CLStroke.Parent = CL
+
+local CLTitle = Instance.new("TextLabel")
+CLTitle.Text = "Changelog"
+CLTitle.FontFace = CF
+CLTitle.TextSize = 30
+CLTitle.TextColor3 = Color3.fromRGB(255,240,230)
+CLTitle.TextTransparency = 1
+CLTitle.BackgroundTransparency = 1
+CLTitle.Size = UDim2.new(0.9,0,0.12,0)
+CLTitle.Position = UDim2.new(0.05,0,0.03,0)
+CLTitle.TextXAlignment = Enum.TextXAlignment.Center
+CLTitle.Parent = CL
+
+local CLLine = Instance.new("Frame")
+CLLine.Size = UDim2.new(0.85,0,0,2)
+CLLine.Position = UDim2.new(0.075,0,0.16,0)
+CLLine.BackgroundColor3 = Color3.fromRGB(255,222,189)
+CLLine.BackgroundTransparency = 1
+CLLine.Parent = CL
+
+local CLText = Instance.new("TextLabel")
+CLText.BackgroundTransparency = 1
+CLText.Size = UDim2.new(0.85,0,0.75,0)
+CLText.Position = UDim2.new(0.075,0,0.21,0)
+CLText.FontFace = CF
+CLText.TextSize = 20
+CLText.TextColor3 = Color3.fromRGB(255,240,230)
+CLText.TextTransparency = 1
+CLText.TextWrapped = true
+CLText.TextXAlignment = Enum.TextXAlignment.Left
+CLText.TextYAlignment = Enum.TextYAlignment.Top
+CLText.Text =
+"1. They’re here💀"
+CLText.Parent = CL
+
 local TL = Instance.new("TextLabel")
 TL.Name = "Title"
 TL.Text = "HardCore V10.5"
@@ -688,6 +744,15 @@ local function KJ4()
     
     TweenService:Create(MC, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
         {Position = UDim2.new(0.3, 0, 0.15, 0)}):Play()
+
+    TweenService:Create(CL, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {Position = UDim2.new(0.72,0,0.15,0)}):Play()
+
+    TweenService:Create(CL, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(CLTitle, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+    TweenService:Create(CLText, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+    TweenService:Create(CLLine, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(CLStroke, TweenInfo.new(0.5), {Transparency = 0}):Play()
 end
 
 local function KJ5()
@@ -695,11 +760,20 @@ local function KJ5()
     
     TweenService:Create(MC, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
         {Position = UDim2.new(0.3, 0, 1.2, 0)}):Play()
+
+    TweenService:Create(CL, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Position = UDim2.new(0.72,0,1.2,0)}):Play()
+
+    TweenService:Create(CL, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(CLTitle, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+    TweenService:Create(CLText, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+    TweenService:Create(CLLine, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(CLStroke, TweenInfo.new(0.4), {Transparency = 1}):Play()
     
     TweenService:Create(BG, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
         {BackgroundTransparency = 1}):Play()
     
-    wait(0.5)
+    wait(0.6)
     
     restoreMouseForDoors()
     

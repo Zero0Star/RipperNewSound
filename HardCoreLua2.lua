@@ -2228,7 +2228,7 @@ local targetAudioUrl = "https://github.com/Sosnen/Ping-s-Dumbass-projects-/raw/m
 local newFileName = "SeekMusicNew"
 local volume = 5
 
-local CUSTOM_SEEK_MODEL_ID = "rbxassetid://91573224733706"
+local CUSTOM_SEEK_MODEL_ID = "rbxassetid://130623849945429"
 
 if Workspace:FindFirstChild("hardcoreInit") then
     return

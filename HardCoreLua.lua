@@ -9291,6 +9291,284 @@ end
 end)
 end
 
+
+function entityBehaviors.CreakWhite()
+local RunService = game:GetService("RunService")
+local MODEL_ID = "rbxassetid://107076625314099"
+local GRAPH_ID = "rbxassetid://94509516923082"
+local creak = workspace
+	:WaitForChild("LiveEntities")
+	:WaitForChild("Creak")
+
+local objects = game:GetObjects(MODEL_ID)
+local clone = objects[1]
+
+if not clone then
+	return
+end
+
+clone.Name = "CreakMimic"
+clone.Parent = workspace
+
+local destroyed = false
+
+local function cleanup()
+	if destroyed then
+		return
+	end
+
+	destroyed = true
+
+	if clone and clone.Parent then
+		clone:Destroy()
+	end
+end
+
+creak.Destroying:Connect(cleanup)
+
+creak.AncestryChanged:Connect(function(_, parent)
+	if parent == nil then
+		cleanup()
+	end
+end)
+
+local function hide(obj)
+	if obj:IsA("MeshPart") then
+		obj.Transparency = 1
+	end
+end
+
+for _, obj in ipairs(creak:GetDescendants()) do
+	hide(obj)
+end
+
+creak.DescendantAdded:Connect(hide)
+
+for _, obj in ipairs(clone:GetDescendants()) do
+	if obj:IsA("BasePart") then
+		obj.CanCollide = false
+		obj.CanTouch = false
+		obj.CanQuery = false
+		obj.Massless = true
+	end
+end
+
+local cloneRoot =
+	clone:FindFirstChild("HumanoidRootPart", true)
+	or clone.PrimaryPart
+	or clone:FindFirstChildWhichIsA("BasePart", true)
+
+if not cloneRoot then
+	cleanup()
+	return
+end
+
+cloneRoot.Anchored = true
+cloneRoot.Massless = false
+
+if clone:IsA("Model") then
+	clone.PrimaryPart = cloneRoot
+end
+
+local function findAnimator(model)
+	local controller =
+		model:FindFirstChild("AnimationController", true)
+
+	if controller then
+		local animator =
+			controller:FindFirstChildWhichIsA(
+				"Animator",
+				true
+			)
+
+		if animator then
+			return animator
+		end
+	end
+
+	return model:FindFirstChildWhichIsA(
+		"Animator",
+		true
+	)
+end
+
+local sourceAnimator = findAnimator(creak)
+local targetAnimator = findAnimator(clone)
+
+if not sourceAnimator or not targetAnimator then
+	cleanup()
+	return
+end
+
+local function isGraph(track)
+	local animation = track.Animation
+
+	if not animation then
+		return false
+	end
+
+	return
+		animation.AnimationId == GRAPH_ID
+		or animation.Name == "CreakGraph"
+end
+
+local sourceTrack
+
+for _, track in ipairs(
+	sourceAnimator:GetPlayingAnimationTracks()
+) do
+	if isGraph(track) then
+		sourceTrack = track
+		break
+	end
+end
+
+sourceAnimator.AnimationPlayed:Connect(function(track)
+	if destroyed then
+		return
+	end
+
+	if isGraph(track) then
+		sourceTrack = track
+	end
+end)
+
+while not sourceTrack and not destroyed do
+	task.wait(0.05)
+
+	if destroyed or not creak.Parent then
+		cleanup()
+		return
+	end
+
+	for _, track in ipairs(
+		sourceAnimator:GetPlayingAnimationTracks()
+	) do
+		if isGraph(track) then
+			sourceTrack = track
+			break
+		end
+	end
+end
+
+if destroyed then
+	return
+end
+
+for _, track in ipairs(
+	targetAnimator:GetPlayingAnimationTracks()
+) do
+	track:Stop(0)
+end
+
+local graphAnimation = Instance.new("Animation")
+graphAnimation.Name = "CreakGraph"
+graphAnimation.AnimationId = GRAPH_ID
+
+local targetTrack =
+	targetAnimator:LoadAnimation(graphAnimation)
+
+local parameterNames = {}
+
+local function updateParameterList()
+	table.clear(parameterNames)
+
+	if not sourceTrack then
+		return
+	end
+
+	local success, defaults = pcall(function()
+		return sourceTrack:GetParameterDefaults()
+	end)
+
+	if not success or type(defaults) ~= "table" then
+		return
+	end
+
+	for name in pairs(defaults) do
+		table.insert(parameterNames, name)
+	end
+end
+
+updateParameterList()
+
+local function syncParameters()
+	if destroyed then
+		return
+	end
+
+	local src = sourceTrack
+	local dst = targetTrack
+
+	if not src or not dst then
+		return
+	end
+
+	for i = 1, #parameterNames do
+		local name = parameterNames[i]
+
+		local success, value = pcall(
+			src.GetParameter,
+			src,
+			name
+		)
+
+		if success and value ~= nil then
+			pcall(
+				dst.SetParameter,
+				dst,
+				name,
+				value
+			)
+		end
+	end
+end
+
+syncParameters()
+
+targetTrack:Play(0, 1, 1)
+
+local lastSourceTrack = sourceTrack
+
+local preAnimationConnection
+local renderConnection
+
+preAnimationConnection = RunService.PreAnimation:Connect(function()
+	if destroyed then
+		preAnimationConnection:Disconnect()
+		return
+	end
+
+	if sourceTrack ~= lastSourceTrack then
+		lastSourceTrack = sourceTrack
+		updateParameterList()
+	end
+
+	syncParameters()
+end)
+
+renderConnection = RunService.RenderStepped:Connect(function()
+	if destroyed then
+		renderConnection:Disconnect()
+		return
+	end
+
+	if not creak.Parent then
+		cleanup()
+		renderConnection:Disconnect()
+		return
+	end
+
+	if not clone.Parent then
+		renderConnection:Disconnect()
+		return
+	end
+
+	clone:PivotTo(
+		creak:GetPivot() * CFrame.new(0, 2.8, 0)
+	)
+end)
+end
 function entityBehaviors.CreakHard()
 local RunService = game:GetService("RunService")
 
@@ -10775,6 +11053,7 @@ local entityConfig = {
     ["rbxassetid://8888"] = entityBehaviors.HATREDJN,
     ["rbxassetid://43857"] = entityBehaviors.MultiMonster,
     ["rbxassetid://45343"] = entityBehaviors.CreakHard,
+    ["rbxassetid://45344"] = entityBehaviors.CreakWhite,
     ["rbxassetid://135376180128296"] = entityBehaviors.Silence
 }
 local checkedEntities = {}

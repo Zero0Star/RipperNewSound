@@ -3431,6 +3431,1575 @@ end
 ExecuteJumpScare()
 end
 
+function entityBehaviors.Cease()
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "LightRoom",
+    {
+        ["Light Color"] = Color3.new(0, 0.098297834396362, 1)
+    }
+)
+local entity = spawner.Create({Entity = {Name = "Cease",Asset = "74118615017772",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 100,Delay = 0,Reversed = false},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 100,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"CEASE", "你该学会辨别", "听取周围的声音", "反复进柜子躲避它"},Cause = ""}})
+entity:SetCallback("OnRebounding", function(startOfRebound)
+
+	local entityModel = entity.Model
+	local main = entityModel:WaitForChild("Main")
+	local attachment = main:WaitForChild("Attachment")
+	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+	local sounds = {
+		footsteps = main:WaitForChild("Footsteps"),
+		playSound = main:WaitForChild("PlaySound"),
+		switch = main:WaitForChild("Switch"),
+		switchBack = main:WaitForChild("SwitchBack")
+	}
+
+	for _, c in attachment:GetChildren() do
+		c.Enabled = (not startOfRebound)
+	end
+	for _, c in AttachmentSwitch:GetChildren() do
+		c.Enabled = startOfRebound
+	end
+
+	if startOfRebound == true then
+		sounds.footsteps.PlaybackSpeed = 0.35
+		sounds.playSound.PlaybackSpeed = 0.25
+		sounds.switch:Play()
+	else
+		sounds.footsteps.PlaybackSpeed = 0.25
+		sounds.playSound.PlaybackSpeed = 0.16
+		sounds.switchBack:Play()
+	end
+	
+end)
+entity:Run()
+wait(40)
+local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
+Event:FireServer(
+    "LightRoom",
+    {
+        ["Light Color"] = Color3.new(0, 0, 0)
+    }
+)
+end
+function entityBehaviors.Shok()
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+local function spawnShocker()
+    local shockerModel = game:GetObjects("rbxassetid://129658537539698")[1]
+    local camera = Workspace.CurrentCamera
+
+    local rootPart = shockerModel:FindFirstChild("HumanoidRootPart") or shockerModel:FindFirstChildWhichIsA("Part")
+    shockerModel.PrimaryPart = rootPart
+    shockerModel:SetPrimaryPartCFrame(camera.CFrame * CFrame.new(0, 0, -7))
+    shockerModel.Parent = Workspace
+
+    local oogaBoogaaPart = shockerModel:WaitForChild("OOGA BOOGAAAA")
+    local horrorScream = oogaBoogaaPart:WaitForChild("HORROR SCREAM 15")
+    local boneSound = oogaBoogaaPart:FindFirstChild("Bone")
+
+    local lookDuration = 2
+    local lookStart = nil
+    local hasTriggered = false
+    local hasFallen = false
+
+    local function fallToGround()
+        if hasFallen then return end
+        hasFallen = true
+
+        oogaBoogaaPart.Anchored = false
+        oogaBoogaaPart.CanCollide = false
+
+        task.delay(2, function()
+            if shockerModel then
+                shockerModel:Destroy()
+            end
+        end)
+    end
+
+    local connection
+    connection = game:GetService("RunService").RenderStepped:Connect(function()
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+        if hasTriggered then connection:Disconnect() return end
+
+        local directionToShocker = (oogaBoogaaPart.Position - camera.CFrame.Position).Unit
+        local playerLookVector = camera.CFrame.LookVector
+        local dot = directionToShocker:Dot(playerLookVector)
+
+        if dot > 0.85 then
+            if not lookStart then
+                lookStart = tick()
+            elseif tick() - lookStart >= lookDuration then
+                hasTriggered = true
+                connection:Disconnect()
+
+                horrorScream:Play()
+                if boneSound then boneSound:Play() end
+                humanoid:TakeDamage(30)
+                local targetPos = character.HumanoidRootPart.Position + Vector3.new(0, 2, 0)
+                local tweenInfo = TweenInfo.new(1.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+                local tween = TweenService:Create(oogaBoogaaPart, tweenInfo, {Position = targetPos})
+                tween:Play()
+
+                tween.Completed:Connect(function()
+                    fallToGround()
+                end)
+
+                ReplicatedStorage.GameStats["Player_".. player.Name].Total.DeathCause.Value = "Shocker"
+                firesignal(ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
+                    "You died to who you call Shocker...",
+                    "Don't look at it or it stuns you!"
+                }, "Blue")
+            end
+        else
+            connection:Disconnect()
+            fallToGround()
+        end
+    end)
+
+    task.delay(5, function()
+        if not hasTriggered and not hasFallen then
+            fallToGround()
+        end
+    end)
+end
+spawnShocker()
+end
+function entityBehaviors.LightOSs()
+ function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(106818719931200, workspace)
+if not s then
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 7, -15)
+entity.Part.CFrame = entity.CFrame
+end
+
+function entityBehaviors.LOOKSW()
+function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(124094609630783, workspace)
+if not s then
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(30, 1.2, -10)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
+        end
+    end
+end
+end)
+
+function entityBehaviors.SuperDread()
+function GetRoom()
+    local gruh = workspace.CurrentRooms
+    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local tweenservice = game:GetService("TweenService")
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    local function NormalizeGitHubURL(url)
+        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
+            return url .. "?raw=true"
+        end
+        return url
+    end
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
+            local url = NormalizeGitHubURL(source)
+            local success, result = pcall(function()
+                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
+                local content = game:HttpGet(url)
+                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
+                    writefile(filename, content)
+                    local assetFunc = getcustomasset or getsynasset
+                    local obj = game:GetObjects(assetFunc(filename))[1]
+                    delfile(filename)
+                    return obj
+                else
+                    return nil
+                end
+            end)
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+            for _, obj in ipairs(model:GetDescendants()) do
+                if obj:IsA("Script") or obj:IsA("LocalScript") then
+                    obj:Destroy()
+                end
+            end
+            pcall(function()
+                model:SetAttribute("LoadedByExecutor", true)
+            end)
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(140017686556165, workspace) 
+if not s then
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 1, -15)
+entity.Part.CFrame = entity.CFrame
+
+pcall(function()
+local room = workspace.CurrentRooms:FindFirstChild(
+    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
+)
+if room then
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj.Name == "PlaySound" and obj:IsA("Sound") then
+            obj:Stop()
+            obj.Playing = false
+            obj.TimePosition = 0
+            obj.Looped = false
+        end
+    end
+end
+end)
+end
+function entityBehaviors.DreadJump()
+local BLACK = Color3.new(0, 0, 0)
+local WHITE = Color3.new(1, 1, 1)
+
+local part = Instance.new("Part")
+
+part.Name = "Bound_" .. tick()
+part.Parent = workspace
+part.Size = Vector3.new(5, 5, 5)
+part.Position = Vector3.new(0, 5, 0)
+part.Anchored = true
+part.Color = Color3.new(1, 0, 0)
+local dreadJumpSound = workspace:FindFirstChild("DreadJump")
+if dreadJumpSound and dreadJumpSound:IsA("Sound") then
+    dreadJumpSound:Play()
+end
+
+task.wait(3)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local SHAKE_INTENSITY = 1
+local SHAKE_DURATION = 15
+local SHAKE_SPEED = 70
+
+local player = Players.LocalPlayer
+if not player then return end
+
+local camera = workspace.CurrentCamera
+local startTime = tick()
+local originalPosition = camera.CFrame.Position
+local connection
+
+connection = RunService.RenderStepped:Connect(function()
+    local elapsed = tick() - startTime
+    
+    if elapsed < SHAKE_DURATION then
+        local decay = 1 - (elapsed / SHAKE_DURATION)
+        local intensity = SHAKE_INTENSITY * decay
+        local time = elapsed * SHAKE_SPEED
+        local offset = Vector3.new(
+            math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+            math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+            math.sin(time * 1.0) * intensity * 0.3
+        )
+        local lookVector = camera.CFrame.LookVector
+        local upVector = camera.CFrame.UpVector
+        local rightVector = camera.CFrame.RightVector
+        local currentPos = camera.CFrame.Position
+        local newPos = currentPos + offset
+        camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
+    else
+        if connection then
+            connection:Disconnect()
+        end
+    end
+end)
+
+local function getAllParts()
+    local parts = {}
+    local function collectParts(object)
+        for _, child in ipairs(object:GetChildren()) do
+            if child:IsA("BasePart") then
+                table.insert(parts, child)
+            end
+            collectParts(child)
+        end
+    end
+    collectParts(workspace)
+    return parts
+end
+
+local allParts = getAllParts()
+local isPlaying = true  
+local colorSwitchCoroutine = coroutine.create(function()
+    local isBlack = true
+    while isPlaying do
+        local targetColor = isBlack and BLACK or WHITE
+        isBlack = not isBlack
+        for _, part in ipairs(allParts) do
+            part.Color = targetColor
+        end
+        task.wait(0.01)
+    end
+end)
+
+coroutine.resume(colorSwitchCoroutine)
+
+startSound.Ended:Connect(function()
+    isPlaying = false
+    startSound:Destroy()
+end)
+
+startSound.Stopped:Connect(function()
+    isPlaying = false
+    startSound:Destroy()
+end)
+end
+local ContentProvider = game:GetService("ContentProvider")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local MULTI_MONSTER_VOLUME = 2
+
+local MULTI_MONSTER_MUSIC = {
+    {
+        Name = "M1",
+        FileName = "MultiMonster1",
+        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster1.mp3?raw=true"
+    },
+    {
+        Name = "M2",
+        FileName = "MultiMonster2",
+        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster2.mp3?raw=true"
+    },
+    {
+        Name = "M3",
+        FileName = "MultiMonster3",
+        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster3.mp3?raw=true"
+    },
+    {
+        Name = "M4",
+        FileName = "MultiMonster4",
+        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster4.mp3?raw=true"
+    }
+}
+
+local function preloadMultiMonsterMusic(info)
+    local sound = workspace:FindFirstChild(info.Name)
+
+    if sound and not sound:IsA("Sound") then
+        sound:Destroy()
+        sound = nil
+    end
+
+    if not sound then
+        sound = Instance.new("Sound")
+        sound.Name = info.Name
+        sound.Parent = workspace
+    end
+
+    sound.Volume = MULTI_MONSTER_VOLUME
+    sound.Looped = false
+
+    pcall(function()
+        sound:Stop()
+        sound.TimePosition = 0
+    end)
+
+    local ok, err = pcall(function()
+        if type(writefile) ~= "function" or type(game.HttpGet) ~= "function" then
+            error("executor file/http functions unavailable")
+        end
+
+        local path = info.FileName .. ".mp3"
+        writefile(path, game:HttpGet(info.URL))
+
+        local getter = getcustomasset or getsynasset
+
+        if not getter then
+            error("getcustomasset/getsynasset unavailable")
+        end
+
+        sound.SoundId = getter(path)
+
+        pcall(function()
+            ContentProvider:PreloadAsync({sound})
+        end)
+    end)
+
+    if not ok then
+        warn("[MultiMonster] Failed to preload " .. info.Name .. ":", err)
+    end
+
+    return sound
+end
+
+local MULTI_MONSTER_SOUNDS = {}
+
+for _, info in ipairs(MULTI_MONSTER_MUSIC) do
+    MULTI_MONSTER_SOUNDS[info.Name] = preloadMultiMonsterMusic(info)
+end
+
+local GLITCH_CHARACTERS = {
+    "#", "$", "%", "&",
+    "0", "1", "3", "7",
+    "/", "\\", "<", ">",
+    "_", "-", "!", "?",
+    "[", "]", "{", "}",
+    "@", "*"
+}
+
+local function randomGlitchCharacter()
+    return GLITCH_CHARACTERS[math.random(1, #GLITCH_CHARACTERS)]
+end
+
+local function corruptText(original, chance)
+    local result = {}
+
+    for i = 1, #original do
+        local char = original:sub(i, i)
+
+        if char ~= " " and math.random() < chance then
+            result[#result + 1] = randomGlitchCharacter()
+        else
+            result[#result + 1] = char
+        end
+    end
+
+    return table.concat(result)
+end
+
+local function createMultiMonsterUI()
+    local player = Players.LocalPlayer
+
+    if not player then
+        return nil
+    end
+
+    local playerGui = player:WaitForChild("PlayerGui")
+    local old = playerGui:FindFirstChild("MultiMonsterGlitchUI")
+
+    if old then
+        old:Destroy()
+    end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "MultiMonsterGlitchUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 999999
+    gui.Parent = playerGui
+
+    local text = Instance.new("TextLabel")
+    text.Name = "GlitchText"
+    text.AnchorPoint = Vector2.new(0.5, 1)
+    text.Position = UDim2.new(0.5, 0, 0.88, 0)
+    text.Size = UDim2.new(0.85, 0, 0, 85)
+    text.BackgroundTransparency = 1
+    text.Text = ""
+    text.TextColor3 = Color3.fromRGB(255, 20, 20)
+    text.TextStrokeColor3 = Color3.fromRGB(35, 0, 0)
+    text.TextStrokeTransparency = 0.1
+    text.TextSize = 32
+    text.TextWrapped = true
+
+    pcall(function()
+        text.FontFace = Font.new("rbxassetid://11702779517")
+    end)
+
+    text.Parent = gui
+
+    local timerText = Instance.new("TextLabel")
+    timerText.Name = "TimerText"
+    timerText.AnchorPoint = Vector2.new(0.5, 0.5)
+    timerText.Position = UDim2.new(0.5, 0, -0.15, 0)
+    timerText.Size = UDim2.new(0, 420, 0, 60)
+    timerText.BackgroundTransparency = 1
+    timerText.Text = "Time : 304"
+    timerText.TextColor3 = Color3.fromRGB(255, 20, 20)
+    timerText.TextStrokeColor3 = Color3.fromRGB(35, 0, 0)
+    timerText.TextStrokeTransparency = 0.05
+    timerText.TextSize = 30
+    timerText.Visible = false
+
+    pcall(function()
+        timerText.FontFace = Font.new("rbxassetid://11702779517")
+    end)
+
+    timerText.Parent = gui
+
+    local glitchLines = {}
+
+    for i = 1, 7 do
+        local line = Instance.new("Frame")
+        line.Name = "GlitchLine_" .. i
+        line.BorderSizePixel = 0
+        line.BackgroundColor3 = Color3.fromRGB(math.random(180, 255), 0, 0)
+        line.BackgroundTransparency = 0.55
+        line.Size = UDim2.new(
+            math.random(8, 35) / 100,
+            0,
+            0,
+            math.random(1, 3)
+        )
+        line.Position = UDim2.new(
+            math.random(5, 80) / 100,
+            0,
+            math.random(65, 92) / 100,
+            0
+        )
+        line.Visible = false
+        line.Parent = gui
+
+        table.insert(glitchLines, line)
+    end
+
+    local timerLines = {}
+
+    for i = 1, 4 do
+        local line = Instance.new("Frame")
+        line.Name = "TimerGlitchLine_" .. i
+        line.BorderSizePixel = 0
+        line.BackgroundColor3 = Color3.fromRGB(math.random(190, 255), 0, 0)
+        line.BackgroundTransparency = 0.45
+        line.Size = UDim2.new(0, math.random(50, 160), 0, math.random(1, 2))
+        line.Position = UDim2.new(0.5, math.random(-170, 170), 0.08, math.random(-10, 10))
+        line.Visible = false
+        line.Parent = gui
+
+        table.insert(timerLines, line)
+    end
+
+    return gui, text, glitchLines, timerText, timerLines
+end
+
+local function showGlitchSentence(label, lines, sentence, duration)
+    if not label then
+        return
+    end
+
+    local running = true
+    local originalPosition = UDim2.new(0.5, 0, 0.88, 0)
+
+    label.Text = sentence
+    label.Visible = true
+    label.TextTransparency = 0
+
+    task.spawn(function()
+        while running and label.Parent do
+            label.Position = UDim2.new(
+                0.5,
+                math.random(-2, 2),
+                0.88,
+                math.random(-1, 1)
+            )
+
+            if math.random() < 0.26 then
+                label.Text = corruptText(sentence, 0.08)
+            else
+                label.Text = sentence
+            end
+
+            if math.random() < 0.11 then
+                label.TextTransparency = math.random(15, 50) / 100
+            else
+                label.TextTransparency = 0
+            end
+
+            for _, line in ipairs(lines) do
+                line.Visible = math.random() < 0.11
+
+                if line.Visible then
+                    line.Position = UDim2.new(
+                        math.random(8, 82) / 100,
+                        0,
+                        math.random(68, 92) / 100,
+                        0
+                    )
+
+                    line.Size = UDim2.new(
+                        math.random(8, 30) / 100,
+                        0,
+                        0,
+                        math.random(1, 3)
+                    )
+                end
+            end
+
+            task.wait(math.random(4, 10) / 100)
+        end
+    end)
+
+    task.wait(duration)
+
+    running = false
+    label.Text = sentence
+    label.TextTransparency = 0
+    label.Position = originalPosition
+
+    for _, line in ipairs(lines) do
+        line.Visible = false
+    end
+end
+
+local function dropTimer(timerText)
+    if not timerText then
+        return
+    end
+
+    timerText.Visible = true
+    timerText.Position = UDim2.new(0.38, 0, -0.18, 0)
+
+    local points = {
+        UDim2.new(0.42, 0, -0.05, 0),
+        UDim2.new(0.57, 0, 0.015, 0),
+        UDim2.new(0.46, 0, 0.055, 0),
+        UDim2.new(0.52, 0, 0.075, 0),
+        UDim2.new(0.5, 0, 0.08, 0)
+    }
+
+    local times = {
+        0.12,
+        0.14,
+        0.12,
+        0.1,
+        0.1
+    }
+
+    for i, point in ipairs(points) do
+        local tween = TweenService:Create(
+            timerText,
+            TweenInfo.new(
+                times[i],
+                Enum.EasingStyle.Quad,
+                Enum.EasingDirection.Out
+            ),
+            {
+                Position = point
+            }
+        )
+
+        tween:Play()
+        tween.Completed:Wait()
+    end
+
+    timerText.Position = UDim2.new(0.5, 0, 0.08, 0)
+end
+
+local function startMultiMonsterTimer(timerText, timerLines)
+    if not timerText then
+        return
+    end
+
+    dropTimer(timerText)
+
+    task.spawn(function()
+        for timeLeft = 315, 0, -1 do
+            if not timerText or not timerText.Parent then
+                return
+            end
+
+            local normalText = "Time : " .. timeLeft
+            local secondStart = os.clock()
+
+            while os.clock() - secondStart < 1 do
+                if not timerText.Parent then
+                    return
+                end
+
+                timerText.Position = UDim2.new(
+                    0.5,
+                    math.random(-2, 2),
+                    0.08,
+                    math.random(-1, 1)
+                )
+
+                if math.random() < 0.3 then
+                    timerText.Text = corruptText(normalText, 0.1)
+                else
+                    timerText.Text = normalText
+                end
+
+                if math.random() < 0.1 then
+                    timerText.TextTransparency = math.random(10, 40) / 100
+                else
+                    timerText.TextTransparency = 0
+                end
+
+                if math.random() < 0.07 then
+                    timerText.TextColor3 = Color3.fromRGB(255, 90, 90)
+                else
+                    timerText.TextColor3 = Color3.fromRGB(255, 20, 20)
+                end
+
+                for _, line in ipairs(timerLines or {}) do
+                    line.Visible = math.random() < 0.12
+
+                    if line.Visible then
+                        line.Position = UDim2.new(
+                            0.5,
+                            math.random(-180, 180),
+                            0.08,
+                            math.random(-18, 18)
+                        )
+
+                        line.Size = UDim2.new(
+                            0,
+                            math.random(40, 170),
+                            0,
+                            math.random(1, 2)
+                        )
+                    end
+                end
+
+                task.wait(math.random(4, 9) / 100)
+            end
+        end
+
+        if timerText and timerText.Parent then
+            timerText.Text = "Time : 0"
+            timerText.Position = UDim2.new(0.5, 0, 0.08, 0)
+            timerText.TextTransparency = 0
+            timerText.TextColor3 = Color3.fromRGB(255, 20, 20)
+        end
+
+        for _, line in ipairs(timerLines or {}) do
+            line.Visible = false
+        end
+    end)
+end
+
+local function playSoundAndWait(sound)
+    if not sound then
+        return
+    end
+
+    sound:Stop()
+    sound.TimePosition = 0
+    sound:Play()
+    sound.Ended:Wait()
+end
+
+function entityBehaviors.MultiMonster()
+    local M1 = MULTI_MONSTER_SOUNDS.M1
+    local M2 = MULTI_MONSTER_SOUNDS.M2
+    local M3 = MULTI_MONSTER_SOUNDS.M3
+    local M4 = MULTI_MONSTER_SOUNDS.M4
+
+    if not M1 or not M2 or not M3 or not M4 then
+        warn("[MultiMonster] Sounds are missing.")
+        return
+    end
+
+    for _, sound in ipairs({M1, M2, M3, M4}) do
+        pcall(function()
+            sound:Stop()
+            sound.TimePosition = 0
+        end)
+    end
+
+    local gui, glitchText, glitchLines, timerText, timerLines = createMultiMonsterUI()
+
+    M1:Play()
+
+    task.spawn(function()
+        local sentences = {
+            "...",
+            "这个地方真有趣.",
+            "我喜欢这里?",
+            "我会伤害到你吗?",
+            "我讨厌这些。",
+            "玩笑话总是让你开心。"
+        }
+
+        local timeout = 0
+
+        while M1.TimeLength <= 0 and timeout < 5 do
+            timeout += 0.05
+            task.wait(0.05)
+        end
+
+        local totalTime = M1.TimeLength
+
+        if totalTime <= 0 then
+            totalTime = 18
+        end
+
+        local sentenceDuration = math.max(2, totalTime / #sentences)
+
+        for _, sentence in ipairs(sentences) do
+            if not M1.IsPlaying then
+                break
+            end
+
+            showGlitchSentence(
+                glitchText,
+                glitchLines,
+                sentence,
+                sentenceDuration
+            )
+        end
+    end)
+
+    M1.Ended:Wait()
+
+    if glitchText then
+        glitchText.Text = ""
+        glitchText.Visible = false
+    end
+
+    for _, line in ipairs(glitchLines or {}) do
+        line.Visible = false
+    end
+
+    M2:Stop()
+    M2.TimePosition = 0
+    M2:Play()
+
+    task.spawn(function()
+        startMultiMonsterTimer(timerText, timerLines)
+    end)
+
+    M2.Ended:Wait()
+
+    playSoundAndWait(M2)
+
+    playSoundAndWait(M3)
+    playSoundAndWait(M3)
+
+    playSoundAndWait(M4)
+
+    if gui then
+        gui:Destroy()
+    end
+end
+function entityBehaviors.CreakHard()
+local RunService = game:GetService("RunService")
+
+local MODEL_ID = "rbxassetid://122236943587712"
+local GRAPH_ID = "rbxassetid://94509516923082"
+
+local creak = workspace
+	:WaitForChild("LiveEntities")
+	:WaitForChild("Creak")
+
+local objects = game:GetObjects(MODEL_ID)
+local clone = objects[1]
+
+if not clone then
+	return
+end
+
+clone.Name = "CreakMimic"
+clone.Parent = workspace
+
+local destroyed = false
+
+local function cleanup()
+	if destroyed then
+		return
+	end
+
+	destroyed = true
+
+	if clone and clone.Parent then
+		clone:Destroy()
+	end
+end
+
+creak.Destroying:Connect(cleanup)
+
+creak.AncestryChanged:Connect(function(_, parent)
+	if parent == nil then
+		cleanup()
+	end
+end)
+
+local function hide(obj)
+	if obj:IsA("MeshPart") then
+		obj.Transparency = 1
+	end
+end
+
+for _, obj in ipairs(creak:GetDescendants()) do
+	hide(obj)
+end
+
+creak.DescendantAdded:Connect(hide)
+
+for _, obj in ipairs(clone:GetDescendants()) do
+	if obj:IsA("BasePart") then
+		obj.CanCollide = false
+		obj.CanTouch = false
+		obj.CanQuery = false
+		obj.Massless = true
+	end
+end
+
+local cloneRoot =
+	clone:FindFirstChild("HumanoidRootPart", true)
+	or clone.PrimaryPart
+	or clone:FindFirstChildWhichIsA("BasePart", true)
+
+if not cloneRoot then
+	cleanup()
+	return
+end
+
+cloneRoot.Anchored = true
+cloneRoot.Massless = false
+
+if clone:IsA("Model") then
+	clone.PrimaryPart = cloneRoot
+end
+
+local function findAnimator(model)
+	local controller =
+		model:FindFirstChild("AnimationController", true)
+
+	if controller then
+		local animator =
+			controller:FindFirstChildWhichIsA(
+				"Animator",
+				true
+			)
+
+		if animator then
+			return animator
+		end
+	end
+
+	return model:FindFirstChildWhichIsA(
+		"Animator",
+		true
+	)
+end
+
+local sourceAnimator = findAnimator(creak)
+local targetAnimator = findAnimator(clone)
+
+if not sourceAnimator or not targetAnimator then
+	cleanup()
+	return
+end
+
+local function isGraph(track)
+	local animation = track.Animation
+
+	if not animation then
+		return false
+	end
+
+	return
+		animation.AnimationId == GRAPH_ID
+		or animation.Name == "CreakGraph"
+end
+
+local sourceTrack
+
+for _, track in ipairs(
+	sourceAnimator:GetPlayingAnimationTracks()
+) do
+	if isGraph(track) then
+		sourceTrack = track
+		break
+	end
+end
+
+sourceAnimator.AnimationPlayed:Connect(function(track)
+	if destroyed then
+		return
+	end
+
+	if isGraph(track) then
+		sourceTrack = track
+	end
+end)
+
+while not sourceTrack and not destroyed do
+	task.wait(0.05)
+
+	if destroyed or not creak.Parent then
+		cleanup()
+		return
+	end
+
+	for _, track in ipairs(
+		sourceAnimator:GetPlayingAnimationTracks()
+	) do
+		if isGraph(track) then
+			sourceTrack = track
+			break
+		end
+	end
+end
+
+if destroyed then
+	return
+end
+
+for _, track in ipairs(
+	targetAnimator:GetPlayingAnimationTracks()
+) do
+	track:Stop(0)
+end
+
+local graphAnimation = Instance.new("Animation")
+graphAnimation.Name = "CreakGraph"
+graphAnimation.AnimationId = GRAPH_ID
+
+local targetTrack =
+	targetAnimator:LoadAnimation(graphAnimation)
+
+local parameterNames = {}
+
+local function updateParameterList()
+	table.clear(parameterNames)
+
+	if not sourceTrack then
+		return
+	end
+
+	local success, defaults = pcall(function()
+		return sourceTrack:GetParameterDefaults()
+	end)
+
+	if not success or type(defaults) ~= "table" then
+		return
+	end
+
+	for name in pairs(defaults) do
+		table.insert(parameterNames, name)
+	end
+end
+
+updateParameterList()
+
+local function syncParameters()
+	if destroyed then
+		return
+	end
+
+	local src = sourceTrack
+	local dst = targetTrack
+
+	if not src or not dst then
+		return
+	end
+
+	for i = 1, #parameterNames do
+		local name = parameterNames[i]
+
+		local success, value = pcall(
+			src.GetParameter,
+			src,
+			name
+		)
+
+		if success and value ~= nil then
+			pcall(
+				dst.SetParameter,
+				dst,
+				name,
+				value
+			)
+		end
+	end
+end
+
+syncParameters()
+
+targetTrack:Play(0, 1, 1)
+
+local lastSourceTrack = sourceTrack
+
+local preAnimationConnection
+local renderConnection
+
+preAnimationConnection = RunService.PreAnimation:Connect(function()
+	if destroyed then
+		preAnimationConnection:Disconnect()
+		return
+	end
+
+	if sourceTrack ~= lastSourceTrack then
+		lastSourceTrack = sourceTrack
+		updateParameterList()
+	end
+
+	syncParameters()
+end)
+
+renderConnection = RunService.RenderStepped:Connect(function()
+	if destroyed then
+		renderConnection:Disconnect()
+		return
+	end
+
+	if not creak.Parent then
+		cleanup()
+		renderConnection:Disconnect()
+		return
+	end
+
+	if not clone.Parent then
+		renderConnection:Disconnect()
+		return
+	end
+
+	clone:PivotTo(
+		creak:GetPivot()
+	)
+end)
+end
+function entityBehaviors.CreakWhite()
+local RunService = game:GetService("RunService")
+local MODEL_ID = "rbxassetid://107076625314099"
+local GRAPH_ID = "rbxassetid://94509516923082"
+local creak = workspace
+	:WaitForChild("LiveEntities")
+	:WaitForChild("Creak")
+
+local objects = game:GetObjects(MODEL_ID)
+local clone = objects[1]
+
+if not clone then
+	return
+end
+
+clone.Name = "CreakMimic"
+clone.Parent = workspace
+
+local destroyed = false
+
+local function cleanup()
+	if destroyed then
+		return
+	end
+
+	destroyed = true
+
+	if clone and clone.Parent then
+		clone:Destroy()
+	end
+end
+
+creak.Destroying:Connect(cleanup)
+
+creak.AncestryChanged:Connect(function(_, parent)
+	if parent == nil then
+		cleanup()
+	end
+end)
+
+local function hide(obj)
+	if obj:IsA("MeshPart") then
+		obj.Transparency = 1
+	end
+end
+
+for _, obj in ipairs(creak:GetDescendants()) do
+	hide(obj)
+end
+
+creak.DescendantAdded:Connect(hide)
+
+for _, obj in ipairs(clone:GetDescendants()) do
+	if obj:IsA("BasePart") then
+		obj.CanCollide = false
+		obj.CanTouch = false
+		obj.CanQuery = false
+		obj.Massless = true
+	end
+end
+
+local cloneRoot =
+	clone:FindFirstChild("HumanoidRootPart", true)
+	or clone.PrimaryPart
+	or clone:FindFirstChildWhichIsA("BasePart", true)
+
+if not cloneRoot then
+	cleanup()
+	return
+end
+
+cloneRoot.Anchored = true
+cloneRoot.Massless = false
+
+if clone:IsA("Model") then
+	clone.PrimaryPart = cloneRoot
+end
+
+local function findAnimator(model)
+	local controller =
+		model:FindFirstChild("AnimationController", true)
+
+	if controller then
+		local animator =
+			controller:FindFirstChildWhichIsA(
+				"Animator",
+				true
+			)
+
+		if animator then
+			return animator
+		end
+	end
+
+	return model:FindFirstChildWhichIsA(
+		"Animator",
+		true
+	)
+end
+
+local sourceAnimator = findAnimator(creak)
+local targetAnimator = findAnimator(clone)
+
+if not sourceAnimator or not targetAnimator then
+	cleanup()
+	return
+end
+
+local function isGraph(track)
+	local animation = track.Animation
+
+	if not animation then
+		return false
+	end
+
+	return
+		animation.AnimationId == GRAPH_ID
+		or animation.Name == "CreakGraph"
+end
+
+local sourceTrack
+
+for _, track in ipairs(
+	sourceAnimator:GetPlayingAnimationTracks()
+) do
+	if isGraph(track) then
+		sourceTrack = track
+		break
+	end
+end
+
+sourceAnimator.AnimationPlayed:Connect(function(track)
+	if destroyed then
+		return
+	end
+
+	if isGraph(track) then
+		sourceTrack = track
+	end
+end)
+
+while not sourceTrack and not destroyed do
+	task.wait(0.05)
+
+	if destroyed or not creak.Parent then
+		cleanup()
+		return
+	end
+
+	for _, track in ipairs(
+		sourceAnimator:GetPlayingAnimationTracks()
+	) do
+		if isGraph(track) then
+			sourceTrack = track
+			break
+		end
+	end
+end
+
+if destroyed then
+	return
+end
+
+for _, track in ipairs(
+	targetAnimator:GetPlayingAnimationTracks()
+) do
+	track:Stop(0)
+end
+
+local graphAnimation = Instance.new("Animation")
+graphAnimation.Name = "CreakGraph"
+graphAnimation.AnimationId = GRAPH_ID
+
+local targetTrack =
+	targetAnimator:LoadAnimation(graphAnimation)
+
+local parameterNames = {}
+
+local function updateParameterList()
+	table.clear(parameterNames)
+
+	if not sourceTrack then
+		return
+	end
+
+	local success, defaults = pcall(function()
+		return sourceTrack:GetParameterDefaults()
+	end)
+
+	if not success or type(defaults) ~= "table" then
+		return
+	end
+
+	for name in pairs(defaults) do
+		table.insert(parameterNames, name)
+	end
+end
+
+updateParameterList()
+
+local function syncParameters()
+	if destroyed then
+		return
+	end
+
+	local src = sourceTrack
+	local dst = targetTrack
+
+	if not src or not dst then
+		return
+	end
+
+	for i = 1, #parameterNames do
+		local name = parameterNames[i]
+
+		local success, value = pcall(
+			src.GetParameter,
+			src,
+			name
+		)
+
+		if success and value ~= nil then
+			pcall(
+				dst.SetParameter,
+				dst,
+				name,
+				value
+			)
+		end
+	end
+end
+
+syncParameters()
+
+targetTrack:Play(0, 1, 1)
+
+local lastSourceTrack = sourceTrack
+
+local preAnimationConnection
+local renderConnection
+
+preAnimationConnection = RunService.PreAnimation:Connect(function()
+	if destroyed then
+		preAnimationConnection:Disconnect()
+		return
+	end
+
+	if sourceTrack ~= lastSourceTrack then
+		lastSourceTrack = sourceTrack
+		updateParameterList()
+	end
+
+	syncParameters()
+end)
+
+renderConnection = RunService.RenderStepped:Connect(function()
+	if destroyed then
+		renderConnection:Disconnect()
+		return
+	end
+
+	if not creak.Parent then
+		cleanup()
+		renderConnection:Disconnect()
+		return
+	end
+
+	if not clone.Parent then
+		renderConnection:Disconnect()
+		return
+	end
+
+	clone:PivotTo(
+		creak:GetPivot() * CFrame.new(0, 2.8, 0)
+	)
+end)
+end
 local entityConfig = {
     ["rbxassetid://1"] = entityBehaviors.ATCHRipper,
     ["rbxassetid://3"] = entityBehaviors.AMIN60,
@@ -3441,6 +5010,15 @@ local entityConfig = {
     ["rbxassetid://8"] = entityBehaviors.ChainSmoker,
     ["rbxassetid://9"] = entityBehaviors.LightSpeed,
     ["rbxassetid://10"] = entityBehaviors.A200Jump,
+    ["rbxassetid://11"] = entityBehaviors.Cease, 
+    ["rbxassetid://12"] = entityBehaviors.Shok,
+    ["rbxassetid://13"] = entityBehaviors.LightOSs,
+    ["rbxassetid://14"] = entityBehaviors.SuperDread,
+    ["rbxassetid://15"] = entityBehaviors.DreadJump,
+    ["rbxassetid://16"] = entityBehaviors.MultiMonster,
+    ["rbxassetid://17"] = entityBehaviors.CreakHard,
+    ["rbxassetid://18"] = entityBehaviors.CreakWhite,
+    ["rbxassetid://19"]  = entityBehaviors.HATRED,
     ["rbxassetid://2"] = entityBehaviors.A200
 }
 local checkedEntities = {}
@@ -3490,3 +5068,4 @@ end
 local hint = Instance.new("Hint", Workspace)
 hint.Text = "Loading... Doors HardCore V10.6 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)
+end

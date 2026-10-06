@@ -1,1 +1,11 @@
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("开启困难模式",true)
+local sound = Instance.new("Sound")
+sound.Name = "Subspace"
+sound.SoundId = "rbxassetid://111961753014545"
+sound.Volume = 1
+sound.Parent = workspace
+
+sound.Ended:Connect(function()
+    sound:Destroy()
+end)
+
+sound:Play()

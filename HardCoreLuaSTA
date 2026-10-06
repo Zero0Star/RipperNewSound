@@ -204,7 +204,7 @@ CB2.LayoutOrder = 3
 CB2.BackgroundColor3 = Color3.fromRGB(255, 222, 189)
 CB2.BackgroundTransparency = 0.1
 CB2.AutoButtonColor = true
-CB2.Text = "Reignited"
+CB2.Text = "Archives(Coming soon)"
 CB2.FontFace = CF
 CB2.TextColor3 = Color3.fromRGB(80, 60, 40)
 CB2.TextScaled = true
@@ -327,85 +327,9 @@ end)
 
 CB2.MouseButton1Click:Connect(function()
     playAudio()
-   
-    local RunService = game:GetService("RunService")
-    local items = {
-        "HardcoreOne",
-        "HardcoreTwo", 
-        "HardcoreITEM",
-        "HardcoreFour"
-    }
-    local found = {}
-    local connection = nil
-    local isDone = false
-    local lastCount = 0
-
-    local function updateProgress()
-        local count = 0
-        for _, name in ipairs(items) do
-            if found[name] then
-                count = count + 1
-            end
-        end
-
-        if count ~= lastCount then
-            lastCount = count
-            
-            pcall(function()
-                require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-                    .caption("HardCore Loading: " .. count .. "/4", true)
-            end)
-            
-            if count == 5 then
-                isDone = true
-                if connection then
-                    connection:Disconnect()
-                    connection = nil
-                end
-                
-                pcall(function()
-                    require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-                        .caption("HardCoreHotel is all loaded!", true)
-                end)
-            end
-        end
-    end
-
-    connection = RunService.Heartbeat:Connect(function()
-        for _, name in ipairs(items) do
-            if not found[name] then
-                local item = workspace:FindFirstChild(name)
-                if item and item:IsA("BoolValue") then
-                    found[name] = true
-                    updateProgress()
-                end
-            end
-        end
+    pcall(function()
+        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("即将到来!", true)
     end)
-
-    task.spawn(function()
-        local scriptUrls = {
-            "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua22.lua?raw=true",
-            "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua5.lua?raw=true",
-            "https://raw.githubusercontent.com/Guestly-Alt/Scripts/refs/heads/main/Hardcore-Reignited-(Recreated)",
-            "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour.lua?raw=true",
-            "https://github.com/Zero0Star/RipperNewSound/blob/master/Item.lua?raw=true"
-        }
-        for _, url in ipairs(scriptUrls) do
-            if url and url ~= "" then
-                pcall(function()
-                    local remoteCode = game:HttpGet(url, true)
-                    loadstring(remoteCode)()
-                end)
-                if _ < #scriptUrls then 
-                    wait(5)
-                end
-            end
-        end
-    end)
-    
-    updateProgress()
-    playAudio()
 end)
 
 MB.MouseButton1Click:Connect(function()

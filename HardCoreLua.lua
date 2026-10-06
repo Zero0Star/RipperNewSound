@@ -3353,13 +3353,6 @@ end))
 _G.Z367StartSelectedMinigame = startGame
 
 
---========================================================
-
---========================================================
--- Z-367 Lock Detection
--- Only the player currently locked by Z-367 starts the minigame.
--- Other players only receive music / Bang / camera effects.
---========================================================
 local Z367LockedPlayer = nil
 local Z367EncounterStarted = false
 
@@ -3398,15 +3391,8 @@ local function getNearestAlivePlayer(position)
 end
 
 local function isThisPlayerLocked()
-    -- Use the LocalPlayer captured at the top of this script.
-    -- The old code referenced `LocalPlayer` before its later local declaration,
-    -- so Lua resolved it as a global (usually nil), preventing the minigame.
     return Z367LockedPlayer == player
 end
-
--- Z-367 TARGET / SPECTATOR CONTROLLER
--- 不创建、不检测、不替换 spawner；直接沿用你原脚本里的生成器环境。
---========================================================
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
@@ -3726,9 +3712,6 @@ local function startAmbientForEveryone()
     startAmbientMicroShake()
     startSoundManager()
 
-    -- Spectator clients do not run the minigame, so they need their own
-    -- encounter completion cleanup. At about the same moment the locked
-    -- player would survive the 42-second game, remove their local Z-367 too.
     if not isThisPlayerLocked() then
         task.delay(CONFIG.Duration + 0.10, function()
             if encounterSerial ~= thisEncounter then return end

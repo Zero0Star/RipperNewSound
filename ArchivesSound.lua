@@ -67,15 +67,17 @@ local soundsData = {
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/A5.mp3?raw=true", name = "A5", vol = 6},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/A6.mp3?raw=true", name = "A6", vol = 6},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/A7.mp3?raw=true", name = "A7", vol = 6},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/AbominationLoop_Custom.mp3?raw=true", name = "A500Two", vol = 1.5},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/AbominationStart_Custom.mp3?raw=true", name = "A500One", vol = 1.5},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/AbominationLoop_END.mp3?raw=true", name = "A500Three", vol = 1.5},
+    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/AbominationLoop_Custom.mp3?raw=true", name = "A500Two", vol = 1.5},
+    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/AbominationLoop_Custom2.mp3?raw=true", name = "A500Three", vol = 1.5},
+    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/AbominationLoop_END.mp3?raw=true", name = "A500Four", vol = 1.5},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/Silence.mp3?raw=true", name = "Silence", vol = 1},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/SilenceFar.mp3?raw=true", name = "SilenceFar", vol = 1},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true", name = "DeerGodMusic", vol = 1},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/FrostbitePhase1.mp3?raw=true", name = "F1", vol = 1},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/FrostbitePhase2.mp3?raw=true", name = "F2", vol = 1},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/FrostbiteEnd.mp3?raw=true", name = "F3", vol = 1},
+    {url = "https://github.com/Zero0Star/RipperMPSound/blob/master/HatredBossMusic.mp3?raw=true", name = "HATRED", vol = 1},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/ATCHST.mp3?raw=true", name = "ATCHSTARYT", vol = 0.3}
 }
 

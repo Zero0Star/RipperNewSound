@@ -435,7 +435,7 @@ end
 
 
 CreateFollowerSystem(1,89102835650735,"QWQ75321")
-CreateFollowerSystem(115878511638478,102779962756282,"goat_qiu")
+CreateFollowerSystem(115878511638478,79523224142535,"goat_qiu")
 CreateFollowerSystem(137290604674399,114265802440184,"Nssys123")
 CreateFollowerSystem(14806821870,96998158567562,"sppvve")
 CreateFollowerSystem(135367832132409,71505836701563,"woshiniruier")
@@ -461,10 +461,9 @@ local function MCRGlitch()
 			"1",
 			"7",
 			"X",
-                        "&",
+			"&",
 			"?"
 		}
-
 
 		task.spawn(function()
 
@@ -474,13 +473,10 @@ local function MCRGlitch()
 					math.random(0.8,1.5)
 				)
 
-
 				local duration =
 					math.random(8,12) / 10
 
-
 				local startTime = tick()
-
 
 				while tick() - startTime < duration do
 
@@ -488,21 +484,17 @@ local function MCRGlitch()
 						return
 					end
 
-
 					local Result = ""
-
 
 					for i = 1,#Original do
 
 						local Char =
 							Original:sub(i,i)
 
-
 						if Char == " "
 						or Char == "'" then
 
-							Result =
-								Result .. Char
+							Result = Result .. Char
 
 						else
 
@@ -528,14 +520,11 @@ local function MCRGlitch()
 
 					end
 
-
 					TextLabel.Text = Result
-
 
 					task.wait(0.05)
 
 				end
-
 
 				TextLabel.Text = Original
 
@@ -545,76 +534,50 @@ local function MCRGlitch()
 
 	end
 
+	local function SetupMCR(model)
 
+		if not model:IsA("Model") or model.Name ~= "MCR" then
+			return
+		end
 
-	local function FindMCR()
+		local NameUIV2 =
+			model:FindFirstChild("NameUIV2")
 
-		for _,model in ipairs(workspace:GetDescendants()) do
+		if not NameUIV2 then
+			return
+		end
 
-			if model:IsA("Model")
-			and model.Name == "MCR" then
+		local Stuff =
+			NameUIV2:FindFirstChild("Stuff")
 
+		if not Stuff then
+			return
+		end
 
-				local NameUIV2 =
-					model:FindFirstChild(
-						"NameUIV2"
-					)
+		local Frame =
+			Stuff:FindFirstChild("Frame")
 
+		if not Frame then
+			return
+		end
 
-				if NameUIV2 then
+		local MorphName =
+			Frame:FindFirstChild("MorphName")
 
-					local Stuff =
-						NameUIV2:FindFirstChild(
-							"Stuff"
-						)
+		if MorphName
+		and MorphName:IsA("TextLabel")
+		and not MorphName:GetAttribute("MCRGlitched") then
 
-
-					if Stuff then
-
-						local Frame =
-							Stuff:FindFirstChild(
-								"Frame"
-							)
-
-
-						if Frame then
-
-							local MorphName =
-								Frame:FindFirstChild(
-									"MorphName"
-								)
-
-
-							if MorphName
-							and MorphName:IsA("TextLabel") then
-
-
-								StartGlitch(
-									MorphName
-								)
-
-
-								return
-
-							end
-
-						end
-
-					end
-
-				end
-
-			end
+			MorphName:SetAttribute("MCRGlitched",true)
+			StartGlitch(MorphName)
 
 		end
 
 	end
 
-
-
-	FindMCR()
-
-
+	for _,model in ipairs(workspace:GetDescendants()) do
+		SetupMCR(model)
+	end
 
 	workspace.DescendantAdded:Connect(function(obj)
 
@@ -622,14 +585,12 @@ local function MCRGlitch()
 		and obj.Name == "MCR" then
 
 			task.wait(0.5)
-
-			FindMCR()
+			SetupMCR(obj)
 
 		end
 
 	end)
 
 end
-
 
 MCRGlitch()

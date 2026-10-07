@@ -5000,6 +5000,1754 @@ renderConnection = RunService.RenderStepped:Connect(function()
 	)
 end)
 end
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local NEAR_SOUND_DISTANCE = 115
+local FAR_MAX_DISTANCE = 360
+local FAR_MIN_VOLUME = 0.02
+local MODEL_Y_OFFSET = -15
+local SOUND_CONFIRM_TIME = 0.08
+
+local HardCoreSound = workspace:WaitForChild("HardCoreSound")
+
+local SilenceSound =
+    HardCoreSound:WaitForChild("Silence")
+
+local SilenceFarSound =
+    HardCoreSound:WaitForChild("SilenceFar")
+
+SilenceSound.Volume = 5
+SilenceSound.Looped = false
+
+SilenceFarSound.Volume = 1
+SilenceFarSound.Looped = false
+
+local player = Players.LocalPlayer
+
+local function GetPlayerPosition1()
+    local character = player.Character
+
+    if character then
+        local root = character:FindFirstChild("HumanoidRootPart")
+
+        if root then
+            return root.Position
+        end
+    end
+
+    local camera = workspace.CurrentCamera
+
+    if camera then
+        return camera.CFrame.Position
+    end
+
+    return Vector3.zero
+end
+
+local function GetDistance1(position)
+    return (GetPlayerPosition1() - position).Magnitude
+end
+
+local function ResetSound1(sound)
+    sound:Stop()
+
+    pcall(function()
+        sound.TimePosition = 0
+    end)
+end
+
+local function GetFarVolume1(distance)
+    if distance <= NEAR_SOUND_DISTANCE then
+        return 1
+    end
+
+    if distance >= FAR_MAX_DISTANCE then
+        return FAR_MIN_VOLUME
+    end
+
+    local alpha =
+        (distance - NEAR_SOUND_DISTANCE)
+        / (FAR_MAX_DISTANCE - NEAR_SOUND_DISTANCE)
+
+    local volume =
+        (1 - alpha) ^ 1.25
+
+    return math.clamp(
+        volume,
+        FAR_MIN_VOLUME,
+        1
+    )
+end
+
+local shakeID = 0
+local currentShake = nil
+local currentShakeOffset = CFrame.new()
+local currentOriginalFOV = nil
+
+local function StopShake1()
+    local camera = workspace.CurrentCamera
+
+    if currentShake then
+        pcall(function()
+            RunService:UnbindFromRenderStep(currentShake)
+        end)
+    end
+
+    if camera then
+        pcall(function()
+            camera.CFrame =
+                camera.CFrame
+                * currentShakeOffset:Inverse()
+        end)
+
+        if currentOriginalFOV then
+            camera.FieldOfView =
+                currentOriginalFOV
+        end
+    end
+
+    currentShake = nil
+    currentShakeOffset = CFrame.new()
+    currentOriginalFOV = nil
+end
+
+local function SilenceShake1(entityPosition)
+    local camera = workspace.CurrentCamera
+
+    if not camera then
+        return
+    end
+
+    StopShake1()
+
+    shakeID += 1
+
+    local bindName =
+        "SilenceShake_" .. shakeID
+
+    currentShake = bindName
+    currentShakeOffset = CFrame.new()
+
+    local distance =
+        GetDistance1(entityPosition)
+
+    local distancePower =
+        math.clamp(
+            1 - ((distance - 8) / 190),
+            0.05,
+            1
+        )
+
+    local shakeStrength =
+        0.2
+        + ((distancePower ^ 1.35) * 3.8)
+
+    local originalFOV =
+        camera.FieldOfView
+
+    currentOriginalFOV =
+        originalFOV
+
+    local targetFOV =
+        math.clamp(
+            originalFOV
+            + 72 * distancePower,
+            originalFOV,
+            120
+        )
+
+    local attackTime = 0.07
+    local fadeTime = 2.1
+    local totalTime =
+        attackTime + fadeTime
+
+    local started =
+        os.clock()
+
+    RunService:BindToRenderStep(
+        bindName,
+        Enum.RenderPriority.Camera.Value + 1,
+        function()
+            if currentShake ~= bindName then
+                return
+            end
+
+            local elapsed =
+                os.clock() - started
+
+            if elapsed >= totalTime then
+                camera.CFrame =
+                    camera.CFrame
+                    * currentShakeOffset:Inverse()
+
+                currentShakeOffset =
+                    CFrame.new()
+
+                camera.FieldOfView =
+                    originalFOV
+
+                RunService:UnbindFromRenderStep(
+                    bindName
+                )
+
+                if currentShake == bindName then
+                    currentShake = nil
+                    currentOriginalFOV = nil
+                end
+
+                return
+            end
+
+            local envelope
+            local fov
+
+            if elapsed <= attackTime then
+                local alpha =
+                    math.clamp(
+                        elapsed / attackTime,
+                        0,
+                        1
+                    )
+
+                local impact =
+                    1 - ((1 - alpha) ^ 5)
+
+                envelope = impact
+
+                fov =
+                    originalFOV
+                    + (
+                        targetFOV
+                        - originalFOV
+                    )
+                    * impact
+            else
+                local alpha =
+                    math.clamp(
+                        (elapsed - attackTime)
+                        / fadeTime,
+                        0,
+                        1
+                    )
+
+                envelope =
+                    (1 - alpha) ^ 1.3
+
+                fov =
+                    originalFOV
+                    + (
+                        targetFOV
+                        - originalFOV
+                    )
+                    * envelope
+            end
+
+            camera.FieldOfView =
+                fov
+
+            local t =
+                math.max(
+                    elapsed - attackTime,
+                    0
+                )
+
+            local wave1 =
+                math.sin(
+                    t * math.pi * 9.4
+                )
+
+            local wave2 =
+                math.sin(
+                    t * math.pi * 15.8
+                    + 0.75
+                )
+
+            local wave3 =
+                math.sin(
+                    t * math.pi * 22.2
+                    + 1.6
+                )
+
+            local verticalWave =
+                math.sin(
+                    t * math.pi * 12.6
+                    + 1.15
+                )
+
+            local rollWave =
+                math.sin(
+                    t * math.pi * 10.1
+                    + 0.35
+                )
+
+            local pitchWave =
+                math.sin(
+                    t * math.pi * 7.5
+                    + 1.1
+                )
+
+            local x =
+                (
+                    wave1 * 0.22
+                    + wave2 * 0.07
+                    + wave3 * 0.025
+                )
+                * shakeStrength
+                * envelope
+
+            local y =
+                verticalWave
+                * 0.032
+                * shakeStrength
+                * envelope
+
+            local yaw =
+                (
+                    wave1 * math.rad(0.6)
+                    + wave2 * math.rad(0.18)
+                )
+                * shakeStrength
+                * envelope
+
+            local roll =
+                rollWave
+                * math.rad(0.88)
+                * shakeStrength
+                * envelope
+
+            local pitch =
+                pitchWave
+                * math.rad(0.14)
+                * shakeStrength
+                * envelope
+
+            local newOffset =
+                CFrame.new(
+                    x,
+                    y,
+                    0
+                )
+                * CFrame.Angles(
+                    pitch,
+                    yaw,
+                    roll
+                )
+
+            camera.CFrame =
+                camera.CFrame
+                * currentShakeOffset:Inverse()
+                * newOffset
+
+            currentShakeOffset =
+                newOffset
+        end
+    )
+end
+
+local jumpscareActive = false
+local jumpscareFinished = false
+
+local function TriggerJumpscare1()
+    if jumpscareActive or jumpscareFinished then
+        return
+    end
+
+    jumpscareActive = true
+
+    ResetSound1(SilenceFarSound)
+    ResetSound1(SilenceSound)
+
+    SilenceSound.Volume = 5
+    SilenceSound:Play()
+
+    StopShake1()
+
+    local character =
+        player.Character
+
+    if not character then
+        jumpscareActive = false
+        return
+    end
+
+    local humanoid =
+        character:FindFirstChildOfClass(
+            "Humanoid"
+        )
+
+    local playerGui =
+        player:WaitForChild(
+            "PlayerGui"
+        )
+
+    local oldGui =
+        playerGui:FindFirstChild(
+            "SilenceJumpscare"
+        )
+
+    if oldGui then
+        oldGui:Destroy()
+    end
+
+    local gui =
+        Instance.new("ScreenGui")
+
+    gui.Name =
+        "SilenceJumpscare"
+
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 1000000
+
+    gui.ZIndexBehavior =
+        Enum.ZIndexBehavior.Sibling
+
+    gui.Parent =
+        playerGui
+
+    local black =
+        Instance.new("Frame")
+
+    black.Size =
+        UDim2.fromScale(1, 1)
+
+    black.Position =
+        UDim2.fromScale(0, 0)
+
+    black.BackgroundColor3 =
+        Color3.new(0, 0, 0)
+
+    black.BorderSizePixel = 0
+    black.ZIndex = 1
+    black.Parent = gui
+
+    local snow =
+        Instance.new("ImageLabel")
+
+    snow.AnchorPoint =
+        Vector2.new(0.5, 0.5)
+
+    snow.Position =
+        UDim2.fromScale(0.5, 0.5)
+
+    snow.Size =
+        UDim2.fromScale(1.1, 1.1)
+
+    snow.BackgroundTransparency = 1
+    snow.ImageTransparency = 0
+
+    snow.ScaleType =
+        Enum.ScaleType.Stretch
+
+    snow.ZIndex = 2
+    snow.Parent = gui
+
+    local jumpscare =
+        Instance.new("ImageLabel")
+
+    jumpscare.AnchorPoint =
+        Vector2.new(0.5, 0.5)
+
+    jumpscare.Position =
+        UDim2.fromScale(0.5, 0.5)
+
+    jumpscare.Size =
+        UDim2.fromScale(1.02, 1.02)
+
+    jumpscare.BackgroundTransparency = 1
+
+    jumpscare.Image =
+        "rbxassetid://14359776338"
+
+    jumpscare.ImageTransparency = 0
+
+    jumpscare.ScaleType =
+        Enum.ScaleType.Stretch
+
+    jumpscare.ZIndex = 3
+    jumpscare.Parent = gui
+
+    local snowImages = {
+        "rbxassetid://117266253034518",
+        "rbxassetid://8454012934",
+        "rbxassetid://122347391038526"
+    }
+
+    snow.Image =
+        snowImages[1]
+
+    local camera =
+        workspace.CurrentCamera
+
+    local originalFOV =
+        camera and camera.FieldOfView or 70
+
+    local duration = 0.8
+    local started = os.clock()
+    local snowIndex = 1
+    local lastSnow = 0
+
+    while true do
+        local elapsed =
+            os.clock() - started
+
+        local alpha =
+            math.clamp(
+                elapsed / duration,
+                0,
+                1
+            )
+
+        if elapsed - lastSnow >= 0.045 then
+            lastSnow = elapsed
+
+            snowIndex += 1
+
+            if snowIndex > #snowImages then
+                snowIndex = 1
+            end
+
+            snow.Image =
+                snowImages[snowIndex]
+        end
+
+        local curve =
+            1 - ((1 - alpha) ^ 3)
+
+        local pulse =
+            math.sin(
+                alpha
+                * math.pi
+                * 9
+            )
+
+        local scale =
+            1.02
+            + curve * 0.12
+            + pulse
+            * 0.014
+            * (1 - alpha)
+
+        jumpscare.Size =
+            UDim2.fromScale(
+                scale,
+                scale
+            )
+
+        jumpscare.Rotation =
+            math.sin(
+                alpha
+                * math.pi
+                * 11
+            )
+            * 0.75
+            * (1 - alpha)
+
+        local snowScale =
+            1.1
+            + math.sin(
+                alpha
+                * math.pi
+                * 13
+            )
+            * 0.02
+
+        snow.Size =
+            UDim2.fromScale(
+                snowScale,
+                snowScale
+            )
+
+        if camera then
+            camera.FieldOfView =
+                originalFOV
+                + 8 * curve
+                + (
+                    math.sin(
+                        alpha
+                        * math.pi
+                        * 8
+                    )
+                    * 1.5
+                    * (1 - alpha)
+                )
+        end
+
+        if alpha >= 1 then
+            break
+        end
+
+        RunService.RenderStepped:Wait()
+    end
+
+    if humanoid and humanoid.Parent then
+        humanoid:TakeDamage(100)
+    end
+
+    local fadeDuration =
+        0.45
+
+    local fadeStarted =
+        os.clock()
+
+    while true do
+        local alpha =
+            math.clamp(
+                (os.clock() - fadeStarted)
+                / fadeDuration,
+                0,
+                1
+            )
+
+        local eased =
+            1 - ((1 - alpha) ^ 3)
+
+        jumpscare.ImageTransparency =
+            eased
+
+        snow.ImageTransparency =
+            eased
+
+        black.BackgroundTransparency =
+            eased
+
+        jumpscare.Size =
+            UDim2.fromScale(
+                1.14
+                + eased * 0.04,
+                1.14
+                + eased * 0.04
+            )
+
+        if camera then
+            camera.FieldOfView =
+                originalFOV
+                + 8
+                * (1 - eased)
+        end
+
+        if alpha >= 1 then
+            break
+        end
+
+        RunService.RenderStepped:Wait()
+    end
+
+    if camera then
+        camera.FieldOfView =
+            originalFOV
+    end
+
+    gui:Destroy()
+
+    jumpscareFinished = true
+    jumpscareActive = false
+end
+
+local soundWatchConnection = nil
+local soundConnections = {}
+local soundConfirmTokens = {}
+local nearSilence = false
+
+local function IsRealPlayingSound1(object)
+    if not object then
+        return false
+    end
+
+    if not object:IsA("Sound") then
+        return false
+    end
+
+    local character =
+        player.Character
+
+    if not character then
+        return false
+    end
+
+    if not object:IsDescendantOf(character) then
+        return false
+    end
+
+    if object.SoundId == "" then
+        return false
+    end
+
+    if object.Volume <= 0 then
+        return false
+    end
+
+    if not object.Playing then
+        return false
+    end
+
+    return true
+end
+
+local function CancelSoundConfirmation1(sound)
+    soundConfirmTokens[sound] =
+        (soundConfirmTokens[sound] or 0) + 1
+end
+
+local function ConfirmPlayingSound1(sound)
+    if not nearSilence then
+        return
+    end
+
+    if jumpscareActive or jumpscareFinished then
+        return
+    end
+
+    if not IsRealPlayingSound1(sound) then
+        return
+    end
+
+    soundConfirmTokens[sound] =
+        (soundConfirmTokens[sound] or 0) + 1
+
+    local token =
+        soundConfirmTokens[sound]
+
+    task.delay(
+        SOUND_CONFIRM_TIME,
+        function()
+            if not nearSilence then
+                return
+            end
+
+            if jumpscareActive or jumpscareFinished then
+                return
+            end
+
+            if soundConfirmTokens[sound] ~= token then
+                return
+            end
+
+            if not sound or not sound.Parent then
+                return
+            end
+
+            if not IsRealPlayingSound1(sound) then
+                return
+            end
+
+            task.spawn(
+                TriggerJumpscare1
+            )
+        end
+    )
+end
+
+local function DisconnectWatchedSound1(sound)
+    local connections =
+        soundConnections[sound]
+
+    if connections then
+        for _, connection in ipairs(
+            connections
+        ) do
+            if connection then
+                connection:Disconnect()
+            end
+        end
+    end
+
+    soundConnections[sound] = nil
+    soundConfirmTokens[sound] = nil
+end
+
+local function WatchSound1(sound)
+    if not sound:IsA("Sound") then
+        return
+    end
+
+    DisconnectWatchedSound1(sound)
+
+    soundConnections[sound] = {}
+
+    table.insert(
+        soundConnections[sound],
+        sound:GetPropertyChangedSignal(
+            "Playing"
+        ):Connect(function()
+            if sound.Playing then
+                ConfirmPlayingSound1(sound)
+            else
+                CancelSoundConfirmation1(sound)
+            end
+        end)
+    )
+
+    table.insert(
+        soundConnections[sound],
+        sound.AncestryChanged:Connect(
+            function()
+                local character =
+                    player.Character
+
+                if
+                    not character
+                    or not sound:IsDescendantOf(character)
+                then
+                    CancelSoundConfirmation1(sound)
+                    DisconnectWatchedSound1(sound)
+                end
+            end
+        )
+    )
+
+    if sound.Playing then
+        ConfirmPlayingSound1(sound)
+    end
+end
+
+local function StopSoundWatcher1()
+    nearSilence = false
+
+    if soundWatchConnection then
+        soundWatchConnection:Disconnect()
+        soundWatchConnection = nil
+    end
+
+    local sounds = {}
+
+    for sound in pairs(
+        soundConnections
+    ) do
+        table.insert(
+            sounds,
+            sound
+        )
+    end
+
+    for _, sound in ipairs(
+        sounds
+    ) do
+        CancelSoundConfirmation1(sound)
+        DisconnectWatchedSound1(sound)
+    end
+
+    table.clear(
+        soundConfirmTokens
+    )
+end
+
+local function StartSoundWatcher1()
+    StopSoundWatcher1()
+
+    local character =
+        player.Character
+
+    if not character then
+        return
+    end
+
+    nearSilence = true
+
+    for _, object in ipairs(
+        character:GetDescendants()
+    ) do
+        if object:IsA("Sound") then
+            WatchSound1(object)
+        end
+    end
+
+    soundWatchConnection =
+        character.DescendantAdded:Connect(
+            function(object)
+                if not nearSilence then
+                    return
+                end
+
+                if object:IsA("Sound") then
+                    WatchSound1(object)
+                end
+            end
+        )
+end
+
+local audioToken = 0
+
+local function StartRoomAudio1(
+    entityPosition,
+    totalDuration
+)
+    audioToken += 1
+
+    local token =
+        audioToken
+
+    ResetSound1(SilenceSound)
+    ResetSound1(SilenceFarSound)
+
+    task.spawn(
+        SilenceShake1,
+        entityPosition
+    )
+
+    task.spawn(function()
+        local started =
+            os.clock()
+
+        local currentMode =
+            nil
+
+        while
+            audioToken == token
+            and not jumpscareFinished
+            and os.clock() - started < totalDuration
+        do
+            local distance =
+                GetDistance1(
+                    entityPosition
+                )
+
+            if distance <= NEAR_SOUND_DISTANCE then
+                if currentMode ~= "near" then
+                    ResetSound1(
+                        SilenceFarSound
+                    )
+
+                    ResetSound1(
+                        SilenceSound
+                    )
+
+                    SilenceSound.Volume =
+                        5
+
+                    SilenceSound:Play()
+
+                    currentMode =
+                        "near"
+                end
+
+                if not nearSilence then
+                    StartSoundWatcher1()
+                end
+            else
+                if nearSilence then
+                    StopSoundWatcher1()
+                end
+
+                local farVolume =
+                    GetFarVolume1(
+                        distance
+                    )
+
+                if currentMode ~= "far" then
+                    ResetSound1(
+                        SilenceSound
+                    )
+
+                    ResetSound1(
+                        SilenceFarSound
+                    )
+
+                    SilenceFarSound.Volume =
+                        farVolume
+
+                    SilenceFarSound:Play()
+
+                    currentMode =
+                        "far"
+                else
+                    SilenceFarSound.Volume =
+                        farVolume
+                end
+            end
+
+            RunService.Heartbeat:Wait()
+        end
+
+        if nearSilence then
+            StopSoundWatcher1()
+        end
+    end)
+end
+
+function entityBehaviors.Silence()
+    jumpscareActive = false
+    jumpscareFinished = false
+
+    StopSoundWatcher1()
+
+    local CurrentRooms =
+        workspace:WaitForChild(
+            "CurrentRooms"
+        )
+
+    local rooms = {}
+
+    for _, room in ipairs(
+        CurrentRooms:GetChildren()
+    ) do
+        local number =
+            tonumber(room.Name)
+
+        if
+            number
+            and number >= 1
+            
+        then
+            table.insert(
+                rooms,
+                {
+                    Number = number,
+                    Room = room
+                }
+            )
+        end
+    end
+
+    table.sort(
+        rooms,
+        function(a, b)
+            return
+                a.Number
+                < b.Number
+        end
+    )
+
+    if #rooms == 0 then
+        return
+    end
+
+    local loaded =
+        game:GetObjects(
+            "rbxassetid://131690436250513"
+        )
+
+    local Silence =
+        loaded[1]
+
+    if not Silence then
+        return
+    end
+
+    if not Silence:IsA("Model") then
+        local holder =
+            Instance.new("Model")
+
+        holder.Name =
+            "Silence"
+
+        Silence.Parent =
+            holder
+
+        Silence =
+            holder
+    end
+
+    Silence.Name =
+        "Silence"
+
+    Silence.Parent =
+        workspace
+
+    for _, object in ipairs(
+        Silence:GetDescendants()
+    ) do
+        if object:IsA("BasePart") then
+            object.Anchored = true
+            object.CanCollide = false
+            object.CanTouch = false
+            object.CanQuery = false
+        end
+    end
+
+    local modelRotation =
+        Silence:GetPivot().Rotation
+
+    Silence:PivotTo(
+        CFrame.new(
+            0,
+            0,
+            0
+        )
+        * modelRotation
+    )
+
+    local modelBoxCF,
+        modelBoxSize =
+        Silence:GetBoundingBox()
+
+    local modelBottom =
+        modelBoxCF.Position.Y
+        - modelBoxSize.Y * 0.5
+
+    local bottomOffset =
+        -modelBottom
+
+    local function GetRoomSize1(room)
+        if room:IsA("Model") then
+            local _, size =
+                room:GetBoundingBox()
+
+            return size
+        end
+
+        if room:IsA("BasePart") then
+            return room.Size
+        end
+
+        return Vector3.new(
+            30,
+            20,
+            30
+        )
+    end
+
+    local function FindFloor1(room)
+        local entrance =
+            room:FindFirstChild(
+                "RoomEntrance"
+            )
+
+        if not entrance then
+            entrance =
+                room:FindFirstChild(
+                    "RoomEntrance",
+                    true
+                )
+        end
+
+        if
+            entrance
+            and entrance:IsA("BasePart")
+        then
+            local targetCF =
+                entrance.CFrame
+                * CFrame.new(
+                    0,
+                    0,
+                    -15
+                )
+
+            local target =
+                targetCF.Position
+
+            local params =
+                RaycastParams.new()
+
+            params.FilterType =
+                Enum.RaycastFilterType.Include
+
+            params.FilterDescendantsInstances = {
+                room
+            }
+
+            params.IgnoreWater =
+                true
+
+            local origin =
+                target
+                + Vector3.new(
+                    0,
+                    35,
+                    0
+                )
+
+            local result =
+                workspace:Raycast(
+                    origin,
+                    Vector3.new(
+                        0,
+                        -90,
+                        0
+                    ),
+                    params
+                )
+
+            if result then
+                return
+                    result.Position,
+                    GetRoomSize1(room)
+            end
+
+            return
+                target,
+                GetRoomSize1(room)
+        end
+
+        if room:IsA("Model") then
+            local cf, size =
+                room:GetBoundingBox()
+
+            local params =
+                RaycastParams.new()
+
+            params.FilterType =
+                Enum.RaycastFilterType.Include
+
+            params.FilterDescendantsInstances = {
+                room
+            }
+
+            params.IgnoreWater =
+                true
+
+            local origin =
+                cf.Position
+                + Vector3.new(
+                    0,
+                    size.Y * 0.5 + 10,
+                    0
+                )
+
+            local result =
+                workspace:Raycast(
+                    origin,
+                    Vector3.new(
+                        0,
+                        -(size.Y + 30),
+                        0
+                    ),
+                    params
+                )
+
+            if result then
+                return
+                    result.Position,
+                    size
+            end
+
+            return
+                Vector3.new(
+                    cf.Position.X,
+                    cf.Position.Y
+                    - size.Y * 0.5,
+                    cf.Position.Z
+                ),
+                size
+        end
+
+        if room:IsA("BasePart") then
+            return
+                room.Position
+                - Vector3.new(
+                    0,
+                    room.Size.Y * 0.5,
+                    0
+                ),
+                room.Size
+        end
+
+        return
+            Vector3.zero,
+            Vector3.new(
+                30,
+                20,
+                30
+            )
+    end
+
+    local function PivotSilence1(position)
+        Silence:PivotTo(
+            CFrame.new(position)
+            * modelRotation
+        )
+    end
+
+    local function MoveVertical1(
+        startPosition,
+        endPosition,
+        duration,
+        descending
+    )
+        local started =
+            os.clock()
+
+        while true do
+            if jumpscareFinished then
+                return false
+            end
+
+            local alpha =
+                math.clamp(
+                    (os.clock() - started)
+                    / duration,
+                    0,
+                    1
+                )
+
+            local eased
+
+            if descending then
+                eased =
+                    1
+                    - ((1 - alpha) ^ 4)
+            else
+                eased =
+                    alpha ^ 4
+            end
+
+            PivotSilence1(
+                startPosition:Lerp(
+                    endPosition,
+                    eased
+                )
+            )
+
+            if alpha >= 1 then
+                break
+            end
+
+            RunService.RenderStepped:Wait()
+        end
+
+        PivotSilence1(
+            endPosition
+        )
+
+        return true
+    end
+
+    local MAX_SILENCE_ROOMS = 10
+
+    local startRoomIndex = 1
+
+    if #rooms > MAX_SILENCE_ROOMS then
+        startRoomIndex = #rooms - 8
+    end
+
+    for roomIndex = startRoomIndex, #rooms do
+
+        local data = rooms[roomIndex]
+        if jumpscareFinished then
+            break
+        end
+
+        local floorPosition,
+            roomSize =
+            FindFloor1(
+                data.Room
+            )
+
+        local landingPosition =
+            floorPosition
+            + Vector3.new(
+                0,
+                bottomOffset
+                + MODEL_Y_OFFSET,
+                0
+            )
+
+        local spawnHeight =
+            math.max(
+                roomSize.Y + 35,
+                45
+            )
+
+        local upperPosition =
+            landingPosition
+            + Vector3.new(
+                0,
+                spawnHeight,
+                0
+            )
+
+        PivotSilence1(
+            upperPosition
+        )
+
+        StartRoomAudio1(
+            landingPosition,
+            5.2
+        )
+
+        local moved =
+            MoveVertical1(
+                upperPosition,
+                landingPosition,
+                0.52,
+                true
+            )
+
+        if not moved then
+            break
+        end
+
+        local holdStarted =
+            os.clock()
+
+        while
+            os.clock()
+            - holdStarted
+            < 4
+        do
+            if jumpscareFinished then
+                break
+            end
+
+            RunService.Heartbeat:Wait()
+        end
+
+        if jumpscareFinished then
+            break
+        end
+
+        moved =
+            MoveVertical1(
+                landingPosition,
+                upperPosition,
+                0.42,
+                false
+            )
+
+        if not moved then
+            break
+        end
+    end
+
+    audioToken += 1
+
+    StopSoundWatcher1()
+
+    ResetSound1(
+        SilenceFarSound
+    )
+
+    if Silence and Silence.Parent then
+        Silence:Destroy()
+    end
+end
+
+function entityBehaviors.DeerGod()
+local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local Debris = game:GetService("Debris")
+
+    local entityModel = nil
+    local chaseConnection = nil
+    local lockedPlayer = nil
+
+    local customSpeed = 20
+    local lockRange = 250
+
+    local teleportDistance = 80
+    local teleportForwardOffset = 50
+    local teleportStartDelay = 20
+
+    local canTeleport = false
+
+    local player = Players.LocalPlayer
+
+    local glitchGui = nil
+    local glitchConnection = nil
+
+
+    local function CreateDeerGodGlitch()
+
+        glitchGui = Instance.new("ScreenGui")
+        glitchGui.Name = "DeerGodGlitch"
+        glitchGui.IgnoreGuiInset = true
+        glitchGui.ResetOnSpawn = false
+        glitchGui.Parent = player:WaitForChild("PlayerGui")
+
+        local noise = Instance.new("ImageLabel")
+        noise.Parent = glitchGui
+        noise.Size = UDim2.new(1,0,1,0)
+        noise.BackgroundTransparency = 1
+        noise.Image = "rbxassetid://8116159092"
+        noise.ScaleType = Enum.ScaleType.Tile
+        noise.TileSize = UDim2.new(0,180,0,180)
+        noise.ImageTransparency = 0.92
+
+
+        glitchConnection = RunService.RenderStepped:Connect(function()
+
+            if not glitchGui or not glitchGui.Parent then
+                return
+            end
+
+            noise.ImageTransparency = 0.86 + math.random()*0.1
+
+            noise.Position = UDim2.new(
+                0,
+                math.random(-6,6),
+                0,
+                math.random(-6,6)
+            )
+
+            if math.random() < 0.08 then
+
+                local bar = Instance.new("Frame")
+                bar.Parent = glitchGui
+                bar.Size = UDim2.new(
+                    math.random(20,80)/100,
+                    0,
+                    0,
+                    math.random(2,8)
+                )
+
+                bar.Position = UDim2.new(
+                    math.random(),
+                    0,
+                    math.random(),
+                    0
+                )
+
+                bar.BackgroundColor3 = Color3.new(
+                    math.random(),
+                    math.random(),
+                    math.random()
+                )
+
+                bar.BackgroundTransparency = 0.8
+                bar.BorderSizePixel = 0
+
+                Debris:AddItem(bar,0.08)
+
+            end
+
+        end)
+
+    end
+
+
+    local entity = spawner.Create({
+
+        Entity = {
+            Name = "Deer god",
+            Asset = "101210986101880",
+            HeightOffset = -4
+        },
+
+        Lights = {
+            Flicker = {
+                Enabled = true,
+                Duration = 50
+            },
+            Shatter = true,
+            Repair = false
+        },
+
+        CameraShake = {
+            Enabled = true,
+            Range = 1500,
+            Values = {0.5,5,0.1,1}
+        },
+
+        Movement = {
+            Speed = 20,
+            Delay = 2,
+            Reversed = true
+        },
+
+        Damage = {
+            Enabled = true,
+            Range = 10,
+            Amount = 200
+        },
+
+        Crucifixion = {
+            Enabled = true,
+            Range = 40,
+            Resist = true,
+            Break = true
+        },
+                Death = {
+            Type = "Curious",
+            Hints = {
+                "看起来你真倒霉...",
+                "你被所谓的鹿神击杀了",
+                "不要理它过于遥远",
+                "十字架不能保证你的安全"
+            },
+            Cause = "Deer God"
+        }
+    })
+
+    local function FindTarget()
+
+        local nearest = nil
+        local shortest = math.huge
+
+        local pos = entityModel.PrimaryPart.Position
+
+        for _,p in ipairs(Players:GetPlayers()) do
+
+            local char = p.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChild("Humanoid")
+
+            if root and hum and hum.Health > 0 then
+
+                local dist = (root.Position-pos).Magnitude
+
+                if dist < shortest and dist <= lockRange then
+                    shortest = dist
+                    nearest = p
+                end
+
+            end
+        end
+
+        return nearest
+    end
+
+
+    entity:SetCallback("OnSpawned",function()
+
+        entityModel = entity.Model
+
+        if entityModel and not entityModel.PrimaryPart then
+            entityModel.PrimaryPart =
+                entityModel:FindFirstChild("Main")
+                or entityModel:FindFirstChildWhichIsA("BasePart")
+        end
+
+
+        if not entityModel or not entityModel.PrimaryPart then
+            return
+        end
+
+
+        CreateDeerGodGlitch()
+
+        lockedPlayer = FindTarget()
+
+
+        task.delay(teleportStartDelay,function()
+
+            if entityModel and lockedPlayer then
+                canTeleport = true
+            end
+
+        end)
+
+
+        chaseConnection = RunService.Heartbeat:Connect(function(dt)
+
+            if not entityModel or not entityModel.PrimaryPart then
+                return
+            end
+
+            if not lockedPlayer then
+                return
+            end
+
+
+            local char = lockedPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChild("Humanoid")
+
+
+            if not root or not hum then
+                return
+            end
+
+
+            if hum.Health <= 0 then
+
+                if chaseConnection then
+                    chaseConnection:Disconnect()
+                end
+
+                entityModel:Destroy()
+                entityModel=nil
+                lockedPlayer=nil
+
+                return
+
+            end
+
+
+            local pos = entityModel.PrimaryPart.Position
+            local target = root.Position
+
+            local distance = (target-pos).Magnitude
+
+
+            if canTeleport and distance >= teleportDistance then
+
+                local forwardPosition =
+                    root.Position +
+                    root.CFrame.LookVector * teleportForwardOffset
+
+
+                entityModel:SetPrimaryPartCFrame(
+                    CFrame.lookAt(
+                        forwardPosition,
+                        forwardPosition-root.CFrame.LookVector
+                    )
+                )
+
+
+                local sound = Instance.new("Sound")
+                sound.SoundId = "rbxassetid://131811476310735"
+                sound.Volume = 8
+                sound.Parent = entityModel.PrimaryPart
+
+                sound:Play()
+
+                sound.Ended:Connect(function()
+                    sound:Destroy()
+                end)
+
+                return
+            end
+
+
+            local direction = (target-pos).Unit
+            local newPos = pos + direction*customSpeed*dt
+
+
+            entityModel:SetPrimaryPartCFrame(
+                CFrame.lookAt(
+                    newPos,
+                    newPos-direction
+                )
+            )
+
+        end)
+
+
+        task.delay(85,function()
+
+            if chaseConnection then
+                chaseConnection:Disconnect()
+            end
+
+            if entityModel then
+                entityModel:Destroy()
+            end
+
+            local folder = workspace:FindFirstChild("HardCoreSound")
+
+            if folder then
+                local sound = folder:FindFirstChild("DeerGodMusic")
+                if sound then
+                    sound:Stop()
+                end
+            end
+
+            if glitchConnection then
+                glitchConnection:Disconnect()
+            end
+
+            if glitchGui then
+                glitchGui:Destroy()
+            end
+
+        end)
+
+    end)
+
+
+    entity:Run()
+
+
+    local folder = workspace:FindFirstChild("HardCoreSound")
+
+    if folder then
+        local music = folder:FindFirstChild("DeerGodMusic")
+        if music then
+            music:Play()
+        end
+    end
+end
+
 local entityConfig = {
     ["rbxassetid://1"] = entityBehaviors.ATCHRipper,
     ["rbxassetid://3"] = entityBehaviors.AMIN60,
@@ -5018,7 +6766,8 @@ local entityConfig = {
     ["rbxassetid://16"] = entityBehaviors.MultiMonster,
     ["rbxassetid://17"] = entityBehaviors.CreakHard,
     ["rbxassetid://18"] = entityBehaviors.CreakWhite,
-    ["rbxassetid://19"]  = entityBehaviors.HATRED,
+    ["rbxassetid://19"] = entityBehaviors.Silence,
+    ["rbxassetid://20"] = entityBehaviors.DeerGod,
     ["rbxassetid://2"] = entityBehaviors.A200
 }
 local checkedEntities = {}

@@ -73,6 +73,9 @@ local soundsData = {
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/Silence.mp3?raw=true", name = "Silence", vol = 1},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/SilenceFar.mp3?raw=true", name = "SilenceFar", vol = 1},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true", name = "DeerGodMusic", vol = 1},
+    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/FrostbitePhase1.mp3?raw=true", name = "F1", vol = 1},
+    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/FrostbitePhase2.mp3?raw=true", name = "F2", vol = 1},
+    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/FrostbiteEnd.mp3?raw=true", name = "F3", vol = 1},
     {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/ATCHST.mp3?raw=true", name = "ATCHSTARYT", vol = 0.3}
 }
 

@@ -6747,6 +6747,1949 @@ local Players = game:GetService("Players")
         end
     end
 end
+function entityBehaviors.FrostBite()
+function GetRoom()
+	local rooms = workspace:FindFirstChild("CurrentRooms")
+	local gameData = game.ReplicatedStorage:FindFirstChild("GameData")
+	local latestRoom = gameData and gameData:FindFirstChild("LatestRoom")
+
+	if not rooms or not latestRoom then
+		return nil
+	end
+
+	return rooms:FindFirstChild(tostring(latestRoom.Value))
+end
+
+function LoadCustomInstance(source, parent)
+	local model
+
+	while task.wait() and not model do
+		local success, result = pcall(function()
+			return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+		end)
+
+		if success and result then
+			model = result
+		end
+
+		if model then
+			model.Parent = parent or workspace
+
+			for _, v in ipairs(model:GetDescendants()) do
+				if v:IsA("Script") or v:IsA("LocalScript") then
+					v:Destroy()
+				end
+			end
+		end
+	end
+
+	return model
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local camera = workspace.CurrentCamera
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local s = LoadCustomInstance("83840759413024", workspace)
+if not s then
+	return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+if not entity then
+	s:Destroy()
+	return
+end
+
+local firstRoom = GetRoom()
+if not firstRoom or not firstRoom:FindFirstChild("RoomEntrance") then
+	s:Destroy()
+	return
+end
+
+entity.CFrame = firstRoom.RoomEntrance.CFrame * CFrame.new(0, 5, -15)
+
+local effectNames = {
+	"face",
+	"Heylois",
+	"BlackTrai2l",
+	"BlackTrai3l"
+}
+
+local function SetEntityEffectsEnabled(state)
+	local attachment = entity:FindFirstChild("Attachment")
+	if not attachment then
+		return
+	end
+
+	for _, name in ipairs(effectNames) do
+		local effect = attachment:FindFirstChild(name)
+		if effect and effect:IsA("ParticleEmitter") or effect and effect:IsA("Trail") or effect and effect:IsA("Beam") then
+			effect.Enabled = state
+		elseif effect and effect:IsA("Light") then
+			effect.Enabled = state
+		end
+	end
+end
+
+SetEntityEffectsEnabled(false)
+
+local staticSounds = {}
+
+for _, v in ipairs(s:GetDescendants()) do
+	if v:IsA("Sound") and v.Name == "Static Effect" then
+		v.Looped = true
+		v:Play()
+		table.insert(staticSounds, v)
+	end
+end
+
+local hardcore = workspace:FindFirstChild("HardCoreSound")
+local music
+
+local function PlayMusic(name, looped, waitForLoad)
+	if music then
+		music:Stop()
+		music:Destroy()
+		music = nil
+	end
+
+	if not hardcore then
+		return nil
+	end
+
+	local source = hardcore:FindFirstChild(name)
+	if not source or not source:IsA("Sound") then
+		return nil
+	end
+
+	music = source:Clone()
+	music.Parent = workspace
+	music.Looped = looped
+
+	if waitForLoad and not music.IsLoaded then
+		local started = os.clock()
+
+		while music.Parent and not music.IsLoaded and os.clock() - started < 3 do
+			task.wait()
+		end
+	end
+
+	music:Play()
+	return music
+end
+
+PlayMusic("F1", true)
+
+local frost = Instance.new("ColorCorrectionEffect")
+frost.Parent = game.Lighting
+
+TweenService:Create(
+	frost,
+	TweenInfo.new(10),
+	{
+		TintColor = Color3.fromRGB(217, 250, 255),
+		Saturation = -0.7,
+		Contrast = 0.2
+	}
+):Play()
+
+local light = Instance.new("PointLight")
+light.Range = 60
+light.Brightness = 99999
+light.Parent = entity
+
+TweenService:Create(
+	light,
+	TweenInfo.new(3),
+	{
+		Brightness = 0
+	}
+):Play()
+
+local finished = false
+local camShake
+local cameraShakerModule = ReplicatedStorage:FindFirstChild("CameraShaker")
+
+if cameraShakerModule then
+	local success, shaker = pcall(require, cameraShakerModule)
+
+	if success and shaker then
+		camShake = shaker.new(
+			Enum.RenderPriority.Camera.Value,
+			function(cf)
+				camera = workspace.CurrentCamera
+
+				if camera then
+					camera.CFrame = camera.CFrame * cf
+				end
+			end
+		)
+
+		camShake:Start()
+
+		task.spawn(function()
+			while entity.Parent and not finished do
+				camera = workspace.CurrentCamera
+
+				if camera then
+					local distance = (camera.CFrame.Position - entity.Position).Magnitude
+					local power = math.clamp(1 - distance / 120, 0, 1)
+
+					if power > 0 then
+						camShake:ShakeOnce(
+							power * 8,
+							40,
+							0.05,
+							0.35,
+							Vector3.new(0.15, 0.15, 0.15),
+							Vector3.new(1, 1, 1)
+						)
+					end
+				end
+
+				task.wait(0.15)
+			end
+		end)
+	end
+end
+
+task.wait(5)
+
+for _, v in ipairs(staticSounds) do
+	v:Stop()
+end
+
+SetEntityEffectsEnabled(true)
+
+pcall(function()
+	entity.Ambience:Play()
+	entity.AmbienceFar:Play()
+end)
+
+local function LerpNumberSequenceToOne(sequence, alpha)
+	local keypoints = {}
+
+	for _, keypoint in ipairs(sequence.Keypoints) do
+		local value = keypoint.Value + (1 - keypoint.Value) * alpha
+		local envelope = keypoint.Envelope * (1 - alpha)
+
+		table.insert(
+			keypoints,
+			NumberSequenceKeypoint.new(
+				keypoint.Time,
+				value,
+				envelope
+			)
+		)
+	end
+
+	return NumberSequence.new(keypoints)
+end
+
+local finalFadeStarted = false
+
+local function StartFinalFade(duration)
+	if finalFadeStarted then
+		return
+	end
+
+	finalFadeStarted = true
+	duration = math.max(tonumber(duration) or 5, 0.1)
+
+	pcall(function()
+		entity.Ambience:Stop()
+		entity.AmbienceFar:Stop()
+	end)
+
+	SetEntityEffectsEnabled(false)
+
+	local des = Instance.new("Sound")
+	des.SoundId = "rbxassetid://111715441853991"
+	des.Volume = 0.5
+	des.Parent = workspace
+	des:Play()
+	Debris:AddItem(des, math.max(duration + 2, 10))
+
+	local particleData = {}
+
+	for _, v in ipairs(s:GetDescendants()) do
+		if v:IsA("BasePart") then
+			TweenService:Create(
+				v,
+				TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{
+					Transparency = 1
+				}
+			):Play()
+		elseif v:IsA("Decal") or v:IsA("Texture") then
+			TweenService:Create(
+				v,
+				TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{
+					Transparency = 1
+				}
+			):Play()
+		elseif v:IsA("Light") then
+			TweenService:Create(
+				v,
+				TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{
+					Brightness = 0
+				}
+			):Play()
+		elseif v:IsA("ParticleEmitter") then
+			table.insert(
+				particleData,
+				{
+					Object = v,
+					Transparency = v.Transparency
+				}
+			)
+		end
+	end
+
+	local fadeValue = Instance.new("NumberValue")
+	fadeValue.Value = 0
+
+	local changedConnection
+	changedConnection = fadeValue:GetPropertyChangedSignal("Value"):Connect(function()
+		for _, data in ipairs(particleData) do
+			if data.Object and data.Object.Parent then
+				data.Object.Transparency = LerpNumberSequenceToOne(
+					data.Transparency,
+					fadeValue.Value
+				)
+			end
+		end
+	end)
+
+	local particleTween = TweenService:Create(
+		fadeValue,
+		TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+		{
+			Value = 1
+		}
+	)
+
+	particleTween:Play()
+
+	particleTween.Completed:Connect(function()
+		if changedConnection then
+			changedConnection:Disconnect()
+		end
+
+		for _, data in ipairs(particleData) do
+			if data.Object and data.Object.Parent then
+				data.Object.Transparency = NumberSequence.new(1)
+				data.Object.Enabled = false
+			end
+		end
+
+		fadeValue:Destroy()
+	end)
+
+	if frost and frost.Parent then
+		TweenService:Create(
+			frost,
+			TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+			{
+				TintColor = Color3.fromRGB(255, 255, 255),
+				Saturation = 0,
+				Contrast = 0
+			}
+		):Play()
+	end
+end
+
+local roomCount = 0
+local gameData = ReplicatedStorage:FindFirstChild("GameData")
+local latestRoom = gameData and gameData:FindFirstChild("LatestRoom")
+
+if not latestRoom then
+	finished = true
+end
+
+task.spawn(function()
+	if not latestRoom then
+		return
+	end
+
+	while roomCount < 5 and not finished do
+		latestRoom.Changed:Wait()
+
+		if finished then
+			break
+		end
+
+		roomCount += 1
+
+		local room = GetRoom()
+
+		if room and room:FindFirstChild("RoomEntrance") and entity.Parent then
+			local value = Instance.new("CFrameValue")
+			value.Value = entity.CFrame
+
+			local connection
+			connection = value:GetPropertyChangedSignal("Value"):Connect(function()
+				if entity.Parent then
+					entity.CFrame = value.Value
+				end
+			end)
+
+			local tween = TweenService:Create(
+				value,
+				TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{
+					Value = room.RoomEntrance.CFrame * CFrame.new(0, 5, -15)
+				}
+			)
+
+			tween:Play()
+			tween.Completed:Wait()
+
+			if connection then
+				connection:Disconnect()
+			end
+
+			value:Destroy()
+		end
+
+		if roomCount == 3 then
+			PlayMusic("F2", true)
+		elseif roomCount == 5 then
+			local f3 = PlayMusic("F3", false, true)
+			local fadeDuration = 5
+
+			if f3 and f3.TimeLength > 0 then
+				fadeDuration = f3.TimeLength
+			end
+
+			StartFinalFade(fadeDuration)
+
+			if f3 then
+				local ended = false
+				local endedConnection
+
+				endedConnection = f3.Ended:Connect(function()
+					ended = true
+				end)
+
+				local started = os.clock()
+
+				while f3.Parent and not ended and os.clock() - started < fadeDuration + 2 do
+					task.wait()
+				end
+
+				if endedConnection then
+					endedConnection:Disconnect()
+				end
+			else
+				task.wait(fadeDuration)
+			end
+
+			finished = true
+			break
+		end
+	end
+end)
+
+task.spawn(function()
+	while not finished do
+		task.wait(1)
+
+		if finished then
+			break
+		end
+
+		local safe = false
+		local lighter = chr:FindFirstChild("Lighter")
+
+		if lighter and lighter:FindFirstChild("Handle") then
+			local holder = lighter.Handle:FindFirstChild("EffectsHolder")
+
+			if holder and holder:FindFirstChild("AttachOn") then
+				local main = holder.AttachOn:FindFirstChild("MainLight")
+
+				if main and main:IsA("PointLight") then
+					safe = main.Enabled
+				end
+			end
+		end
+
+		if not safe then
+			pcall(function()
+				local humanoid = chr:FindFirstChildOfClass("Humanoid")
+
+				if humanoid and humanoid.Health > 0 then
+					humanoid.Health -= 5
+				end
+			end)
+		end
+	end
+end)
+
+repeat
+	task.wait()
+until finished
+
+dmg = false
+roomChanged = true
+
+if camShake then
+	pcall(function()
+		camShake:Stop()
+	end)
+end
+
+pcall(function()
+	entity.Ambience:Stop()
+	entity.AmbienceFar:Stop()
+end)
+
+SetEntityEffectsEnabled(false)
+
+if music then
+	music:Stop()
+	music:Destroy()
+	music = nil
+end
+
+if s and s.Parent then
+	s:Destroy()
+end
+
+if frost and frost.Parent then
+	frost:Destroy()
+end
+end
+function entityBehaviors.HATRED()
+local HATRED_PREPARED_SOUND = nil
+
+local function getHatredSound()
+    local folder = game:GetService("Workspace"):FindFirstChild("HardCoreSound")
+    if not folder then
+        return nil
+    end
+
+    local sound = folder:FindFirstChild("HATRED")
+    if sound and sound:IsA("Sound") then
+        HATRED_PREPARED_SOUND = sound
+        return sound
+    end
+
+    return nil
+end
+
+local function createPreparedHatredSound()
+    return getHatredSound()
+end
+
+do
+    createPreparedHatredSound()
+end
+
+_G.entityBehaviors = entityBehaviors
+if type(getgenv) == "function" then
+    getgenv().entityBehaviors = entityBehaviors
+end
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+
+local player = Players.LocalPlayer
+if not player then
+    return
+end
+
+if type(_G.HatredBossController) == "table"
+    and type(_G.HatredBossController.Stop) == "function" then
+    pcall(_G.HatredBossController.Stop)
+end
+
+local CONFIG = {
+    ModelId = 94520721608869,
+    MusicVolume = 0.8,
+
+    StartDistance = 120,
+    StopDistance = 15,
+    ApproachDuration = 20,
+    HoverHeight = 3,
+    HoverDuration = 260,
+
+    FlickerDuration = 260,
+    FlickerAmount = 30,
+    ShakeDuration = 260,
+    ShakeIntensity = 0.7,
+
+    PhaseGoals = {10, 15, 20},
+    PhaseTimes = {20, 30, 30},
+    BluePenalty = 3,
+    PhaseTransitionSoundId = 102844356541414,
+    PhaseTransitionDelay = 2.2,
+
+    FailureFadeDuration = 5,
+    FailureStormDuration = 13,
+    FailureVoidDuration = 2.5,
+    FaceSwapDuration = 0.1,
+    FaceSwapMinDelay = 1.4,
+    FaceSwapMaxDelay = 3.2,
+    FailureSoundId = 139866863795650,
+    FailureSoundVolume = 4,
+}
+
+local COLORS = {
+    Background = Color3.fromRGB(7, 8, 14),
+    Panel = Color3.fromRGB(17, 19, 29),
+    Panel2 = Color3.fromRGB(27, 29, 43),
+    Text = Color3.fromRGB(242, 244, 255),
+    Muted = Color3.fromRGB(151, 157, 183),
+    Red = Color3.fromRGB(255, 54, 72),
+    RedDark = Color3.fromRGB(138, 22, 42),
+    Blue = Color3.fromRGB(48, 128, 255),
+    Gold = Color3.fromRGB(255, 195, 77),
+    Green = Color3.fromRGB(87, 232, 151),
+}
+
+local State = {
+    running = false,
+    ending = false,
+    cleaned = false,
+    token = 0,
+    phase = 0,
+    clicks = 0,
+    deadline = 0,
+
+    connections = {},
+    tweens = {},
+    targetTweens = {},
+    instances = {},
+
+    music = nil,
+    phaseSound = nil,
+    failureSound = nil,
+    boss = nil,
+    blur = nil,
+    gui = nil,
+    ui = nil,
+    inventory = nil,
+    bossConnection = nil,
+    mouseConnection = nil,
+
+    originalMouseBehavior = nil,
+    originalMouseIconEnabled = nil,
+    originalInventoryVisible = nil,
+}
+
+local Controller = {}
+_G.HatredBossController = Controller
+
+local function alive(token)
+    return State.running and not State.cleaned and State.token == token
+end
+
+local function addConnection(connection)
+    if connection then
+        table.insert(State.connections, connection)
+    end
+    return connection
+end
+
+local function disconnect(connection)
+    if connection then
+        pcall(function()
+            connection:Disconnect()
+        end)
+    end
+end
+
+local function destroy(instance)
+    if instance and instance.Parent then
+        pcall(function()
+            instance:Destroy()
+        end)
+    end
+end
+
+local function playTween(instance, info, goal)
+    if not instance or not instance.Parent then
+        return nil
+    end
+    local tween = TweenService:Create(instance, info, goal)
+    table.insert(State.tweens, tween)
+    tween:Play()
+    return tween
+end
+
+local function waitCancelable(seconds, token)
+    local finishAt = os.clock() + seconds
+    while os.clock() < finishAt do
+        if not alive(token) then
+            return false
+        end
+        task.wait(math.max(0, math.min(0.1, finishAt - os.clock())))
+    end
+    return alive(token)
+end
+
+local function safeCaption(text)
+    pcall(function()
+        local mainUI = player:WaitForChild("PlayerGui", 3):FindFirstChild("MainUI")
+        local initiator = mainUI and mainUI:FindFirstChild("Initiator")
+        local mainGame = initiator and initiator:FindFirstChild("Main_Game")
+        if mainGame then
+            require(mainGame).caption(text, true)
+        end
+    end)
+end
+
+local function getCharacterParts(timeout)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local root = character:WaitForChild("HumanoidRootPart", timeout or 5)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    return character, root, humanoid
+end
+
+local function startRoomFlicker()
+    task.spawn(function()
+        pcall(function()
+            local gameData = ReplicatedStorage:FindFirstChild("GameData")
+            local latestRoomValue = gameData and gameData:FindFirstChild("LatestRoom")
+            local rooms = Workspace:FindFirstChild("CurrentRooms")
+            local room = latestRoomValue and rooms and rooms:FindFirstChild(tostring(latestRoomValue.Value))
+            local modules = ReplicatedStorage:FindFirstChild("ModulesClient")
+            local eventModule = modules and modules:FindFirstChild("Module_Events")
+            if room and eventModule then
+                require(eventModule).flicker(room, CONFIG.FlickerDuration, CONFIG.FlickerAmount)
+            end
+        end)
+    end)
+end
+
+local SHAKE_BIND_NAME = "HatredBossCameraShake"
+
+local function startCameraShake(token)
+    pcall(function()
+        RunService:UnbindFromRenderStep(SHAKE_BIND_NAME)
+    end)
+
+    local startedAt = os.clock()
+    RunService:BindToRenderStep(SHAKE_BIND_NAME, Enum.RenderPriority.Camera.Value + 1, function()
+        if not alive(token) then
+            pcall(function()
+                RunService:UnbindFromRenderStep(SHAKE_BIND_NAME)
+            end)
+            return
+        end
+
+        local elapsed = os.clock() - startedAt
+        if elapsed >= CONFIG.ShakeDuration then
+            pcall(function()
+                RunService:UnbindFromRenderStep(SHAKE_BIND_NAME)
+            end)
+            return
+        end
+
+        local camera = Workspace.CurrentCamera
+        if camera then
+            local decay = math.max(0.12, 1 - elapsed / CONFIG.ShakeDuration)
+            local power = CONFIG.ShakeIntensity * decay
+            local x = math.noise(elapsed * 5.1, 0, 0) * power
+            local y = math.noise(0, elapsed * 5.7, 0) * power
+            local roll = math.noise(0, 0, elapsed * 4.6) * math.rad(power)
+            camera.CFrame = camera.CFrame * CFrame.new(x, y, 0) * CFrame.Angles(0, 0, roll)
+        end
+    end)
+end
+
+local function loadBossMusic()
+    local sound = HATRED_PREPARED_SOUND or getHatredSound()
+    if not sound then
+        return nil
+    end
+
+    sound:Stop()
+    sound.Volume = 0
+    sound.Looped = true
+    State.music = sound
+    sound.TimePosition = 0
+    sound:Play()
+    playTween(sound, TweenInfo.new(1.5, Enum.EasingStyle.Quad), {Volume = CONFIG.MusicVolume})
+    return sound
+end
+
+local function fadeMusic(seconds)
+    local sound = State.music
+    State.music = nil
+    if not sound then
+        return
+    end
+
+    if sound.Parent then
+        local tween = TweenService:Create(sound, TweenInfo.new(seconds or 1.2, Enum.EasingStyle.Quad), {Volume = 0})
+        tween:Play()
+        task.delay(seconds or 1.2, function()
+            if sound and sound.Parent then
+                pcall(function()
+                    sound:Stop()
+                end)
+            end
+        end)
+    end
+end
+
+local function createGlowingModel()
+    local model = Instance.new("Model")
+    model.Name = "MovingModel"
+
+    local mainPart = Instance.new("Part")
+    mainPart.Name = "Core"
+    mainPart.Size = Vector3.new(5, 5, 5)
+    mainPart.Shape = Enum.PartType.Ball
+    mainPart.Color = Color3.fromRGB(0, 200, 255)
+    mainPart.Material = Enum.Material.Neon
+    mainPart.Transparency = 0.2
+    mainPart.CanCollide = false
+    mainPart.Anchored = true
+    mainPart.Parent = model
+
+    local pointLight = Instance.new("PointLight")
+    pointLight.Color = Color3.fromRGB(100, 200, 255)
+    pointLight.Range = 30
+    pointLight.Brightness = 5
+    pointLight.Parent = mainPart
+
+    model.PrimaryPart = mainPart
+    return model
+end
+
+local function loadBossModel()
+    local success, result = pcall(function()
+        local objects = game:GetObjects("rbxassetid://" .. tostring(CONFIG.ModelId))
+        if objects and #objects > 0 then
+            return objects[1]:Clone()
+        end
+        return nil
+    end)
+
+    if success and result then
+        return result
+    end
+
+    return createGlowingModel()
+end
+
+local function startBossMovement(root, token)
+    local model = loadBossModel()
+    if not model then
+        return false
+    end
+
+    model.Name = "HatRed"
+    model.Parent = Workspace
+    State.boss = model
+
+    local primaryPart = model.PrimaryPart
+    if not primaryPart then
+        for _, part in ipairs(model:GetDescendants()) do
+            if part:IsA("BasePart") then
+                model.PrimaryPart = part
+                primaryPart = part
+                break
+            end
+        end
+    end
+
+    if not primaryPart then
+        model:Destroy()
+        State.boss = nil
+        return false
+    end
+
+    for _, part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+            part.Anchored = true
+        end
+    end
+
+    local playerPos = root.Position
+    local playerLook = root.CFrame.LookVector
+    local startPos = playerPos + (playerLook * CONFIG.StartDistance)
+    startPos = startPos + Vector3.new(0, 10, 0)
+    model:SetPrimaryPartCFrame(CFrame.new(startPos))
+
+    local startTime = tick()
+    local isMoving = true
+    local isHovering = false
+    local hoverStartTime = 0
+    local connection
+
+    connection = RunService.Heartbeat:Connect(function()
+        if not alive(token) or not model or not model.Parent or not model:IsDescendantOf(Workspace) then
+            if connection then
+                connection:Disconnect()
+            end
+            return
+        end
+
+        if not root or not root.Parent then
+            if connection then
+                connection:Disconnect()
+            end
+            if model and model.Parent then
+                model:Destroy()
+            end
+            return
+        end
+
+        local currentTime = tick()
+        local currentPlayerPos = root.Position
+        local playerLookDirection = root.CFrame.LookVector
+
+        if isMoving then
+            local elapsed = currentTime - startTime
+            local progress = math.min(elapsed / CONFIG.ApproachDuration, 1)
+
+            if progress >= 1 then
+                isMoving = false
+                isHovering = true
+                hoverStartTime = currentTime
+                return
+            end
+
+            local easedProgress = progress * progress
+            local targetPos = currentPlayerPos + (playerLookDirection * CONFIG.StopDistance)
+                + Vector3.new(0, CONFIG.HoverHeight, 0)
+            local currentPos = startPos:Lerp(targetPos, easedProgress)
+            model:SetPrimaryPartCFrame(CFrame.new(currentPos))
+
+            local lookDirection = currentPlayerPos - currentPos
+            if lookDirection.Magnitude > 0.1 then
+                lookDirection = lookDirection.Unit
+                model:SetPrimaryPartCFrame(CFrame.new(currentPos, currentPos + lookDirection))
+            end
+        elseif isHovering then
+            local hoverTime = currentTime - hoverStartTime
+            if hoverTime >= CONFIG.HoverDuration then
+                if model and model.Parent then
+                    model:Destroy()
+                end
+                if connection then
+                    connection:Disconnect()
+                end
+                return
+            end
+
+            local targetPos = currentPlayerPos + (playerLookDirection * CONFIG.StopDistance)
+                + Vector3.new(0, CONFIG.HoverHeight, 0)
+            local currentPos = primaryPart.Position
+            local smoothedPos = currentPos:Lerp(targetPos, 0.1)
+            model:SetPrimaryPartCFrame(CFrame.new(smoothedPos))
+
+            local lookDirection = currentPlayerPos - smoothedPos
+            if lookDirection.Magnitude > 0.1 then
+                lookDirection = lookDirection.Unit
+                model:SetPrimaryPartCFrame(CFrame.new(smoothedPos, smoothedPos + lookDirection))
+            end
+        end
+    end)
+
+    State.bossConnection = connection
+    addConnection(connection)
+    return true
+end
+
+local FACE_NORMAL_ID = 92470122721520
+local FACE_GLITCH_IDS = {
+    130581413102559,
+    94635282583639,
+    16804066476,
+    16595430194,
+}
+
+local function findReboundFace()
+    local hatRed = State.boss
+    if not hatRed or not hatRed.Parent then
+        hatRed = Workspace:FindFirstChild("HatRed")
+    end
+    if not hatRed then
+        return nil
+    end
+
+    local face = hatRed:FindFirstChild("FACE", true)
+    local attachment = face and face:FindFirstChild("Attachment", true)
+    return attachment and attachment:FindFirstChild("Rebound Face", true) or nil
+end
+
+local function setFaceTexture(faceObject, assetId)
+    if not faceObject or not faceObject.Parent then
+        return false
+    end
+
+    local asset = "rbxassetid://" .. tostring(assetId)
+    local property
+    if faceObject:IsA("ImageLabel") or faceObject:IsA("ImageButton") then
+        property = "Image"
+    elseif faceObject:IsA("MeshPart") then
+        property = "TextureID"
+    else
+        property = "Texture"
+    end
+
+    return pcall(function()
+        faceObject[property] = asset
+    end)
+end
+
+local function startFaceChanging(token)
+    task.spawn(function()
+        while alive(token) and State.boss and State.boss.Parent do
+            local delaySeconds = CONFIG.FaceSwapMinDelay
+                + math.random() * (CONFIG.FaceSwapMaxDelay - CONFIG.FaceSwapMinDelay)
+            if not waitCancelable(delaySeconds, token) then
+                return
+            end
+
+            local faceObject = findReboundFace()
+            if faceObject then
+                local randomId = FACE_GLITCH_IDS[math.random(1, #FACE_GLITCH_IDS)]
+                setFaceTexture(faceObject, randomId)
+                if not waitCancelable(CONFIG.FaceSwapDuration, token) then
+                    return
+                end
+                setFaceTexture(faceObject, FACE_NORMAL_ID)
+            else
+                task.wait(0.2)
+            end
+        end
+    end)
+end
+
+local function hideInventory()
+    local playerGui = player:FindFirstChild("PlayerGui")
+    if not playerGui then
+        return
+    end
+
+    local mainUI = playerGui:FindFirstChild("MainUI")
+    local settings = mainUI and mainUI:FindFirstChild("Settings")
+    local inventory = settings and settings:FindFirstChild("Inventory")
+    if not inventory then
+        for _, item in ipairs(playerGui:GetDescendants()) do
+            if item:IsA("GuiObject") and item.Name:lower():find("inventory", 1, true) then
+                inventory = item
+                break
+            end
+        end
+    end
+
+    if inventory and inventory:IsA("GuiObject") then
+        State.inventory = inventory
+        State.originalInventoryVisible = inventory.Visible
+        inventory.Visible = false
+    end
+end
+
+local function startMouseOverride(token)
+    State.originalMouseBehavior = UserInputService.MouseBehavior
+    State.originalMouseIconEnabled = UserInputService.MouseIconEnabled
+
+    State.mouseConnection = addConnection(RunService.RenderStepped:Connect(function()
+        if alive(token) and State.phase > 0 then
+            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+            UserInputService.MouseIconEnabled = true
+        end
+    end))
+    UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+    UserInputService.MouseIconEnabled = true
+end
+
+local function corner(parent, radius)
+    local item = Instance.new("UICorner")
+    item.CornerRadius = UDim.new(0, radius)
+    item.Parent = parent
+    return item
+end
+
+local function stroke(parent, color, thickness, transparency)
+    local item = Instance.new("UIStroke")
+    item.Color = color
+    item.Thickness = thickness
+    item.Transparency = transparency or 0
+    item.Parent = parent
+    return item
+end
+
+local function makeLabel(parent, name, text, size, position, font, color, textSize, alignment)
+    local label = Instance.new("TextLabel")
+    label.Name = name
+    label.BackgroundTransparency = 1
+    label.Size = size
+    label.Position = position
+    label.Font = font or Enum.Font.Gotham
+    label.Text = text
+    label.TextColor3 = color or COLORS.Text
+    label.TextSize = textSize or 18
+    label.TextWrapped = true
+    label.TextXAlignment = alignment or Enum.TextXAlignment.Center
+    label.ZIndex = 15
+    label.Parent = parent
+    return label
+end
+
+local function makeTarget(parent, name, color, diameter)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.AnchorPoint = Vector2.new(0.5, 0.5)
+    button.Size = UDim2.fromOffset(diameter + 12, diameter + 12)
+    button.Position = UDim2.fromScale(0.5, 0.5)
+    button.BackgroundTransparency = 1
+    button.BorderSizePixel = 0
+    button.AutoButtonColor = false
+    button.Text = ""
+    button.Active = true
+    button.Selectable = true
+    button.ZIndex = 20
+    button.Parent = parent
+
+    local orb = Instance.new("Frame")
+    orb.Name = "Orb"
+    orb.AnchorPoint = Vector2.new(0.5, 0.5)
+    orb.Position = UDim2.fromScale(0.5, 0.5)
+    orb.Size = UDim2.fromOffset(diameter, diameter)
+    orb.BackgroundColor3 = color
+    orb.BorderSizePixel = 0
+    orb.ZIndex = 20
+    orb.Parent = button
+    corner(orb, 999)
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new(Color3.new(1, 1, 1), color)
+    gradient.Rotation = 45
+    gradient.Parent = orb
+    stroke(orb, Color3.new(1, 1, 1), 2, 0.45)
+
+    local scale = Instance.new("UIScale")
+    scale.Name = "PopScale"
+    scale.Scale = 1
+    scale.Parent = button
+
+    local shine = Instance.new("Frame")
+    shine.Name = "Shine"
+    shine.AnchorPoint = Vector2.new(0.5, 0.5)
+    shine.Position = UDim2.fromScale(0.36, 0.34)
+    shine.Size = UDim2.fromScale(0.26, 0.26)
+    shine.BackgroundColor3 = Color3.new(1, 1, 1)
+    shine.BackgroundTransparency = 0.25
+    shine.BorderSizePixel = 0
+    shine.ZIndex = 21
+    shine.Parent = orb
+    corner(shine, 999)
+
+    return button
+end
+
+local function setTargetDiameter(target, diameter)
+    if not target then
+        return
+    end
+    target.Size = UDim2.fromOffset(diameter + 12, diameter + 12)
+    local orb = target:FindFirstChild("Orb")
+    if orb then
+        orb.Size = UDim2.fromOffset(diameter, diameter)
+    end
+end
+
+local function createUI()
+    local playerGui = player:WaitForChild("PlayerGui")
+    local old = playerGui:FindFirstChild("HatredBossUI")
+    destroy(old)
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "HatredBossUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    gui.DisplayOrder = 10000
+    gui.Parent = playerGui
+    State.gui = gui
+
+    local dim = Instance.new("Frame")
+    dim.Name = "Dim"
+    dim.Size = UDim2.fromScale(1, 1)
+    dim.BackgroundColor3 = Color3.new(0, 0, 0)
+    dim.BackgroundTransparency = 1
+    dim.BorderSizePixel = 0
+    dim.ZIndex = 10
+    dim.Parent = gui
+
+    local panel = Instance.new("Frame")
+    panel.Name = "Panel"
+    panel.AnchorPoint = Vector2.new(0.5, 0.5)
+    panel.Position = UDim2.fromScale(0.5, 0.5)
+    panel.Size = UDim2.fromScale(0.72, 0.72)
+    panel.BackgroundColor3 = COLORS.Panel
+    panel.BackgroundTransparency = 0.05
+    panel.BorderSizePixel = 0
+    panel.ClipsDescendants = true
+    panel.ZIndex = 11
+    panel.Parent = gui
+    corner(panel, 18)
+    stroke(panel, Color3.fromRGB(107, 48, 68), 2, 0.25)
+
+    local sizeConstraint = Instance.new("UISizeConstraint")
+    sizeConstraint.MinSize = Vector2.new(310, 340)
+    sizeConstraint.MaxSize = Vector2.new(980, 700)
+    sizeConstraint.Parent = panel
+
+    local panelScale = Instance.new("UIScale")
+    panelScale.Name = "EntranceScale"
+    panelScale.Scale = 0.84
+    panelScale.Parent = panel
+
+    local accent = Instance.new("Frame")
+    accent.Size = UDim2.new(1, 0, 0, 5)
+    accent.BackgroundColor3 = COLORS.Red
+    accent.BorderSizePixel = 0
+    accent.ZIndex = 12
+    accent.Parent = panel
+    local accentGradient = Instance.new("UIGradient")
+    accentGradient.Color = ColorSequence.new(COLORS.RedDark, COLORS.Red, COLORS.RedDark)
+    accentGradient.Parent = accent
+
+    local title = makeLabel(panel, "Title", "H A T R E D", UDim2.new(0.55, 0, 0, 44), UDim2.new(0.04, 0, 0, 18), Enum.Font.GothamBlack, COLORS.Text, 23, Enum.TextXAlignment.Left)
+    local phaseLabel = makeLabel(panel, "Phase", "PHASE 1 / 3", UDim2.new(0.35, 0, 0, 44), UDim2.new(0.61, 0, 0, 18), Enum.Font.GothamBold, COLORS.Gold, 16, Enum.TextXAlignment.Right)
+
+    local instruction = makeLabel(panel, "Instruction", "点击红色目标", UDim2.new(0.92, 0, 0, 34), UDim2.new(0.04, 0, 0, 65), Enum.Font.GothamMedium, COLORS.Muted, 16)
+
+    local statBar = Instance.new("Frame")
+    statBar.Name = "StatBar"
+    statBar.Size = UDim2.new(0.92, 0, 0, 46)
+    statBar.Position = UDim2.new(0.04, 0, 0, 104)
+    statBar.BackgroundColor3 = COLORS.Panel2
+    statBar.BorderSizePixel = 0
+    statBar.ZIndex = 12
+    statBar.Parent = panel
+    corner(statBar, 10)
+
+    local counter = makeLabel(statBar, "Counter", "0 / 10", UDim2.new(0.28, 0, 1, 0), UDim2.new(0.03, 0, 0, 0), Enum.Font.GothamBold, COLORS.Text, 17, Enum.TextXAlignment.Left)
+    local timer = makeLabel(statBar, "Timer", "20.0", UDim2.new(0.25, 0, 1, 0), UDim2.new(0.72, 0, 0, 0), Enum.Font.GothamBlack, COLORS.Text, 19, Enum.TextXAlignment.Right)
+
+    local progressBack = Instance.new("Frame")
+    progressBack.Name = "ProgressBack"
+    progressBack.AnchorPoint = Vector2.new(0.5, 0.5)
+    progressBack.Position = UDim2.fromScale(0.5, 0.5)
+    progressBack.Size = UDim2.new(0.36, 0, 0, 7)
+    progressBack.BackgroundColor3 = Color3.fromRGB(49, 52, 70)
+    progressBack.BorderSizePixel = 0
+    progressBack.ZIndex = 13
+    progressBack.Parent = statBar
+    corner(progressBack, 999)
+
+    local progress = Instance.new("Frame")
+    progress.Name = "Progress"
+    progress.Size = UDim2.fromScale(0, 1)
+    progress.BackgroundColor3 = COLORS.Red
+    progress.BorderSizePixel = 0
+    progress.ZIndex = 14
+    progress.Parent = progressBack
+    corner(progress, 999)
+
+    local arena = Instance.new("Frame")
+    arena.Name = "Arena"
+    arena.Size = UDim2.new(0.92, 0, 1, -205)
+    arena.Position = UDim2.new(0.04, 0, 0, 164)
+    arena.BackgroundColor3 = COLORS.Background
+    arena.BackgroundTransparency = 0.12
+    arena.BorderSizePixel = 0
+    arena.ClipsDescendants = true
+    arena.ZIndex = 12
+    arena.Parent = panel
+    corner(arena, 14)
+    stroke(arena, Color3.fromRGB(69, 72, 94), 1, 0.35)
+
+    local arenaGradient = Instance.new("UIGradient")
+    arenaGradient.Color = ColorSequence.new(Color3.fromRGB(13, 14, 23), Color3.fromRGB(25, 13, 21))
+    arenaGradient.Rotation = 35
+    arenaGradient.Parent = arena
+
+    local redTarget = makeTarget(arena, "RedTarget", COLORS.Red, 66)
+    local blueTarget1 = makeTarget(arena, "BlueTarget1", COLORS.Blue, 58)
+    local blueTarget2 = makeTarget(arena, "BlueTarget2", COLORS.Blue, 58)
+    blueTarget1.Visible = false
+    blueTarget2.Visible = false
+
+    local footer = makeLabel(panel, "Footer", "Blue -3s", UDim2.new(0.92, 0, 0, 26), UDim2.new(0.04, 0, 1, -34), Enum.Font.Gotham, COLORS.Muted, 12)
+
+    local phaseSound = Instance.new("Sound")
+    phaseSound.Name = "HatredPhaseTransition"
+    phaseSound.SoundId = "rbxassetid://" .. tostring(CONFIG.PhaseTransitionSoundId)
+    phaseSound.Volume = 0.9
+    phaseSound.Parent = SoundService
+    State.phaseSound = phaseSound
+
+    State.blur = Instance.new("BlurEffect")
+    State.blur.Name = "HatredBossBlur"
+    State.blur.Size = 0
+    State.blur.Parent = Lighting
+
+    playTween(dim, TweenInfo.new(0.55, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.36})
+    playTween(State.blur, TweenInfo.new(0.55, Enum.EasingStyle.Quad), {Size = 14})
+    playTween(panelScale, TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
+
+    State.ui = {
+        Dim = dim,
+        Panel = panel,
+        PanelScale = panelScale,
+        Phase = phaseLabel,
+        Instruction = instruction,
+        Counter = counter,
+        Timer = timer,
+        Progress = progress,
+        Arena = arena,
+        Red = redTarget,
+        Blue1 = blueTarget1,
+        Blue2 = blueTarget2,
+        Footer = footer,
+    }
+    return State.ui
+end
+
+local function moveTarget(target, speed)
+    local ui = State.ui
+    if not ui or not target or not target.Visible or not target.Parent then
+        return
+    end
+
+    local arenaSize = ui.Arena.AbsoluteSize
+    local targetSize = target.AbsoluteSize
+    if arenaSize.X < 10 or arenaSize.Y < 10 then
+        return
+    end
+
+    local halfX = targetSize.X * 0.5 + 8
+    local halfY = targetSize.Y * 0.5 + 8
+    local x = math.random(math.floor(halfX), math.max(math.floor(halfX), math.floor(arenaSize.X - halfX)))
+    local y = math.random(math.floor(halfY), math.max(math.floor(halfY), math.floor(arenaSize.Y - halfY)))
+
+    local oldTween = State.targetTweens[target]
+    if oldTween then
+        pcall(function()
+            oldTween:Cancel()
+        end)
+    end
+    local tween = TweenService:Create(target, TweenInfo.new(speed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Position = UDim2.fromOffset(x, y),
+    })
+    State.targetTweens[target] = tween
+    tween:Play()
+end
+
+local function targetPulse(target, color)
+    if not target or not target.Parent then
+        return
+    end
+    local scale = target:FindFirstChild("PopScale")
+    local orb = target:FindFirstChild("Orb")
+    local outline = orb and orb:FindFirstChildOfClass("UIStroke")
+    if scale then
+        scale.Scale = 0.78
+        playTween(scale, TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
+    end
+    if outline then
+        outline.Color = color
+        outline.Transparency = 0
+        playTween(outline, TweenInfo.new(0.35), {Transparency = 0.45})
+    end
+end
+
+local function updateHUD()
+    local ui = State.ui
+    if not ui or not ui.Panel.Parent or State.phase < 1 then
+        return
+    end
+
+    local goal = CONFIG.PhaseGoals[State.phase]
+    ui.Phase.Text = string.format("PHASE %d / 3", State.phase)
+    ui.Counter.Text = string.format("%d / %d", State.clicks, goal)
+    local ratio = math.clamp(State.clicks / goal, 0, 1)
+    playTween(ui.Progress, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {Size = UDim2.fromScale(ratio, 1)})
+
+    if State.phase == 1 then
+        ui.Phase.TextColor3 = COLORS.Gold
+        ui.Instruction.Text = "Click the red one!"
+    elseif State.phase == 2 then
+        ui.Phase.TextColor3 = Color3.fromRGB(217, 112, 255)
+        ui.Instruction.Text = "Click the red one, Dodge the blue"
+    else
+        ui.Phase.TextColor3 = COLORS.Red
+        ui.Instruction.Text = "END：Dodge the blue."
+    end
+end
+
+local function flashMessage(text, color, seconds, token)
+    local ui = State.ui
+    if not ui or not ui.Instruction.Parent then
+        return
+    end
+    local expectedPhase = State.phase
+    ui.Instruction.Text = text
+    ui.Instruction.TextColor3 = color
+    task.delay(seconds or 0.8, function()
+        if alive(token) and State.phase == expectedPhase then
+            ui.Instruction.TextColor3 = COLORS.Muted
+            updateHUD()
+        end
+    end)
+end
+
+local function beginPhase(phase, token)
+    if not alive(token) then
+        return
+    end
+    State.phase = phase
+    State.clicks = 0
+    State.deadline = os.clock() + CONFIG.PhaseTimes[phase]
+
+    local ui = State.ui
+    ui.Progress.Size = UDim2.fromScale(0, 1)
+    ui.Red.Visible = true
+    ui.Blue1.Visible = phase >= 2
+    ui.Blue2.Visible = phase >= 3
+    setTargetDiameter(ui.Red, phase == 1 and 66 or (phase == 2 and 58 or 52))
+    setTargetDiameter(ui.Blue1, phase == 3 and 50 or 56)
+    setTargetDiameter(ui.Blue2, 50)
+    updateHUD()
+
+    task.defer(function()
+        RunService.Heartbeat:Wait()
+        if alive(token) then
+            moveTarget(ui.Red, 0)
+            moveTarget(ui.Blue1, 0)
+            moveTarget(ui.Blue2, 0)
+        end
+    end)
+end
+
+local function removeBoss()
+    local model = State.boss
+    State.boss = nil
+    disconnect(State.bossConnection)
+    State.bossConnection = nil
+    destroy(model)
+end
+
+local function restoreLocalState()
+    if State.inventory and State.inventory.Parent and State.originalInventoryVisible ~= nil then
+        State.inventory.Visible = State.originalInventoryVisible
+    end
+    State.inventory = nil
+
+    if State.originalMouseBehavior ~= nil then
+        UserInputService.MouseBehavior = State.originalMouseBehavior
+    end
+    if State.originalMouseIconEnabled ~= nil then
+        UserInputService.MouseIconEnabled = State.originalMouseIconEnabled
+    end
+end
+
+local function cleanup(immediate)
+    if State.cleaned then
+        return
+    end
+    State.cleaned = true
+    State.running = false
+    State.phase = 0
+    State.token = State.token + 1
+
+    pcall(function()
+        RunService:UnbindFromRenderStep(SHAKE_BIND_NAME)
+    end)
+
+    for _, connection in ipairs(State.connections) do
+        disconnect(connection)
+    end
+    State.connections = {}
+
+    for _, tween in ipairs(State.tweens) do
+        pcall(function()
+            tween:Cancel()
+        end)
+    end
+    State.tweens = {}
+    State.targetTweens = {}
+
+    fadeMusic(immediate and 0.05 or 0.9)
+    destroy(State.phaseSound)
+    State.phaseSound = nil
+    destroy(State.failureSound)
+    State.failureSound = nil
+    destroy(State.boss)
+    State.boss = nil
+    destroy(State.blur)
+    State.blur = nil
+    destroy(State.gui)
+    State.gui = nil
+    State.ui = nil
+    restoreLocalState()
+end
+
+Controller.Stop = function()
+    cleanup(false)
+end
+
+local function defeatPlayer()
+    local character, _, humanoid = getCharacterParts(2)
+    local signaled = false
+    if type(replicatesignal) == "function" then
+        signaled = pcall(function()
+            replicatesignal(player.Kill)
+        end)
+    end
+    if not signaled and humanoid and humanoid.Parent then
+        humanoid.Health = 0
+    elseif not signaled and character then
+        character:BreakJoints()
+    end
+end
+
+local FAILURE_TEXTURE_IDS = {
+    88894221959954,
+    12293713542,
+    6214195404,
+}
+
+local function createFailureOverlay()
+    local gui = State.gui
+    if not gui or not gui.Parent then
+        return nil
+    end
+
+    local old = gui:FindFirstChild("FailureOverlay")
+    destroy(old)
+
+    local overlay = Instance.new("Frame")
+    overlay.Name = "FailureOverlay"
+    overlay.Size = UDim2.fromScale(1, 1)
+    overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+    overlay.BackgroundTransparency = 1
+    overlay.BorderSizePixel = 0
+    overlay.ClipsDescendants = true
+    overlay.ZIndex = 500
+    overlay.Parent = gui
+
+    local textLayer = Instance.new("Frame")
+    textLayer.Name = "LoserTextLayer"
+    textLayer.Size = UDim2.fromScale(1, 1)
+    textLayer.BackgroundTransparency = 1
+    textLayer.BorderSizePixel = 0
+    textLayer.ZIndex = 510
+    textLayer.Parent = overlay
+
+    local glitchBars = {}
+    for index = 1, 18 do
+        local bar = Instance.new("Frame")
+        bar.Name = "EdgeError" .. index
+        bar.BackgroundColor3 = COLORS.Red
+        bar.BackgroundTransparency = 1
+        bar.BorderSizePixel = 0
+        bar.ZIndex = 505
+        bar.Parent = overlay
+        table.insert(glitchBars, bar)
+    end
+
+    local glitchImages = {}
+    for index = 1, 12 do
+        local image = Instance.new("ImageLabel")
+        image.Name = "ErrorTexture" .. index
+        image.AnchorPoint = Vector2.new(0.5, 0.5)
+        image.BackgroundTransparency = 1
+        image.BorderSizePixel = 0
+        image.Image = "rbxassetid://" .. tostring(FAILURE_TEXTURE_IDS[((index - 1) % #FAILURE_TEXTURE_IDS) + 1])
+        image.ImageTransparency = 1
+        image.ScaleType = Enum.ScaleType.Stretch
+        image.Visible = false
+        image.ZIndex = 508 + (index % 3)
+        image.Parent = overlay
+        table.insert(glitchImages, image)
+    end
+
+    destroy(State.failureSound)
+    local failureSound = Instance.new("Sound")
+    failureSound.Name = "HatredLoserGlitch"
+    failureSound.SoundId = "rbxassetid://" .. tostring(CONFIG.FailureSoundId)
+    failureSound.Volume = CONFIG.FailureSoundVolume
+    failureSound.Parent = SoundService
+    State.failureSound = failureSound
+
+    return overlay, textLayer, glitchBars, glitchImages
+end
+
+local function updateFailureGlitch(textLayer, glitchBars, glitchImages, intensity)
+    if textLayer and textLayer.Parent then
+        local jitter = math.floor(2 + intensity * 12)
+        textLayer.Position = UDim2.fromOffset(math.random(-jitter, jitter), math.random(-jitter, jitter))
+    end
+
+    for index, bar in ipairs(glitchBars) do
+        if not bar.Parent then
+            continue
+        end
+
+        local side = ((index - 1) % 4) + 1
+        local thickness = math.random(2, math.floor(5 + intensity * 25))
+        local length = math.random(8, math.floor(20 + intensity * 70)) / 100
+        if side == 1 then
+            bar.Size = UDim2.new(length, 0, 0, thickness)
+            bar.Position = UDim2.new(math.random(), 0, 0, math.random(0, 22))
+        elseif side == 2 then
+            bar.AnchorPoint = Vector2.new(0, 1)
+            bar.Size = UDim2.new(length, 0, 0, thickness)
+            bar.Position = UDim2.new(math.random(), 0, 1, -math.random(0, 22))
+        elseif side == 3 then
+            bar.Size = UDim2.new(0, thickness, length, 0)
+            bar.Position = UDim2.new(0, math.random(0, 22), math.random(), 0)
+        else
+            bar.AnchorPoint = Vector2.new(1, 0)
+            bar.Size = UDim2.new(0, thickness, length, 0)
+            bar.Position = UDim2.new(1, -math.random(0, 22), math.random(), 0)
+        end
+
+        local colorRoll = math.random(1, 5)
+        bar.BackgroundColor3 = colorRoll == 1 and Color3.new(1, 1, 1)
+            or (colorRoll == 2 and Color3.fromRGB(30, 0, 0) or COLORS.Red)
+        bar.BackgroundTransparency = math.random(5, math.floor(35 + (1 - intensity) * 50)) / 100
+        bar.Visible = math.random() < (0.35 + intensity * 0.65)
+    end
+
+    for _, image in ipairs(glitchImages) do
+        if image.Parent then
+            local width = math.random(18, math.floor(35 + intensity * 55)) / 100
+            local height = math.random(12, math.floor(25 + intensity * 50)) / 100
+            image.Size = UDim2.fromScale(width, height)
+            image.Position = UDim2.fromScale(math.random(), math.random())
+            image.Rotation = math.random(-12, 12)
+            image.Image = "rbxassetid://" .. tostring(FAILURE_TEXTURE_IDS[math.random(1, #FAILURE_TEXTURE_IDS)])
+            image.ImageColor3 = math.random() < 0.25 and Color3.new(1, 1, 1)
+                or Color3.fromRGB(255, math.random(15, 75), math.random(15, 75))
+            image.ImageTransparency = math.random(8, math.floor(35 + (1 - intensity) * 45)) / 100
+            image.Visible = math.random() < (0.2 + intensity * 0.72)
+        end
+    end
+end
+
+local function spawnLoserText(textLayer, intensity, isFirst)
+    if not textLayer or not textLayer.Parent then
+        return
+    end
+
+    local failureSound = State.failureSound
+    if failureSound and failureSound.Parent then
+        pcall(function()
+            failureSound.TimePosition = 0
+            failureSound:Play()
+        end)
+    end
+
+    local label = Instance.new("TextLabel")
+    label.Name = "YOUR_LOSER"
+    label.AnchorPoint = Vector2.new(0.5, 0.5)
+    label.Size = isFirst and UDim2.fromOffset(420, 100)
+        or UDim2.fromOffset(math.random(150, 430), math.random(45, 115))
+    label.Position = isFirst and UDim2.fromScale(0.5, 0.5)
+        or UDim2.fromScale(math.random(), math.random())
+    label.BackgroundTransparency = 1
+    label.BorderSizePixel = 0
+    label.Font = math.random() < 0.35 and Enum.Font.Code or Enum.Font.GothamBlack
+    label.Text = "YOUR LOSER"
+    label.TextColor3 = math.random() < 0.18 and Color3.new(1, 1, 1) or COLORS.Red
+    label.TextStrokeColor3 = Color3.new(0, 0, 0)
+    label.TextStrokeTransparency = math.max(0, 0.5 - intensity * 0.45)
+    label.TextTransparency = isFirst and 0 or math.random(0, 25) / 100
+    label.TextScaled = true
+    label.Rotation = isFirst and 0 or math.random(-18, 18)
+    label.ZIndex = 520 + math.random(0, 5)
+    label.Parent = textLayer
+
+    local scale = Instance.new("UIScale")
+    scale.Scale = isFirst and 0.15 or math.random(35, 85) / 100
+    scale.Parent = label
+    playTween(
+        scale,
+        TweenInfo.new(isFirst and 0.55 or math.max(0.04, 0.18 - intensity * 0.12), Enum.EasingStyle.Back),
+        {Scale = isFirst and 1 or math.random(90, 150) / 100}
+    )
+end
+
+local function playFailureSequence(token)
+    local overlay, textLayer, glitchBars, glitchImages = createFailureOverlay()
+    if not overlay then
+        return false
+    end
+
+    playTween(
+        overlay,
+        TweenInfo.new(CONFIG.FailureFadeDuration, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+        {BackgroundTransparency = 0}
+    )
+
+    if not waitCancelable(1.4, token) then
+        return false
+    end
+
+    spawnLoserText(textLayer, 0, true)
+    if not waitCancelable(1.1, token) then
+        return false
+    end
+    local stormStart = os.clock()
+    local spawned = 1
+
+    while alive(token) do
+        local elapsed = os.clock() - stormStart
+        local progress = math.clamp(elapsed / CONFIG.FailureStormDuration, 0, 1)
+        if progress >= 1 then
+            break
+        end
+
+        updateFailureGlitch(textLayer, glitchBars, glitchImages, progress)
+        local burst = 1 + math.floor(progress * 4)
+        for _ = 1, burst do
+            if spawned >= 240 then
+                break
+            end
+            spawnLoserText(textLayer, progress, false)
+            spawned = spawned + 1
+        end
+
+        local interval = 0.92 * ((1 - progress) ^ 2) + 0.045
+        if not waitCancelable(interval, token) then
+            return false
+        end
+    end
+
+    if textLayer and textLayer.Parent then
+        textLayer:Destroy()
+    end
+    for _, bar in ipairs(glitchBars) do
+        destroy(bar)
+    end
+    for _, image in ipairs(glitchImages) do
+        destroy(image)
+    end
+    destroy(State.failureSound)
+    State.failureSound = nil
+    overlay.BackgroundTransparency = 0
+
+    return waitCancelable(CONFIG.FailureVoidDuration, token)
+end
+
+local function finish(result, token)
+    if State.ending or not alive(token) then
+        return
+    end
+    State.ending = true
+
+    local ui = State.ui
+    if ui then
+        ui.Red.Visible = false
+        ui.Blue1.Visible = false
+        ui.Blue2.Visible = false
+        ui.Timer.Text = result == "victory" and "CLEAR" or "FAILED"
+        ui.Timer.TextColor3 = result == "victory" and COLORS.Green or COLORS.Red
+        ui.Instruction.Text = result == "victory" and "存活于憎恨" or "YOUR LOSER"
+        ui.Instruction.TextColor3 = result == "victory" and COLORS.Green or COLORS.Red
+    end
+
+    if result == "victory" then
+        removeBoss()
+        fadeMusic(1.8)
+        waitCancelable(1.1, token)
+        safeCaption("It looks like you've made progress. Congratulations.")
+        waitCancelable(1.3, token)
+        cleanup(false)
+    else
+        fadeMusic(4)
+        if playFailureSequence(token) and alive(token) then
+            defeatPlayer()
+        end
+        cleanup(true)
+    end
+end
+
+local function startMiniGame(token)
+    local ui = createUI()
+    hideInventory()
+    beginPhase(1, token)
+    startMouseOverride(token)
+
+    local transitioning = false
+    local nextRedMove = 0
+    local nextBlue1Move = 0
+    local nextBlue2Move = 0
+
+    addConnection(ui.Red.Activated:Connect(function()
+        if not alive(token) or State.ending or transitioning then
+            return
+        end
+        State.clicks = State.clicks + 1
+        targetPulse(ui.Red, Color3.new(1, 1, 1))
+        updateHUD()
+
+        if State.clicks >= CONFIG.PhaseGoals[State.phase] then
+            if State.phase >= 3 then
+                task.spawn(finish, "victory", token)
+                return
+            end
+
+            transitioning = true
+            local nextPhase = State.phase + 1
+            State.deadline = math.huge
+            ui.Red.Visible = false
+            ui.Blue1.Visible = false
+            ui.Blue2.Visible = false
+            ui.Timer.Text = "READY"
+            ui.Timer.TextColor3 = COLORS.Gold
+            ui.Instruction.Text = nextPhase == 3
+                and "存活第二阶段"
+                or "存活第一阶段"
+            ui.Instruction.TextColor3 = COLORS.Gold
+            if State.phaseSound then
+                State.phaseSound.TimePosition = 0
+                State.phaseSound:Play()
+            end
+            task.delay(CONFIG.PhaseTransitionDelay, function()
+                if alive(token) then
+                    beginPhase(nextPhase, token)
+                    transitioning = false
+                end
+            end)
+        else
+            moveTarget(ui.Red, State.phase == 3 and 0.12 or 0.18)
+        end
+    end))
+
+    local function blueClicked(target)
+        if not alive(token) or State.ending or transitioning or State.phase < 2 then
+            return
+        end
+        State.deadline = State.deadline - CONFIG.BluePenalty
+        targetPulse(target, COLORS.Red)
+        flashMessage("-3s 躲避蓝色", COLORS.Red, 0.75, token)
+        moveTarget(target, 0.16)
+    end
+
+    addConnection(ui.Blue1.Activated:Connect(function()
+        blueClicked(ui.Blue1)
+    end))
+    addConnection(ui.Blue2.Activated:Connect(function()
+        if State.phase >= 3 then
+            blueClicked(ui.Blue2)
+        end
+    end))
+
+    addConnection(RunService.Heartbeat:Connect(function()
+        if not alive(token) or State.ending or State.phase < 1 then
+            return
+        end
+
+        if transitioning then
+            ui.Timer.Text = "READY"
+            ui.Timer.TextColor3 = COLORS.Gold
+            return
+        end
+
+        local now = os.clock()
+        local remaining = math.max(0, State.deadline - now)
+        ui.Timer.Text = string.format("%.1f", remaining)
+        ui.Timer.TextColor3 = remaining <= 5 and COLORS.Red or COLORS.Text
+
+        if not transitioning then
+            local redInterval = State.phase == 1 and 0.82 or (State.phase == 2 and 0.66 or 0.5)
+            if now >= nextRedMove then
+                moveTarget(ui.Red, State.phase == 3 and 0.16 or 0.22)
+                nextRedMove = now + redInterval
+            end
+            if State.phase >= 2 and now >= nextBlue1Move then
+                moveTarget(ui.Blue1, 0.3)
+                nextBlue1Move = now + (State.phase == 3 and 0.8 or 1.05)
+            end
+            if State.phase >= 3 and now >= nextBlue2Move then
+                moveTarget(ui.Blue2, 0.3)
+                nextBlue2Move = now + 0.9
+            end
+        end
+
+        if remaining <= 0 then
+            task.spawn(finish, "defeat", token)
+        end
+    end))
+end
+
+local function runEvent()
+    if State.running then
+        return
+    end
+
+    State.cleaned = false
+    State.running = true
+    State.ending = false
+    State.phase = 0
+    State.clicks = 0
+    State.token = State.token + 1
+    local token = State.token
+
+    local ok, errorMessage = xpcall(function()
+        local _, root = getCharacterParts(6)
+        if not root then
+            error("HumanoidRootPart was not found")
+        end
+
+        startRoomFlicker()
+        startCameraShake(token)
+        loadBossMusic()
+        safeCaption("What is this?")
+        if not waitCancelable(0.5, token) then
+            return
+        end
+        if not startBossMovement(root, token) then
+            error("Original boss model could not be loaded")
+        end
+        startFaceChanging(token)
+
+        if not waitCancelable(CONFIG.ApproachDuration, token) then
+            return
+        end
+        safeCaption("We meet again, little bug.")
+        if not waitCancelable(3.2, token) then return end
+        safeCaption("I hope you can learn a lesson this time.")
+        if not waitCancelable(3.2, token) then return end
+        safeCaption("Let's get started.")
+        if not waitCancelable(1, token) then return end
+
+        startMiniGame(token)
+    end, debug.traceback)
+
+    if not ok then
+        cleanup(true)
+    end
+end
+
+addConnection(player.CharacterRemoving:Connect(function()
+    cleanup(true)
+end))
+
+Controller.Start = runEvent
+task.spawn(runEvent)
+end
 
 local entityConfig = {
     ["rbxassetid://1"] = entityBehaviors.ATCHRipper,
@@ -6768,6 +8711,8 @@ local entityConfig = {
     ["rbxassetid://18"] = entityBehaviors.CreakWhite,
     ["rbxassetid://19"] = entityBehaviors.Silence,
     ["rbxassetid://20"] = entityBehaviors.DeerGod,
+    ["rbxassetid://21"] = entityBehaviors.FrostBite,
+    ["rbxassetid://22"] = entityBehaviors.HATRED,
     ["rbxassetid://2"] = entityBehaviors.A200
 }
 local checkedEntities = {}

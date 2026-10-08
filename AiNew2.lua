@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"异常层级，请联系管理员",
-	"物资极其充足!",
-	"无法前往",
+	"安全层级,实体绝迹",
 	"无法前往",
 	"无任何新消息",
-	"???",
 	"无任何新消息",
-	"Rage"
+	"无任何新消息",
+	"披萨派对",
+	"无任何新消息",
+	"无任何新消息"
 }
 
 local stopped = false

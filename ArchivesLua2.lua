@@ -3524,6 +3524,9 @@ end
 function entityBehaviors.broadcast()
 loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/AiNew2.lua?raw=true"))()
 end
+function entityBehaviors.ai2()
+loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/AiNew3.lua?raw=true"))()
+end
 local entityConfig = {
     ["rbxassetid://40"] = entityBehaviors.SA90,
     ["rbxassetid://42"] = entityBehaviors.OSAB,
@@ -3551,6 +3554,7 @@ local entityConfig = {
     ["rbxassetid://64"] = entityBehaviors.A6,
     ["rbxassetid://65"] = entityBehaviors.A7,
     ["rbxassetid://66"] = entityBehaviors.broadcast,
+    ["rbxassetid://67"] = entityBehaviors.ai2,
     ["rbxassetid://41"] = entityBehaviors.WH1T3
 }
 local checkedEntities = {}

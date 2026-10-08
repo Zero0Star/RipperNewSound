@@ -91,12 +91,12 @@ CLText.TextWrapped = true
 CLText.TextXAlignment = Enum.TextXAlignment.Left
 CLText.TextYAlignment = Enum.TextYAlignment.Top
 CLText.Text =
-"1. They’re here💀"
+"1. The Archive updated / Fixed all the bugs, so now monsters won't disappear because of differences between devices."
 CLText.Parent = CL
 
 local TL = Instance.new("TextLabel")
 TL.Name = "Title"
-TL.Text = "HardCore V10.5"
+TL.Text = "HardCore V10.6"
 TL.FontFace = CF
 TL.TextSize = 32
 TL.TextColor3 = Color3.fromRGB(255, 240, 230)
@@ -118,7 +118,7 @@ TI.Name = "TopImage"
 TI.Size = UDim2.new(0.9, 0, 0.3, 0)
 TI.Position = UDim2.new(0.05, 0, 0.12, 0)
 TI.BackgroundTransparency = 1
-TI.Image = "rbxassetid://126272536662931"
+TI.Image = "rbxassetid://119904477151805"
 TI.ScaleType = Enum.ScaleType.Crop
 TI.Parent = MC
 local C2 = Instance.new("UICorner")
@@ -204,7 +204,7 @@ CB2.LayoutOrder = 3
 CB2.BackgroundColor3 = Color3.fromRGB(255, 222, 189)
 CB2.BackgroundTransparency = 0.1
 CB2.AutoButtonColor = true
-CB2.Text = "Archives(24h)"
+CB2.Text = "Archives"
 CB2.FontFace = CF
 CB2.TextColor3 = Color3.fromRGB(80, 60, 40)
 CB2.TextScaled = true
@@ -326,10 +326,158 @@ UB.MouseButton1Click:Connect(function()
 end)
 
 CB2.MouseButton1Click:Connect(function()
+
     playAudio()
-    pcall(function()
-        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("即将到来!", true)
+
+    local RunService = game:GetService("RunService")
+
+    local items = {
+        "HardcoreOne",
+        "HardcoreTwo",
+        "HardcoreM",
+        "HardcoreITEM",
+        "HardcoreMusic"
+    }
+
+
+    local found = {}
+    local connection = nil
+    local lastCount = 0
+    local loading = false
+
+
+    if loading then
+        return
+    end
+
+    loading = true
+
+
+
+    local function updateProgress()
+
+        local count = 0
+
+        for _, name in ipairs(items) do
+
+            if found[name] then
+                count += 1
+            end
+
+        end
+
+        if count ~= lastCount then
+
+            lastCount = count
+
+
+            pcall(function()
+
+                require(
+                    game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game
+                ).caption(
+                    "HardCore Archives Loading: "
+                    ..count.."/"..#items,
+                    true
+                )
+            end)
+        end
+        if count == #items then
+
+
+            if connection then
+                connection:Disconnect()
+                connection = nil
+            end
+
+            pcall(function()
+
+                require(
+                    game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game
+                ).caption(
+                    "HardCore Archives is all loaded!",
+                    true
+                )
+
+            end)
+
+        end
+
+    end
+    connection = RunService.Heartbeat:Connect(function()
+        for _, name in ipairs(items) do
+            if not found[name] then
+                local item = workspace:FindFirstChild(name,true)
+                if item and item:IsA("BoolValue") then
+                    found[name] = true
+
+                    updateProgress()
+                end
+            end
+        end
     end)
+
+    task.spawn(function()
+
+        local scriptUrls = {
+
+            "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/master/ArchivesLua.lua",
+
+            "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/master/ArchivesLua2.lua",
+
+            "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/master/Charm.lua",
+
+            "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/master/ArchivesSound.lua",
+
+            "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/master/HardCoreitem.lua"
+
+        }
+
+        for _, url in ipairs(scriptUrls) do
+
+            task.spawn(function()
+
+                local success, err = pcall(function()
+
+
+                    local code = game:HttpGet(url)
+
+
+                    local func = loadstring(code)
+
+
+                    if func then
+
+                        func()
+
+                    end
+                end)
+
+                if success then
+
+                    print(
+                        "[Archives Loaded]",
+                        url
+                    )
+
+
+                else
+
+                    warn(
+                        "[Archives Failed]",
+                        url,
+                        err
+                    )
+
+                end
+
+            end)
+
+            task.wait(3)
+
+        end
+    end)
+    updateProgress()
 end)
 
 MB.MouseButton1Click:Connect(function()

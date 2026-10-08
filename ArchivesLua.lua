@@ -1,109 +1,17 @@
-if workspace:FindFirstChild("Hardcore1") then
+if workspace:FindFirstChild("HardcoreOne") then
     return
 end
 local marker = Instance.new("BoolValue")
 marker.Name = "HardcoreOne"
 marker.Value = true
 marker.Parent = workspace
-local function GitAud(soundgit, filename)
-    local url = soundgit
-    local FileName = filename
-    writefile(FileName .. ".mp3", game:HttpGet(url))
-    return (getcustomasset or getsynasset)(FileName .. ".mp3")
-end
-local function CustomGitSound(soundlink, vol, filename)
-    local sound = Instance.new("Sound")
-    sound.SoundId = GitAud(soundlink, filename)
-    sound.Parent = workspace
-    sound.Name = filename or "Music"
-    sound.Volume = vol
-    sound:Play()
-    return sound
-end
+loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/Sprint2.lua?raw=true"))()
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entityBehaviors = {}
-function GitAud(soundgit, filename)
-    local fileName = filename or "temp_audio"
-    local fullFileName = fileName .. ".mp3"
-
-    local success, audioData = pcall(function()
-        return game:HttpGet(soundgit)
-    end)
-
-    if not success then
-        return nil
-    end
-
-    local writeSuccess = pcall(function()
-        writefile(fullFileName, audioData)
-    end)
-
-    if not writeSuccess then
-        return nil
-    end
-
-    if getsynasset then
-        return getsynasset(fullFileName)
-    elseif getcustomasset then
-        return getcustomasset(fullFileName)
-    end
-
-    return nil
-end
-
-local githubAudioUrl = "https://github.com/Zero0Star/RipperMPSound/blob/master/RipperNewSound.mp3?raw=true"
-local explosionSoundUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/RipperDoorend.mp3?raw=true"
-
-local backgroundSoundPath = GitAud(
-    githubAudioUrl,
-    "RipperBackgroundSound"
-)
-
-local explosionSoundPath = GitAud(
-    explosionSoundUrl,
-    "RipperExplosionSound"
-)
-
-if backgroundSoundPath then
-    local oldBackgroundSound = workspace:FindFirstChild(
-        "RipperBackgroundSound"
-    )
-
-    if oldBackgroundSound then
-        oldBackgroundSound:Destroy()
-    end
-
-    local backgroundSound = Instance.new("Sound")
-    backgroundSound.Name = "RipperBackgroundSound"
-    backgroundSound.SoundId = backgroundSoundPath
-    backgroundSound.Volume = 2
-    backgroundSound.Looped = false
-    backgroundSound.Parent = workspace
-end
-
-if explosionSoundPath then
-    local oldExplosionSound = workspace:FindFirstChild(
-        "RipperExplosionSound"
-    )
-
-    if oldExplosionSound then
-        oldExplosionSound:Destroy()
-    end
-
-    local explosionSound = Instance.new("Sound")
-    explosionSound.Name = "RipperExplosionSound"
-    explosionSound.SoundId = explosionSoundPath
-    explosionSound.Volume = 5
-    explosionSound.Looped = false
-    explosionSound.Parent = workspace
-end
-
 function entityBehaviors.ATCHRipper()
-    local backgroundSound = workspace:FindFirstChild(
-        "RipperBackgroundSound"
-    )
-
-    if backgroundSound then
+    local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
+    local backgroundSound = hardCoreSound and hardCoreSound:FindFirstChild("RipperBackgroundSound")
+    if backgroundSound and backgroundSound:IsA("Sound") then
         backgroundSound:Stop()
         backgroundSound.TimePosition = 0
         backgroundSound:Play()
@@ -1199,9 +1107,7 @@ function entityBehaviors.ATCHRipper()
         then
             -- 很近：使用原爆炸音效
             local explosionSound =
-                workspace:FindFirstChild(
-                    "RipperExplosionSound"
-                )
+                hardCoreSound and hardCoreSound:FindFirstChild("RipperExplosionSound")
 
             if explosionSound
                 and explosionSound:IsA("Sound")
@@ -1251,9 +1157,7 @@ function entityBehaviors.ATCHRipper()
         -- 安全回退：若找不到 Despawn2/Despawn3，使用原爆炸音效
         if not explodeSound then
             local explosionSound =
-                workspace:FindFirstChild(
-                    "RipperExplosionSound"
-                )
+                hardCoreSound and hardCoreSound:FindFirstChild("RipperExplosionSound")
 
             if explosionSound
                 and explosionSound:IsA("Sound")
@@ -3737,6 +3641,7 @@ if room then
     end
 end
 end)
+end
 
 function entityBehaviors.SuperDread()
 function GetRoom()
@@ -3926,89 +3831,22 @@ startSound.Stopped:Connect(function()
     startSound:Destroy()
 end)
 end
-local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
 local MULTI_MONSTER_VOLUME = 2
 
-local MULTI_MONSTER_MUSIC = {
-    {
-        Name = "M1",
-        FileName = "MultiMonster1",
-        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster1.mp3?raw=true"
-    },
-    {
-        Name = "M2",
-        FileName = "MultiMonster2",
-        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster2.mp3?raw=true"
-    },
-    {
-        Name = "M3",
-        FileName = "MultiMonster3",
-        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster3.mp3?raw=true"
-    },
-    {
-        Name = "M4",
-        FileName = "MultiMonster4",
-        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster4.mp3?raw=true"
-    }
+local HardCoreSound = workspace:WaitForChild("HardCoreSound")
+
+local MULTI_MONSTER_SOUNDS = {
+    M1 = HardCoreSound:WaitForChild("M1"),
+    M2 = HardCoreSound:WaitForChild("M2"),
+    M3 = HardCoreSound:WaitForChild("M3"),
+    M4 = HardCoreSound:WaitForChild("M4")
 }
 
-local function preloadMultiMonsterMusic(info)
-    local sound = workspace:FindFirstChild(info.Name)
-
-    if sound and not sound:IsA("Sound") then
-        sound:Destroy()
-        sound = nil
-    end
-
-    if not sound then
-        sound = Instance.new("Sound")
-        sound.Name = info.Name
-        sound.Parent = workspace
-    end
-
+for _, sound in pairs(MULTI_MONSTER_SOUNDS) do
     sound.Volume = MULTI_MONSTER_VOLUME
-    sound.Looped = false
-
-    pcall(function()
-        sound:Stop()
-        sound.TimePosition = 0
-    end)
-
-    local ok, err = pcall(function()
-        if type(writefile) ~= "function" or type(game.HttpGet) ~= "function" then
-            error("executor file/http functions unavailable")
-        end
-
-        local path = info.FileName .. ".mp3"
-        writefile(path, game:HttpGet(info.URL))
-
-        local getter = getcustomasset or getsynasset
-
-        if not getter then
-            error("getcustomasset/getsynasset unavailable")
-        end
-
-        sound.SoundId = getter(path)
-
-        pcall(function()
-            ContentProvider:PreloadAsync({sound})
-        end)
-    end)
-
-    if not ok then
-        warn("[MultiMonster] Failed to preload " .. info.Name .. ":", err)
-    end
-
-    return sound
-end
-
-local MULTI_MONSTER_SOUNDS = {}
-
-for _, info in ipairs(MULTI_MONSTER_MUSIC) do
-    MULTI_MONSTER_SOUNDS[info.Name] = preloadMultiMonsterMusic(info)
 end
 
 local GLITCH_CHARACTERS = {
@@ -4358,7 +4196,7 @@ function entityBehaviors.MultiMonster()
     local M4 = MULTI_MONSTER_SOUNDS.M4
 
     if not M1 or not M2 or not M3 or not M4 then
-        warn("[MultiMonster] Sounds are missing.")
+
         return
     end
 
@@ -8690,6 +8528,7 @@ end))
 Controller.Start = runEvent
 task.spawn(runEvent)
 end
+
 function entityBehaviors.A500()
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
@@ -8964,6 +8803,1900 @@ end
 camera.FieldOfView=70
 end
 
+function entityBehaviors.Angler()
+local entity = spawner.Create({
+	Entity = {
+		Name = "Angler",
+		Asset = "137184736069143",
+		HeightOffset = -0.6},Lights = {Flicker = {Enabled = true,Duration = 2},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},
+	Movement = {Speed = 110,Delay = 3,Reversed = false},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 100,
+		Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你死于Angler", "他和Rush一样", "看见闪灯时躲避", "这非常简单"},Cause = ""}})
+
+entity:SetCallback("OnRebounding", function(startOfRebound)
+	local entityModel = entity.Model
+	local main = entityModel:WaitForChild("Main")
+	local attachment = main:WaitForChild("Attachment")
+	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
+	local sounds = {
+		footsteps = main:WaitForChild("Footsteps"),
+		playSound = main:WaitForChild("PlaySound"),
+		switch = main:WaitForChild("Switch"),
+		switchBack = main:WaitForChild("SwitchBack")
+	}
+
+	for _, c in attachment:GetChildren() do
+		c.Enabled = (not startOfRebound)
+	end
+	for _, c in AttachmentSwitch:GetChildren() do
+		c.Enabled = startOfRebound
+	end
+
+	if startOfRebound == true then
+		sounds.footsteps.PlaybackSpeed = 0.35
+		sounds.playSound.PlaybackSpeed = 0.25
+		sounds.switch:Play()
+	else
+		sounds.footsteps.PlaybackSpeed = 0.25
+		sounds.playSound.PlaybackSpeed = 0.16
+		sounds.switchBack:Play()
+	end
+end)
+entity:Run()
+end
+function entityBehaviors.guidingjug()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local REPLACEMENT_CONFIG = {
+    ["starjug"] = {assetId = 90395549970314}
+}
+local CHECK_INTERVAL = 0.3
+local trackedTargets = {}
+
+local function loadAssetLocally(assetId)
+    local success, result = pcall(function()
+        return game:GetObjects("rbxassetid://" .. assetId)[1]
+    end)
+    if success and result then
+        return result:Clone()
+    end
+    return nil
+end
+
+local function disableModelCollision(model)
+    for _, part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("MeshPart") then
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+        end
+    end
+end
+
+local function hideStarJugParts(starJug)
+    if not starJug or not starJug.Parent then return end
+    
+    local function hideRecursive(obj)
+        if obj:IsA("MeshPart") or obj:IsA("BasePart") then
+            if not trackedTargets[starJug] then
+                trackedTargets[starJug] = {originalParts = {}}
+            end
+            trackedTargets[starJug].originalParts[obj] = {transparency = obj.Transparency}
+            obj.Transparency = 1
+        end
+        
+        if obj:IsA("ParticleEmitter") or obj:IsA("Beam") or obj:IsA("Trail") then
+            if not trackedTargets[starJug] then
+                trackedTargets[starJug] = {originalParts = {}}
+            end
+            trackedTargets[starJug].originalParts[obj] = {enabled = obj.Enabled}
+            obj.Enabled = false
+        end
+        
+        if obj:IsA("Texture") or obj:IsA("Decal") or obj:IsA("SurfaceAppearance") then
+            if not trackedTargets[starJug] then
+                trackedTargets[starJug] = {originalParts = {}}
+            end
+            trackedTargets[starJug].originalParts[obj] = {transparency = obj.Transparency}
+            obj.Transparency = 1
+        end
+        
+        for _, child in ipairs(obj:GetChildren()) do
+            hideRecursive(child)
+        end
+    end
+    
+    hideRecursive(starJug)
+end
+
+local function restoreStarJug(starJug)
+    local data = trackedTargets[starJug]
+    if not data or not data.originalParts then return end
+    
+    for part, partData in pairs(data.originalParts) do
+        if part and part.Parent then
+            if (part:IsA("MeshPart") or part:IsA("BasePart")) and partData.transparency then
+                part.Transparency = partData.transparency
+            elseif (part:IsA("ParticleEmitter") or part:IsA("Beam") or part:IsA("Trail")) and partData.enabled ~= nil then
+                part.Enabled = partData.enabled
+            elseif (part:IsA("Texture") or part:IsA("Decal") or part:IsA("SurfaceAppearance")) and partData.transparency then
+                part.Transparency = partData.transparency
+            end
+        end
+    end
+end
+
+local function getItemConfig(itemName)
+    local nameLower = itemName:lower()
+    return REPLACEMENT_CONFIG[nameLower]
+end
+
+local function getTargetCFrame(target)
+    if target:IsA("BasePart") or target:IsA("MeshPart") then
+        return target.CFrame
+    elseif target:IsA("Tool") and target:FindFirstChild("Handle") then
+        return target.Handle.CFrame
+    elseif target:IsA("Model") then
+        if target.PrimaryPart then
+            return target:GetPivot()
+        elseif target:FindFirstChildWhichIsA("BasePart") then
+            return target:FindFirstChildWhichIsA("BasePart").CFrame
+        end
+    end
+    return nil
+end
+
+local function createFollowEffect(target, assetId)
+    local effectModel = loadAssetLocally(assetId)
+    if not effectModel then 
+        return nil 
+    end
+    
+    effectModel.Name = "StarJug_Follower"
+    effectModel.Parent = workspace
+    disableModelCollision(effectModel)
+    
+    if not effectModel.PrimaryPart then
+        if effectModel:FindFirstChildWhichIsA("BasePart") then
+            effectModel.PrimaryPart = effectModel:FindFirstChildWhichIsA("BasePart")
+        else
+            effectModel:Destroy()
+            return nil
+        end
+    end
+    
+    local targetCFrame = getTargetCFrame(target)
+    if targetCFrame then
+        effectModel:PivotTo(targetCFrame)
+    end
+    
+    return effectModel
+end
+
+local function updateEffectPosition(data, target)
+    if not data.effect or not data.effect.Parent or not target or not target.Parent then
+        return false
+    end
+    
+    local targetCFrame = getTargetCFrame(target)
+    if not targetCFrame then
+        return false
+    end
+    
+    data.effect:PivotTo(targetCFrame)
+    return true
+end
+
+local function startTrackingTarget(target, config)
+    if trackedTargets[target] then 
+        return trackedTargets[target] 
+    end
+    
+    local effectModel = createFollowEffect(target, config.assetId)
+    if not effectModel then 
+        return nil 
+    end
+    
+    hideStarJugParts(target)
+    
+    trackedTargets[target] = {
+        effect = effectModel, 
+        target = target,
+        config = config
+    }
+    
+    local data = trackedTargets[target]
+    
+    data.connection = RunService.RenderStepped:Connect(function()
+        if not updateEffectPosition(data, target) then
+            if data.connection then
+                data.connection:Disconnect()
+            end
+            if data.effect and data.effect.Parent then
+                data.effect:Destroy()
+            end
+            trackedTargets[target] = nil
+        end
+    end)
+    
+    return trackedTargets[target]
+end
+
+local function stopTrackingTarget(target, restoreVisibility)
+    local data = trackedTargets[target]
+    if not data then return end
+    
+    if restoreVisibility then
+        restoreStarJug(target)
+    end
+    
+    if data.effect and data.effect.Parent then
+        data.effect:Destroy()
+    end
+    
+    if data.connection then
+        data.connection:Disconnect()
+    end
+    
+    trackedTargets[target] = nil
+end
+
+local function cleanupDestroyedTargets()
+    for target, data in pairs(trackedTargets) do
+        if not target or not target.Parent then
+            if data.effect and data.effect.Parent then
+                data.effect:Destroy()
+            end
+            if data.connection then
+                data.connection:Disconnect()
+            end
+            trackedTargets[target] = nil
+        end
+    end
+end
+
+local function findAllStarJugs()
+    local targets = {}
+    
+    local function findStarJugsRecursive(parent)
+        for _, child in ipairs(parent:GetChildren()) do
+            if child.Name:lower() == "starjug" then
+                local config = getItemConfig(child.Name)
+                if config then
+                    table.insert(targets, {target = child, config = config})
+                end
+            end
+            findStarJugsRecursive(child)
+        end
+    end
+    
+    findStarJugsRecursive(workspace)
+    return targets
+end
+
+local function startDetection()
+    local lastCheckTime = 0
+    
+    while true do
+        local currentTime = tick()
+        
+        if currentTime - lastCheckTime >= CHECK_INTERVAL then
+            lastCheckTime = currentTime
+            
+            cleanupDestroyedTargets()
+            
+            local allStarJugs = findAllStarJugs()
+            
+            for _, targetData in ipairs(allStarJugs) do
+                if not trackedTargets[targetData.target] then
+                    startTrackingTarget(targetData.target, targetData.config)
+                end
+            end
+            
+            for target, data in pairs(trackedTargets) do
+                if target and target.Parent then
+                    local isValid = false
+                    local parent = target.Parent
+                    
+                    while parent do
+                        if parent == workspace then
+                            isValid = true
+                            break
+                        end
+                        parent = parent.Parent
+                    end
+                    
+                    if not isValid then
+                        stopTrackingTarget(target, true)
+                    end
+                end
+            end
+        end
+        
+        RunService.Heartbeat:Wait()
+    end
+end
+
+local function initialize()
+    task.spawn(startDetection)
+end
+
+local function cleanup()
+    for target, _ in pairs(trackedTargets) do
+        stopTrackingTarget(target, true)
+    end
+    trackedTargets = {}
+end
+
+local function setupPlayerEvents()
+    local player = Players.LocalPlayer
+    if player then
+        player:GetPropertyChangedSignal("Character"):Connect(function()
+            cleanupDestroyedTargets()
+        end)
+        
+        player.AncestryChanged:Connect(function(_, parent)
+            if not parent then
+                cleanup()
+            end
+        end)
+    end
+end
+initialize()
+setupPlayerEvents()
+end
+function entityBehaviors.A333()
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local random = Random.new()
+local latestRoom = ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom")
+local music = Workspace:WaitForChild("HardCoreSound"):WaitForChild("A333Music")
+
+latestRoom.Changed:Wait()
+
+local function getRoom()
+    return Workspace:WaitForChild("CurrentRooms"):FindFirstChild(tostring(latestRoom.Value))
+end
+
+local model
+local loaded = pcall(function()
+    local room = getRoom()
+    if not room then
+        error("Current room not found")
+    end
+
+    local entrance = room:WaitForChild("RoomEntrance")
+    local objects = game:GetObjects("rbxassetid://129270013455588")
+    model = objects[1]
+    if not model then
+        error("Model failed to load")
+    end
+
+    model.Parent = Workspace
+    local spawnCFrame = entrance.CFrame * CFrame.new(0, 2, -15)
+
+    if model:IsA("Model") then
+        model:PivotTo(spawnCFrame)
+    elseif model:IsA("BasePart") then
+        model.CFrame = spawnCFrame
+        local innerPart = model:FindFirstChild("Part")
+        if innerPart and innerPart:IsA("BasePart") then
+            innerPart.CFrame = spawnCFrame
+        end
+    else
+        local part = model:FindFirstChildWhichIsA("BasePart", true)
+        if part then
+            part.CFrame = spawnCFrame
+        end
+    end
+end)
+
+if not loaded then
+    if model then
+        model:Destroy()
+    end
+    return
+end
+
+local function fadeAndDestroyModel(target, duration)
+    if not target or not target.Parent then
+        return
+    end
+
+    local emitters = {}
+    for _, descendant in ipairs(target:GetDescendants()) do
+        if descendant:IsA("ParticleEmitter") then
+            table.insert(emitters, {
+                emitter = descendant,
+                keypoints = descendant.Transparency.Keypoints
+            })
+        end
+    end
+
+    local started = os.clock()
+    while target.Parent do
+        local alpha = math.clamp((os.clock() - started) / duration, 0, 1)
+
+        for _, entry in ipairs(emitters) do
+            if entry.emitter.Parent then
+                local points = {}
+                for _, keypoint in ipairs(entry.keypoints) do
+                    table.insert(points, NumberSequenceKeypoint.new(
+                        keypoint.Time,
+                        keypoint.Value + (1 - keypoint.Value) * alpha,
+                        keypoint.Envelope * (1 - alpha)
+                    ))
+                end
+                entry.emitter.Transparency = NumberSequence.new(points)
+            end
+        end
+
+        if alpha >= 1 then
+            break
+        end
+        RunService.Heartbeat:Wait()
+    end
+
+    if target.Parent then
+        target:Destroy()
+    end
+end
+
+task.delay(4, function()
+    fadeAndDestroyModel(model, 1.5)
+end)
+
+local running = true
+local spectator = false
+local screenGui
+local currentImage
+local camShake
+local characterAddedConnection
+local characterRemovingConnection
+local diedConnection
+
+local function removeEffects()
+    if currentImage then
+        currentImage:Destroy()
+        currentImage = nil
+    end
+    if screenGui then
+        screenGui:Destroy()
+        screenGui = nil
+    end
+    if camShake then
+        pcall(function()
+            camShake:Stop()
+        end)
+        camShake = nil
+    end
+end
+
+local function becomeSpectator()
+    if spectator then
+        return
+    end
+    spectator = true
+    removeEffects()
+end
+
+local function hasDeathFlag(instance)
+    if not instance then
+        return false
+    end
+    return instance:GetAttribute("Dead") == true
+        or instance:GetAttribute("IsDead") == true
+        or instance:GetAttribute("Alive") == false
+end
+
+local function isPlayerActive()
+    if spectator then
+        return false
+    end
+
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        return false
+    end
+
+    if humanoid.Health <= 0
+        or humanoid:GetState() == Enum.HumanoidStateType.Dead
+        or hasDeathFlag(character)
+        or hasDeathFlag(player) then
+        becomeSpectator()
+        return false
+    end
+
+    return true
+end
+
+local function watchCharacter(character)
+    if diedConnection then
+        diedConnection:Disconnect()
+        diedConnection = nil
+    end
+
+    task.spawn(function()
+        local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
+        if not running or spectator or player.Character ~= character or not humanoid then
+            return
+        end
+        diedConnection = humanoid.Died:Connect(becomeSpectator)
+        isPlayerActive()
+    end)
+end
+
+characterAddedConnection = player.CharacterAdded:Connect(watchCharacter)
+characterRemovingConnection = player.CharacterRemoving:Connect(function()
+    becomeSpectator()
+end)
+
+if player.Character then
+    watchCharacter(player.Character)
+end
+
+local function finishGame()
+    if not running then
+        return
+    end
+    running = false
+    removeEffects()
+    if diedConnection then
+        diedConnection:Disconnect()
+        diedConnection = nil
+    end
+    if characterAddedConnection then
+        characterAddedConnection:Disconnect()
+        characterAddedConnection = nil
+    end
+    if characterRemovingConnection then
+        characterRemovingConnection:Disconnect()
+        characterRemovingConnection = nil
+    end
+end
+
+local endedConnection = music.Ended:Connect(finishGame)
+local stoppedConnection = music.Stopped:Connect(finishGame)
+local destroyingConnection = music.Destroying:Connect(finishGame)
+
+local function isMusicRunning()
+    return running and music.Parent ~= nil and music.IsPlaying
+end
+
+local function waitForMusicTime(seconds)
+    while isMusicRunning() and music.TimePosition < seconds do
+        if not spectator then
+            isPlayerActive()
+        end
+        task.wait(0.03)
+    end
+    return isMusicRunning()
+end
+
+local function caption(message)
+    if not isPlayerActive() or not isMusicRunning() then
+        return
+    end
+    pcall(function()
+        require(player.PlayerGui.MainUI.Initiator.Main_Game).caption(message, true)
+    end)
+end
+
+local function shakeCamera()
+    if not isPlayerActive() or not isMusicRunning() then
+        return
+    end
+
+    if not camShake then
+        local ok, shakerModule = pcall(function()
+            return require(ReplicatedStorage:WaitForChild("CameraShaker"))
+        end)
+        if not ok then
+            return
+        end
+
+        local created, instance = pcall(function()
+            local shaker = shakerModule.new(Enum.RenderPriority.Camera.Value + 1, function(shakeCf)
+                local camera = Workspace.CurrentCamera
+                if camera and isPlayerActive() then
+                    camera.CFrame = camera.CFrame * shakeCf
+                end
+            end)
+            shaker:Start()
+            return shaker
+        end)
+        if not created then
+            return
+        end
+        camShake = instance
+    end
+
+    pcall(function()
+        camShake:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+    end)
+end
+
+local function getScreenGui()
+    if screenGui and screenGui.Parent then
+        return screenGui
+    end
+    if not isPlayerActive() then
+        return nil
+    end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "A333JumpScareGui"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 1000
+    gui.Parent = player:WaitForChild("PlayerGui")
+    screenGui = gui
+    return gui
+end
+
+local function isHiding()
+    local character = player.Character
+    return character ~= nil and character:GetAttribute("Hiding") == true
+end
+
+local function showJumpScareAndCheck(shouldHide)
+    if not isMusicRunning() or not isPlayerActive() then
+        return
+    end
+
+    local gui = getScreenGui()
+    if not gui then
+        return
+    end
+
+    local image = Instance.new("ImageLabel")
+    image.Name = "A333JumpScare"
+    image.BackgroundTransparency = 1
+    image.Image = "rbxassetid://122543847993550"
+    image.ImageTransparency = 1
+    image.AnchorPoint = Vector2.new(0.5, 0.5)
+    image.Position = UDim2.fromScale(0.5, 0.5)
+    local size = random:NextNumber(1.08, 1.22)
+    image.Size = UDim2.fromScale(size, size)
+    image.ScaleType = Enum.ScaleType.Crop
+    image.ZIndex = 10
+    image.Parent = gui
+    currentImage = image
+
+    local damaged = false
+    local started = os.clock()
+
+    while isMusicRunning() and isPlayerActive() and image.Parent do
+        local elapsed = os.clock() - started
+        if elapsed >= 0.4 then
+            break
+        end
+
+        if elapsed < 0.1 then
+            image.ImageTransparency = 1 - 0.5 * (elapsed / 0.1)
+        elseif elapsed < 0.3 then
+            image.ImageTransparency = 0.5
+        else
+            image.ImageTransparency = 0.5 + 0.5 * ((elapsed - 0.3) / 0.1)
+        end
+
+        image.Position = UDim2.new(0.5, random:NextInteger(-25, 25), 0.5, random:NextInteger(-25, 25))
+        image.Rotation = random:NextInteger(-12, 12)
+
+        if not damaged and isHiding() ~= shouldHide then
+            local character = player.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                damaged = true
+                humanoid:TakeDamage(90)
+                isPlayerActive()
+            end
+        end
+
+        RunService.RenderStepped:Wait()
+    end
+
+    if currentImage == image then
+        currentImage = nil
+    end
+    image:Destroy()
+end
+
+local function runChallenge(shouldHide)
+    if not isMusicRunning() or not isPlayerActive() then
+        return
+    end
+
+    caption(shouldHide and "躲藏" or "不躲藏")
+    shakeCamera()
+
+    local started = os.clock()
+    while isMusicRunning() and isPlayerActive() and os.clock() - started < 0.8 do
+        task.wait(0.02)
+    end
+
+    if isMusicRunning() and isPlayerActive() then
+        showJumpScareAndCheck(shouldHide)
+    end
+end
+
+music.Looped = false
+music:Play()
+
+if waitForMusicTime(10) and isPlayerActive() then
+    caption("good luck")
+end
+
+local function isFinalTwentySeconds()
+    return music.TimeLength > 0 and music.TimePosition >= math.max(0, music.TimeLength - 20)
+end
+
+if waitForMusicTime(14) then
+    while isMusicRunning() do
+        if spectator then
+            break
+        end
+
+        if isPlayerActive() then
+            local roundStart = music.TimePosition
+            local shouldHide = random:NextInteger(1, 2) == 1
+            runChallenge(shouldHide)
+
+            local finalPhase = isFinalTwentySeconds()
+            local nextRoundAt = roundStart + (finalPhase and random:NextNumber(3, 5) or random:NextNumber(5, 10))
+
+            while isMusicRunning() and not spectator and music.TimePosition < nextRoundAt do
+                isPlayerActive()
+                if not finalPhase and isFinalTwentySeconds() then
+                    finalPhase = true
+                    nextRoundAt = music.TimePosition + random:NextNumber(3, 5)
+                end
+                task.wait(0.03)
+            end
+        else
+            task.wait(0.1)
+        end
+    end
+end
+
+while isMusicRunning() do
+    task.wait(0.1)
+end
+
+finishGame()
+endedConnection:Disconnect()
+stoppedConnection:Disconnect()
+destroyingConnection:Disconnect()
+end
+function entityBehaviors.JeffTwo()
+local RunService = game:GetService("RunService")
+local V1 = game:GetObjects("rbxassetid://132473459444776")[1]
+V1.Parent = workspace
+local V2 = workspace:WaitForChild("JeffTheKiller")
+local function HS()
+    if not V2 then return end
+    
+    local function HP(obj)
+        if obj:IsA("BasePart") then
+            obj.Transparency = 1
+            obj.CanCollide = false
+        end
+        
+        for _, child in ipairs(obj:GetChildren()) do
+            if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") then
+                child.Transparency = 1
+            elseif child:IsA("ParticleEmitter") or child:IsA("Beam") or child:IsA("Trail") then
+                child.Enabled = false
+            end
+            
+            HP(child)
+        end
+    end
+    local p1 = V2:FindFirstChild("Knife")
+    local p2 = V2:FindFirstChild("Head")
+    local p3 = V2:FindFirstChild("BoyAnimeHair_Black")
+    if p1 then HP(p1) end
+    if p2 then HP(p2) end
+    if p3 then
+        local handle = p3:FindFirstChild("Handle")
+        if handle then HP(handle) end
+    end
+end
+HS()
+local connection
+connection = V2.AncestryChanged:Connect(function(_, parent)
+    if not parent then
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not V2 or not V2.Parent then 
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+        return 
+    end
+    local root = V2:FindFirstChild("HumanoidRootPart") or V2:FindFirstChild("Torso")
+    if not root then return end
+    if V1:IsA("Model") and V1.PrimaryPart then
+        V1:SetPrimaryPartCFrame(root.CFrame)
+    elseif V1:IsA("BasePart") then
+        V1.CFrame = root.CFrame
+    end
+end)
+end
+function entityBehaviors.JEFFGUN()
+local RunService = game:GetService("RunService")
+local V1 = game:GetObjects("rbxassetid://81046861041760")[1]
+V1.Parent = workspace
+local V2 = workspace:WaitForChild("JeffTheKiller")
+
+local xOffset = 0
+local yOffset = 0
+local zOffset = 0
+
+if V1:IsA("Model") then
+    local primary = V1:FindFirstChildWhichIsA("BasePart")
+    if primary then
+        V1.PrimaryPart = primary
+    end
+end
+
+local function HS()
+    if not V2 then return end
+    
+    local function HP(obj)
+        if obj:IsA("BasePart") then
+            obj.Transparency = 1
+            obj.CanCollide = false
+        end
+        
+        for _, child in ipairs(obj:GetChildren()) do
+            if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") then
+                child.Transparency = 1
+            elseif child:IsA("ParticleEmitter") or child:IsA("Beam") or child:IsA("Trail") then
+                child.Enabled = false
+            end
+            
+            HP(child)
+        end
+    end
+    
+    local p1 = V2:FindFirstChild("Knife")
+    local p2 = V2:FindFirstChild("Head")
+    local p3 = V2:FindFirstChild("BoyAnimeHair_Black")
+    if p1 then HP(p1) end
+    if p2 then HP(p2) end
+    if p3 then
+        local h = p3:Clone()
+        h.Parent = V2
+        HP(h)
+    end
+    
+    local leftArm = V2:FindFirstChild("Left Arm")
+    local rightArm = V2:FindFirstChild("Right Arm")
+    if leftArm then HP(leftArm) end
+    if rightArm then HP(rightArm) end
+end
+
+HS()
+
+local connection
+connection = V2.AncestryChanged:Connect(function(_, parent)
+    if not parent then
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not V2 or not V2.Parent then 
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+        return 
+    end
+
+    local function findRootPart(model)
+        local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
+        if root then 
+            return root 
+        end
+        
+        for _, child in pairs(model:GetDescendants()) do
+            if (child.Name == "HumanoidRootPart" or child.Name == "Torso") and child:IsA("BasePart") then
+                return child
+            end
+        end
+        return nil
+    end
+    
+    local root = findRootPart(V2)
+    if not root then 
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+        return
+    end
+    if V1:IsA("Model") then
+        if not V1.PrimaryPart then
+            local part = V1:FindFirstChildWhichIsA("BasePart")
+            if part then
+                V1.PrimaryPart = part
+            end
+        end
+        
+        if V1.PrimaryPart then
+            local newCFrame = CFrame.new(
+                root.CFrame.Position.X + xOffset,
+                root.CFrame.Position.Y + yOffset,
+                root.CFrame.Position.Z + zOffset
+            ) * root.CFrame.Rotation
+            V1:SetPrimaryPartCFrame(newCFrame)
+        end
+    elseif V1:IsA("BasePart") then
+        local newCFrame = CFrame.new(
+            root.CFrame.Position.X + xOffset,
+            root.CFrame.Position.Y + yOffset,
+            root.CFrame.Position.Z + zOffset
+        ) * root.CFrame.Rotation
+        V1.CFrame = newCFrame
+    end
+end)
+end
+function entityBehaviors.JEFFGUNST()
+local sound1 = Instance.new("Sound")
+sound1.SoundId = "rbxassetid://3120031857"
+sound1.Volume = 1
+sound1.Parent = workspace
+local sound2 = Instance.new("Sound")
+sound2.SoundId = "rbxassetid://680140087"
+sound2.Volume = 1
+sound2.Parent = workspace
+sound1:Play()
+task.wait(1)
+sound2:Play()
+sound2.Ended:Wait()
+sound1:Destroy()
+sound2:Destroy()
+end
+function entityBehaviors.REBOUNDSW()
+    local testModelId = 91875007809375
+
+    local function PlayPreloadedSound(soundName, volume)
+        volume = volume or 1
+        local soundFolder = workspace:FindFirstChild("HardCoreSound")
+        if not soundFolder then
+            return nil
+        end
+
+        local sound = soundFolder:FindFirstChild(soundName)
+        if sound and sound:IsA("Sound") then
+            sound.Volume = volume
+            sound:Play()
+            return sound
+        end
+
+        return nil
+    end
+
+    local function GetMaxExistingRoom()
+        local rooms = workspace.CurrentRooms:GetChildren()
+        local maxNum = 0
+        for _, room in ipairs(rooms) do
+            local num = tonumber(room.Name)
+            if num and num > maxNum then
+                maxNum = num
+            end
+        end
+        return maxNum
+    end
+
+    function SpawnReboundEntity(startRoomType)
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj.Name == "Rebound" then
+                pcall(function() obj:Destroy() end)
+            end
+        end
+
+        local success, modelResult = pcall(function()
+            return game:GetObjects("rbxassetid://" .. testModelId)[1]
+        end)
+
+        if not success or not modelResult then
+            return
+        end
+
+        local testEntity = modelResult:Clone()
+        testEntity.Parent = workspace
+        testEntity.Name = "Rebound"
+
+        local primaryPart = testEntity.PrimaryPart or testEntity:FindFirstChildWhichIsA("BasePart")
+        if not primaryPart then
+            testEntity:Destroy()
+            return
+        end
+
+        primaryPart.Anchored = true
+        primaryPart.CanCollide = false
+
+        spawn(function()
+            local targetRoom
+            if startRoomType == "start" then
+                targetRoom = workspace.CurrentRooms:FindFirstChild("0")
+            else
+                local maxRoom = GetMaxExistingRoom()
+                targetRoom = workspace.CurrentRooms:FindFirstChild(tostring(maxRoom))
+            end
+            
+            if targetRoom then
+                local targetCFrame
+                if targetRoom:FindFirstChild("Nodes") then
+                    targetCFrame = (targetRoom:FindFirstChild("RoomEntrance") or targetRoom:FindFirstChild("RoomExit")).CFrame
+                else
+                    targetCFrame = targetRoom.RoomExit.CFrame
+                end
+                primaryPart.CFrame = targetCFrame + Vector3.new(0, 1, 0)
+            end
+            
+            wait(2)
+            StartEntityLogic(primaryPart, startRoomType)
+        end)
+    end
+
+    function StartEntityLogic(primaryPart, startRoomType)
+        local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+        local camera = workspace.CurrentCamera
+        local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(cf)
+            camera.CFrame = camera.CFrame * cf
+        end)
+        camShake:Start()
+
+        local v305 = 2
+        local v306 = 1.2
+        local v307 = Vector3.new(0, 1, 0)
+        local v310 = workspace.CurrentRooms
+
+        local detectedPlayer = false
+        local shakeCooldown = 0
+        
+        local function CheckLineOfSight(entityPart, player, maxDistance)
+            if not entityPart or not player or not player.Character then
+                return false
+            end
+            if player.Character:GetAttribute("Hiding") then
+                return false
+            end
+            
+            local hum = player.Character:FindFirstChildWhichIsA("Humanoid")
+            if not hum or hum.Health <= 0 then
+                return false
+            end
+            
+            local origin = entityPart.Position
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then return false end
+            
+            local targetPos = hrp.Position
+            local distance = (targetPos - origin).Magnitude
+            
+            local direction = (targetPos - origin).Unit * maxDistance
+            local ray = Ray.new(origin, direction)
+            local hitPart, _ = workspace:FindPartOnRay(ray, entityPart)
+            
+            return hitPart and hitPart:IsDescendantOf(player.Character)
+        end
+
+        local function ExecutePlayer()
+            if detectedPlayer then return end
+            detectedPlayer = true
+
+            local vu321 = Instance.new("ScreenGui")
+            local vu322 = Instance.new("ImageLabel")
+            local v323 = Instance.new("ImageLabel")
+            local v324 = Instance.new("ImageLabel")
+            
+            vu321.Name = "TestEntityJs"
+            vu321.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+            
+            vu322.Name = "Static"
+            vu322.Parent = vu321
+            vu322.BackgroundColor3 = Color3.fromRGB(0, 63, 139)
+            vu322.BackgroundTransparency = 1
+            vu322.BorderSizePixel = 0
+            vu322.Size = UDim2.new(1, 0, 1, 0)
+            vu322.Image = "rbxassetid://236543215"
+            vu322.ImageColor3 = Color3.fromRGB(0, 255, 255)
+            vu322.ImageTransparency = 1
+            
+            v323.Name = "TestEntity"
+            v323.Parent = vu321
+            v323.BackgroundTransparency = 1
+            v323.Position = UDim2.new(0.486631036, 0, 0.479363143, 0)
+            v323.Size = UDim2.new(0.0267379656, 0, 0.0387096703, 0)
+            v323.Image = "rbxassetid://79906427468430"
+            
+            v324.Name = "JSSIZE"
+            v324.Parent = vu321
+            v324.BackgroundTransparency = 1
+            v324.Position = UDim2.new(-0.586452842, 0, -1.25140607, 0)
+            v324.Size = UDim2.new(2.12834215, 0, 3.08128953, 0)
+            v324.Visible = false
+            v324.Image = "rbxassetid://10914800940"
+
+            local function v326()
+                local v325 = Instance.new("LocalScript", vu322)
+                while v325.Parent and v325.Parent.Parent do
+                    v325.Parent.Image = "rbxassetid://236543215"
+                    wait(0.002)
+                    v325.Parent.Rotation = 0
+                    wait(0.002)
+                    v325.Parent.Rotation = 180
+                    wait(0.002)
+                    v325.Parent.Image = "rbxassetid://236777652"
+                    wait(0.002)
+                    v325.Parent.Rotation = 0
+                    wait(0.002)
+                    v325.Parent.Rotation = 180
+                    wait(0.002)
+                end
+            end
+            coroutine.wrap(v326)()
+
+            local v327 = Instance.new("LocalScript", vu321)
+            local vu328 = game.ReplicatedStorage
+            local vu329 = game.Players.LocalPlayer
+            local vu330 = v327.Parent
+            local vu331 = vu330.Static
+            local vu332 = vu330.TestEntity
+            
+            local killSound = Instance.new("Sound")
+            killSound.SoundId = "rbxassetid://94785993416953"
+            killSound.Parent = workspace
+            killSound.Volume = 2
+
+            (function()
+                game.TweenService:Create(vu331, TweenInfo.new(0.5), {
+                    BackgroundTransparency = 0,
+                    ImageTransparency = 0.8
+                }):Play()
+                
+                game.TweenService:Create(vu332, TweenInfo.new(0.5), {
+                    Size = v324.Size,
+                    Position = v324.Position
+                }):Play()
+                
+                killSound:Play()
+                
+                spawn(function()
+                    wait(0.3)
+                    local char = vu329.Character
+                    if char then
+                        local hum = char:FindFirstChildWhichIsA("Humanoid")
+                        if hum then
+                            hum:TakeDamage(100)
+                            if vu328.GameStats["Player_" .. vu329.Name] then
+                                vu328.GameStats["Player_" .. vu329.Name].Total.DeathCause.Value = "Rebound"
+                            end
+
+firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
+    "你死于Rebound...",
+    "巨大的噪音震耳欲聋...",
+    "每当开启一次门时注意雷声..."
+}, "Blue")
+                        end
+                    end
+                end)
+                
+                wait(0.5)
+                game.TweenService:Create(vu331, TweenInfo.new(1), {
+                    BackgroundTransparency = 1,
+                    ImageTransparency = 1
+                }):Play()
+                game.TweenService:Create(vu332, TweenInfo.new(0.3), {
+                    ImageTransparency = 1
+                }):Play()
+                wait(1)
+                killSound:Destroy()
+                vu330:Destroy()
+            end)()
+        end
+
+        spawn(function()
+            local player = game.Players.LocalPlayer
+            while primaryPart and primaryPart.Parent do
+                wait(0.5)
+                if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
+                    break
+                end
+
+                if CheckLineOfSight(primaryPart, player, 100) then
+                    ExecutePlayer()
+                end
+            end
+        end)
+
+        if startRoomType == "start" then
+            local currentRoom = 0
+            local maxRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
+
+            while currentRoom <= maxRoom do
+                if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
+                    break
+                end
+
+                local targetRoom = v310:FindFirstChild(currentRoom)
+                if targetRoom then
+                    local targetCFrame
+                    if targetRoom:FindFirstChild("Nodes") then
+                        targetCFrame = (targetRoom:FindFirstChild("RoomEntrance") or targetRoom:FindFirstChild("RoomExit")).CFrame
+                    else
+                        targetCFrame = targetRoom.RoomExit.CFrame
+                    end
+
+                    game.TweenService:Create(primaryPart, TweenInfo.new(v305), {
+                        CFrame = targetCFrame + v307
+                    }):Play()
+                    
+                    wait(v306)
+                end
+
+                maxRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
+                currentRoom = currentRoom + 1
+            end
+        else
+            local currentRoom = GetMaxExistingRoom()
+            local minRoom = math.max(0, currentRoom - 7)
+
+            while currentRoom >= minRoom do
+                if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
+                    break
+                end
+
+                local targetRoom = v310:FindFirstChild(currentRoom)
+                if targetRoom then
+                    local targetCFrame
+                    if targetRoom:FindFirstChild("Nodes") then
+                        targetCFrame = (targetRoom:FindFirstChild("RoomEntrance") or targetRoom:FindFirstChild("RoomExit")).CFrame
+                    else
+                        targetCFrame = targetRoom.RoomExit.CFrame
+                    end
+
+                    game.TweenService:Create(primaryPart, TweenInfo.new(v305), {
+                        CFrame = targetCFrame + v307
+                    }):Play()
+                    
+                    wait(v306)
+                end
+
+                currentRoom = currentRoom - 1
+            end
+        end
+
+        primaryPart.Anchored = false
+        primaryPart.CanCollide = false
+    end
+
+    for _, obj in pairs(workspace:GetChildren()) do
+        if obj.Name == "Rebound" or obj.Name == "Bound" or 
+           (obj.Name:find("ReboundMovings") and not obj.Name:find("_Preloaded")) or 
+           (obj.Name:find("ReboundSweep") and not obj.Name:find("_Preloaded")) then
+            pcall(function() obj:Destroy() end)
+        end
+    end
+
+    local sweepSound = PlayPreloadedSound("ReboundSweep", 2)
+    
+    local part = Instance.new("Part")
+    part.Name = "Bound_" .. tick()
+    part.Parent = workspace
+    game.Lighting.MainColorCorrection.TintColor = Color3.fromRGB(61, 171, 98)
+    game.Lighting.MainColorCorrection.Contrast = 0.2
+    game.Lighting.MainColorCorrection.Saturation = -0.7
+
+    local tween = game:GetService("TweenService")
+    tween:Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {Contrast = 0}):Play()
+    tween:Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {Saturation = 0}):Play()
+    local TW = tween:Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {TintColor = Color3.fromRGB(255, 255, 255)})
+    TW:Play()
+
+    local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+    local camara = game.Workspace.CurrentCamera
+    local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+        camara.CFrame = camara.CFrame * shakeCf
+    end)
+    camShake:Start()
+    camShake:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+
+    wait(3)
+
+    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/DOORS-Entity-Spawner-V2/main/init.luau"))()
+
+    SpawnReboundEntity("latest")
+
+    local sound1 = PlayPreloadedSound("ReboundMovings", 3)
+    if sound1 then
+        repeat
+            wait()
+        until sound1.IsPlaying == false
+    end
+    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+    SpawnReboundEntity("start")
+
+    local CameraShaker2 = require(game.ReplicatedStorage.CameraShaker)
+    local camara2 = game.Workspace.CurrentCamera
+    local camShake2 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+        camara2.CFrame = camara2.CFrame * shakeCf
+    end)
+    camShake2:Start()
+    camShake2:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+    local sound2 = PlayPreloadedSound("ReboundMovings", 3)
+    if sound2 then
+        repeat
+            wait()
+        until sound2.IsPlaying == false
+    end
+    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+    SpawnReboundEntity("latest")
+
+    local CameraShaker3 = require(game.ReplicatedStorage.CameraShaker)
+    local camara3 = game.Workspace.CurrentCamera
+    local camShake3 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+        camara3.CFrame = camara3.CFrame * shakeCf
+    end)
+    camShake3:Start()
+    camShake3:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+    local sound3 = PlayPreloadedSound("ReboundMovings", 3)
+    if sound3 then
+        repeat
+            wait()
+        until sound3.IsPlaying == false
+    end
+    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+    SpawnReboundEntity("start")
+
+    local CameraShaker4 = require(game.ReplicatedStorage.CameraShaker)
+    local camara4 = game.Workspace.CurrentCamera
+    local camShake4 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
+        camara4.CFrame = camara4.CFrame * shakeCf
+    end)
+    camShake4:Start()
+    camShake4:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+    local sound4 = PlayPreloadedSound("ReboundMovings", 3)
+    if sound4 then
+        repeat
+            wait()
+        until sound4.IsPlaying == false
+    end
+end
+function entityBehaviors.JEFFGUN2()
+local RunService = game:GetService("RunService")
+local V1 = game:GetObjects("rbxassetid://134258088105212")[1]
+V1.Parent = workspace
+local V2 = workspace:WaitForChild("JeffTheKiller")
+
+local xOffset = 0
+local yOffset = 0
+local zOffset = 0
+
+if V1:IsA("Model") then
+    local primary = V1:FindFirstChildWhichIsA("BasePart")
+    if primary then
+        V1.PrimaryPart = primary
+    end
+end
+
+local function HS()
+    if not V2 then return end
+    
+    local function HP(obj)
+        if obj:IsA("BasePart") then
+            obj.Transparency = 1
+            obj.CanCollide = false
+        end
+        
+        for _, child in ipairs(obj:GetChildren()) do
+            if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") then
+                child.Transparency = 1
+            elseif child:IsA("ParticleEmitter") or child:IsA("Beam") or child:IsA("Trail") then
+                child.Enabled = false
+            end
+            
+            HP(child)
+        end
+    end
+    
+    local p1 = V2:FindFirstChild("Knife")
+    local p2 = V2:FindFirstChild("Head")
+    local p3 = V2:FindFirstChild("BoyAnimeHair_Black")
+    if p1 then HP(p1) end
+    if p2 then HP(p2) end
+    if p3 then
+        local h = p3:Clone()
+        h.Parent = V2
+        HP(h)
+    end
+    
+    local leftArm = V2:FindFirstChild("Left Arm")
+    local rightArm = V2:FindFirstChild("Right Arm")
+    if leftArm then HP(leftArm) end
+    if rightArm then HP(rightArm) end
+end
+
+HS()
+
+local connection
+connection = V2.AncestryChanged:Connect(function(_, parent)
+    if not parent then
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not V2 or not V2.Parent then 
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+        return 
+    end
+
+    local function findRootPart(model)
+        local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Torso")
+        if root then 
+            return root 
+        end
+        
+        for _, child in pairs(model:GetDescendants()) do
+            if (child.Name == "HumanoidRootPart" or child.Name == "Torso") and child:IsA("BasePart") then
+                return child
+            end
+        end
+        return nil
+    end
+    
+    local root = findRootPart(V2)
+    if not root then 
+        V1:Destroy()
+        if connection then
+            connection:Disconnect()
+        end
+        return
+    end
+    if V1:IsA("Model") then
+        if not V1.PrimaryPart then
+            local part = V1:FindFirstChildWhichIsA("BasePart")
+            if part then
+                V1.PrimaryPart = part
+            end
+        end
+        
+        if V1.PrimaryPart then
+            local newCFrame = CFrame.new(
+                root.CFrame.Position.X + xOffset,
+                root.CFrame.Position.Y + yOffset,
+                root.CFrame.Position.Z + zOffset
+            ) * root.CFrame.Rotation
+            V1:SetPrimaryPartCFrame(newCFrame)
+        end
+    elseif V1:IsA("BasePart") then
+        local newCFrame = CFrame.new(
+            root.CFrame.Position.X + xOffset,
+            root.CFrame.Position.Y + yOffset,
+            root.CFrame.Position.Z + zOffset
+        ) * root.CFrame.Rotation
+        V1.CFrame = newCFrame
+    end
+end)
+end
+function entityBehaviors.gunjeffkq()
+local sound = Instance.new("Sound")
+sound.Name = "Subspace"
+sound.SoundId = "rbxassetid://89344175304287"
+sound.Volume = 4
+sound.Parent = workspace
+
+sound.Ended:Connect(function()
+    sound:Destroy()
+end)
+sound:Play()
+end
+function entityBehaviors.MONTNS()
+local concrete = workspace.MonumentEntity.Top.Concrete
+local decal = Instance.new("Decal")
+decal.Texture = "rbxassetid://155213173"
+decal.Parent = concrete
+end
+function entityBehaviors.MOSCJ()
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local Red = Color3.fromRGB(255, 7, 11)
+local function PlaySound(parent, soundId, volume)
+	local sound = Instance.new("Sound")
+	sound.SoundId = soundId
+	sound.Volume = volume or 1
+	sound.Parent = parent
+	task.spawn(function()
+		task.wait(0.1)
+		sound:Play()
+		sound.Ended:Wait()
+		sound:Destroy()
+	end)
+
+end
+local function GlitchText(TextLabel, Duration)
+
+	if not TextLabel then
+		return
+	end
+
+	local Original = TextLabel.Text
+
+	local GlitchChars = {
+		"▓",
+		"█",
+		"▒",
+		"#",
+		"%",
+		"@",
+		"0",
+		"1",
+		"7",
+		"X",
+		"?"
+	}
+	task.spawn(function()
+		local Start = tick()
+		while tick() - Start < Duration do
+			if not TextLabel.Parent then
+				return
+			end
+			local Result = ""
+			for n = 1,#Original do
+				local Char = Original:sub(n,n)
+				if Char == " " or Char == "'" then
+
+					Result = Result .. Char
+
+				else
+					if math.random() < 0.45 then
+						Result =
+							Result ..
+							GlitchChars[
+								math.random(
+									1,
+									#GlitchChars
+								)
+							]
+
+					else
+
+						Result =
+							Result .. Char
+
+					end
+
+				end
+
+			end
+
+			TextLabel.Text = Result
+
+			task.wait(0.08)
+
+		end
+
+
+		if TextLabel.Parent then
+			TextLabel.Text = Original
+		end
+
+	end)
+
+end
+
+
+
+local function ApplyRedTheme(Achievement)
+
+	for _,v in ipairs(Achievement:GetDescendants()) do
+
+		if v:IsA("TextLabel") then
+			v.TextColor3 = Red
+		end
+
+
+		if v:IsA("UIStroke") then
+			v.Color = Red
+		end
+
+
+		if v:IsA("Frame") then
+			v.BorderColor3 = Red
+		end
+
+	end
+
+end
+
+
+
+local function DoorsNotify(NotifyOptions)
+
+	NotifyOptions = NotifyOptions or {}
+
+
+	local PlayerGui =
+		LocalPlayer:WaitForChild("PlayerGui")
+
+
+	local UIContainer =
+		PlayerGui:FindFirstChild("GlobalUI")
+		or
+		PlayerGui:FindFirstChild("MainUI")
+
+
+	if not UIContainer then
+		return
+	end
+
+
+	local AchievementsHolder =
+		UIContainer:FindFirstChild("AchievementsHolder")
+
+
+	if not AchievementsHolder then
+		return
+	end
+
+
+	local Template =
+		AchievementsHolder:FindFirstChild("Achievement")
+
+
+	if not Template then
+		return
+	end
+
+
+	local Achievement = Template:Clone()
+
+
+	Achievement.Size =
+		UDim2.new(0,0,0,0)
+
+
+	Achievement.Frame.Position =
+		UDim2.new(1.1,0,0,0)
+
+
+	Achievement.Name =
+		"LiveAchievement"
+
+
+	Achievement.Visible = true
+
+
+
+	Achievement.Frame.TextLabel.Text =
+		NotifyOptions.Style
+		or
+		"NOTIFICATION"
+
+
+
+	Achievement.Frame.Details.Title.Text =
+		NotifyOptions.Title
+		or
+		"Sem Título"
+
+
+
+	Achievement.Frame.Details.Desc.Text =
+		NotifyOptions.Description
+		or
+		"Sem Descrição"
+
+
+
+	Achievement.Frame.Details.Reason.Text =
+		NotifyOptions.Reason
+		or ""
+
+
+
+	Achievement.Frame.ImageLabel.Image =
+		(
+			NotifyOptions.Image
+			and
+			NotifyOptions.Image ~= ""
+		)
+		and
+		NotifyOptions.Image
+		or
+		"rbxassetid://0"
+
+
+
+	ApplyRedTheme(Achievement)
+
+
+	Achievement.Parent =
+		AchievementsHolder
+
+
+
+	PlaySound(
+		AchievementsHolder,
+		"rbxassetid://10469938989",
+		1
+	)
+
+
+
+	task.spawn(function()
+
+		task.wait(0.1)
+
+		GlitchText(
+			Achievement.Frame.Details.Title,
+			NotifyOptions.Time or 5
+		)
+
+	end)
+
+
+
+	task.spawn(function()
+
+
+		Achievement:TweenSize(
+			UDim2.new(1,0,0.2,0),
+			Enum.EasingDirection.In,
+			Enum.EasingStyle.Quad,
+			0.8,
+			true
+		)
+
+
+		task.wait(0.8)
+
+
+		Achievement.Frame:TweenPosition(
+			UDim2.new(0,0,0,0),
+			Enum.EasingDirection.Out,
+			Enum.EasingStyle.Quad,
+			0.5,
+			true
+		)
+
+
+
+		local Glow =
+			Achievement.Frame:FindFirstChild("Glow")
+
+
+		if Glow then
+
+			TweenService:Create(
+				Glow,
+				TweenInfo.new(
+					1,
+					Enum.EasingStyle.Quad,
+					Enum.EasingDirection.In
+				),
+				{
+					ImageTransparency = 1
+				}
+			):Play()
+
+		end
+
+
+
+		if typeof(NotifyOptions.Time) == "Instance" then
+
+			NotifyOptions.Time.Destroying:Wait()
+
+		else
+
+			task.wait(
+				NotifyOptions.Time or 5
+			)
+
+		end
+
+
+
+		if not Achievement.Parent then
+			return
+		end
+
+
+
+		Achievement.Frame:TweenPosition(
+			UDim2.new(1.1,0,0,0),
+			Enum.EasingDirection.In,
+			Enum.EasingStyle.Quad,
+			0.5,
+			true
+		)
+
+
+
+		task.wait(0.5)
+
+
+
+		Achievement:TweenSize(
+			UDim2.new(1,0,-0.1,0),
+			Enum.EasingDirection.InOut,
+			Enum.EasingStyle.Quad,
+			0.5,
+			true
+		)
+
+
+
+		task.wait(0.5)
+
+
+		Achievement:Destroy()
+
+	end)
+
+end
+
+
+
+DoorsNotify({
+	Style = "Done!",
+	Title = "Someone Else's Turn",
+	Description = "Survive The MultiMonsters",
+	Reason = "No matter where you are, there's always a buzzing sound following you...",
+	Image = "rbxassetid://100946605902758",
+	Time = 6
+})
+end
+function entityBehaviors.A500F()
+local RunService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
+local flipActive = true
+local flipStart = os.clock()
+local flipDuration = 5
+local flipDirection = 2
+RunService:BindToRenderStep("ScreenFlipOnce", Enum.RenderPriority.Camera.Value + 1, function()
+local now = os.clock()
+local progress = (now - flipStart) / flipDuration
+if progress >= 1 then
+RunService:UnbindFromRenderStep("ScreenFlipOnce")
+return
+end
+local curve = math.sin(progress * math.pi) ^ 0.4
+local flipAngle = math.rad(360) * curve * flipDirection
+camera.CFrame = camera.CFrame * CFrame.Angles(0, 0, flipAngle)
+end)
+end
 local entityConfig = {
     ["rbxassetid://1"] = entityBehaviors.ATCHRipper,
     ["rbxassetid://3"] = entityBehaviors.AMIN60,
@@ -8987,6 +10720,19 @@ local entityConfig = {
     ["rbxassetid://21"] = entityBehaviors.FrostBite,
     ["rbxassetid://22"] = entityBehaviors.HATRED,
     ["rbxassetid://23"] = entityBehaviors.A500,
+    ["rbxassetid://24"] = entityBehaviors.Angler,
+    ["rbxassetid://25"] = entityBehaviors.guidingjug,
+    ["rbxassetid://26"] = entityBehaviors.A333,
+    ["rbxassetid://27"] = entityBehaviors.JeffTwo,
+    ["rbxassetid://28"] = entityBehaviors.JEFFGUNST,
+    ["rbxassetid://29"] = entityBehaviors.JEFFGUN,
+    ["rbxassetid://30"] = entityBehaviors.REBOUNDSW,
+    ["rbxassetid://31"] = entityBehaviors.JEFFGUN2,
+    ["rbxassetid://31"] = entityBehaviors.gunjeffkq,
+    ["rbxassetid://32"] = entityBehaviors.MONTNS,
+    ["rbxassetid://33"] = entityBehaviors.MOSCJ,
+    ["rbxassetid://34"] = entityBehaviors.A500F,
+    ["rbxassetid://35"] = entityBehaviors.Smiler,
     ["rbxassetid://2"] = entityBehaviors.A200
 }
 local checkedEntities = {}
@@ -9032,8 +10778,6 @@ for _, entity in pairs(workspace:GetChildren()) do
         end
     end
 end
--------
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCore V10.6 By Mr.key & HeavenNow :)"
+hint.Text = "Loading... Doors HardCore V10.6 By HeavenNow :)"
 game.Debris:AddItem(hint, 3)
-end

@@ -1,87 +1,409 @@
-local rooms = workspace:WaitForChild("CurrentRooms")
-local soundId = "rbxassetid://140444636093892"
-local processed = {}
+local Workspace = game:GetService("Workspace")
+local Debris = game:GetService("Debris")
 
-local function replace(room)
-	if processed[room] or not room:IsA("Model") or not tonumber(room.Name) then return end
-
-	local function apply()
-		local door = room:FindFirstChild("Door")
-		if door then
-			local mesh = door:FindFirstChild("Door")
-			if mesh and mesh:IsA("MeshPart") then
-				local open = mesh:FindFirstChild("Open")
-				if open and open:IsA("Sound") then
-					open.SoundId = soundId
-					processed[room] = true
-					return true
-				end
-			end
-		end
-	end
-
-	if apply() then return end
-
-	local conn
-	conn = room.DescendantAdded:Connect(function()
-		if apply() and conn then
-			conn:Disconnect()
-		end
-	end)
+if Workspace:FindFirstChild("HardcoreMusic") then
+    return
 end
 
-for _, v in ipairs(rooms:GetChildren()) do
-	replace(v)
+local assetFunction = getcustomasset or getsynasset
+
+assert(type(writefile) == "function", "writefile unavailable")
+assert(type(readfile) == "function", "readfile unavailable")
+assert(type(isfile) == "function", "isfile unavailable")
+assert(type(makefolder) == "function", "makefolder unavailable")
+assert(type(isfolder) == "function", "isfolder unavailable")
+assert(type(assetFunction) == "function", "custom asset unavailable")
+
+local marker = Instance.new("BoolValue")
+marker.Name = "HardcoreMusic"
+marker.Value = true
+marker.Parent = Workspace
+
+local rooms = Workspace:WaitForChild("CurrentRooms")
+local doorSoundId = "rbxassetid://140444636093892"
+local trackedRooms = setmetatable({}, {__mode = "k"})
+
+local function applyDoorSound(room)
+    local door = room:FindFirstChild("Door")
+    if not door then
+        return false
+    end
+
+    local mesh = door:FindFirstChild("Door")
+    if not mesh or not mesh:IsA("BasePart") then
+        return false
+    end
+
+    local open = mesh:FindFirstChild("Open")
+    if not open or not open:IsA("Sound") then
+        return false
+    end
+
+    if open.SoundId ~= doorSoundId then
+        open.SoundId = doorSoundId
+    end
+
+    return true
 end
 
-rooms.ChildAdded:Connect(function(v)
-	replace(v)
-end)
-function GitAud(soundgit, filename)
-    local url = soundgit
-    local FileName = filename
-    writefile(FileName .. ".mp3", game:HttpGet(url))
-    return (getcustomasset or getsynasset)(FileName .. ".mp3")
+local function replaceDoorSound(room)
+    if not room:IsA("Model") then
+        return
+    end
+
+    if not tonumber(room.Name) then
+        return
+    end
+
+    if trackedRooms[room] then
+        return
+    end
+
+    trackedRooms[room] = true
+
+    applyDoorSound(room)
+
+    room.DescendantAdded:Connect(function(descendant)
+        if descendant.Name == "Door" or descendant.Name == "Open" then
+            task.defer(function()
+                if room.Parent then
+                    applyDoorSound(room)
+                end
+            end)
+        end
+    end)
 end
 
-function CustomGitSound(soundlink, vol, filename)
-    local sound = Instance.new("Sound")
-    sound.SoundId = GitAud(soundlink, filename)
-    sound.Parent = workspace
-    sound.Name = filename or ""
-    sound.Volume = vol or 1
-    return sound
+for _, room in ipairs(rooms:GetChildren()) do
+    replaceDoorSound(room)
 end
 
-local folder = Instance.new("Folder")
-folder.Name = "HardCoreSound"
-folder.Parent = workspace
+rooms.ChildAdded:Connect(replaceDoorSound)
+
+local folder = Workspace:FindFirstChild("HardCoreSound")
+
+if folder and not folder:IsA("Folder") then
+    folder:Destroy()
+    folder = nil
+end
+
+if not folder then
+    folder = Instance.new("Folder")
+    folder.Name = "HardCoreSound"
+    folder.Parent = Workspace
+end
+
+local cacheFolder = "HardCoreMusicCache"
+
+if not isfolder(cacheFolder) then
+    makefolder(cacheFolder)
+end
+
+local rawNew = "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/master/"
+local rawMP = "https://raw.githubusercontent.com/Zero0Star/RipperMPSound/master/"
 
 local soundsData = {
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/DreadJumpFace.mp3?raw=true", name = "DreadJump", vol = 5},
-    {url = "https://raw.githubusercontent.com/Zero0Star/RipperMPSound/master/A120Jump.mp3", name = "A200J", vol = 4},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/Astary.mp3?raw=true", name = "A1", vol = 6},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/A2.mp3?raw=true", name = "A2", vol = 6},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/A3.mp3?raw=true", name = "A3", vol = 6},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/A4.mp3?raw=true", name = "A4", vol = 6},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/A5.mp3?raw=true", name = "A5", vol = 6},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/A6.mp3?raw=true", name = "A6", vol = 6},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/A7.mp3?raw=true", name = "A7", vol = 6},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/AbominationStart_Custom.mp3?raw=true", name = "A500One", vol = 1.5},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/AbominationLoop_Custom.mp3?raw=true", name = "A500Two", vol = 1.5},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/AbominationLoop_Custom2.mp3?raw=true", name = "A500Three", vol = 1.5},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/AbominationLoop_END.mp3?raw=true", name = "A500Four", vol = 1.5},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/Silence.mp3?raw=true", name = "Silence", vol = 1},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/SilenceFar.mp3?raw=true", name = "SilenceFar", vol = 1},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true", name = "DeerGodMusic", vol = 1},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/FrostbitePhase1.mp3?raw=true", name = "F1", vol = 1},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/FrostbitePhase2.mp3?raw=true", name = "F2", vol = 1},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/FrostbiteEnd.mp3?raw=true", name = "F3", vol = 1},
-    {url = "https://github.com/Zero0Star/RipperMPSound/blob/master/HatredBossMusic.mp3?raw=true", name = "HATRED", vol = 1},
-    {url = "https://github.com/Zero0Star/RipperNewSound/blob/master/ATCHST.mp3?raw=true", name = "ATCHSTARYT", vol = 0.3}
+    {url = rawNew .. "DreadJumpFace.mp3", name = "DreadJump", vol = 5},
+    {url = rawMP .. "A120Jump.mp3", name = "A200J", vol = 4},
+    {url = rawMP .. "RipperNewSound.mp3", name = "RipperBackgroundSound", vol = 1},
+    {url = rawNew .. "RipperDoorend.mp3", name = "RipperExplosionSound", vol = 1},
+    {url = rawNew .. "A-333Music2.mp3", name = "A333Music", vol = 2},
+    {url = rawNew .. "Astary.mp3", name = "A1", vol = 6},
+    {url = rawMP .. "ReboundSoundV1.mp3", name = "ReboundSweep", vol = 1},
+    {url = rawNew .. "MultiMonster1.mp3", name = "M1", vol = 2},
+    {url = rawNew .. "MultiMonster2.mp3", name = "M2", vol = 2},
+    {url = rawNew .. "MultiMonster3.mp3", name = "M3", vol = 2},
+    {url = rawNew .. "MultiMonster4.mp3", name = "M4", vol = 2},
+    {url = rawMP .. "ReboundMovings.mp3", name = "ReboundMovings", vol = 1},
+    {url = rawNew .. "A2.mp3", name = "A2", vol = 6},
+    {url = rawNew .. "A3.mp3", name = "A3", vol = 6},
+    {url = rawNew .. "A4.mp3", name = "A4", vol = 6},
+    {url = rawNew .. "A5.mp3", name = "A5", vol = 6},
+    {url = rawNew .. "A6.mp3", name = "A6", vol = 6},
+    {url = rawNew .. "A7.mp3", name = "A7", vol = 6},
+    {url = rawNew .. "AbominationStart_Custom.mp3", name = "A500One", vol = 1.5},
+    {url = rawNew .. "AbominationLoop_Custom.mp3", name = "A500Two", vol = 1.5},
+    {url = rawNew .. "AbominationLoop_Custom2.mp3", name = "A500Three", vol = 1.5},
+    {url = rawNew .. "AbominationLoop_END.mp3", name = "A500Four", vol = 1.5},
+    {url = rawNew .. "Silence.mp3", name = "Silence", vol = 1},
+    {url = rawNew .. "SilenceFar.mp3", name = "SilenceFar", vol = 1},
+    {url = rawNew .. "NoRunning.mp3", name = "DeerGodMusic", vol = 1},
+    {url = rawNew .. "FrostbitePhase1.mp3", name = "F1", vol = 1},
+    {url = rawNew .. "FrostbitePhase2.mp3", name = "F2", vol = 1},
+    {url = rawNew .. "FrostbiteEnd.mp3", name = "F3", vol = 1},
+    {url = rawMP .. "HatredBossMusic.mp3", name = "HATRED", vol = 1},
+    {url = rawNew .. "ATCHST.mp3", name = "ATCHSTARYT", vol = 0.3}
 }
 
-for _, data in ipairs(soundsData) do
-    local sound = CustomGitSound(data.url, data.vol, data.name)
+local MAX_CONCURRENT = 4
+local RETRY_DELAY = 1
+local MAX_RETRY_DELAY = 8
+
+local function getFilePath(data)
+    return cacheFolder .. "/" .. data.name .. ".mp3"
+end
+
+local function isValidMP3(content)
+    if type(content) ~= "string" then
+        return false
+    end
+
+    if #content < 128 then
+        return false
+    end
+
+    if content:sub(1, 3) == "ID3" then
+        return true
+    end
+
+    local first, second = content:byte(1, 2)
+
+    if first == 255 and second and second >= 224 then
+        return true
+    end
+
+    return false
+end
+
+local function verifyFile(data)
+    local path = getFilePath(data)
+
+    local existsOK, exists = pcall(isfile, path)
+
+    if not existsOK or not exists then
+        return false
+    end
+
+    local readOK, content = pcall(readfile, path)
+
+    if not readOK then
+        return false
+    end
+
+    return isValidMP3(content)
+end
+
+local function downloadAudio(data)
+    local path = getFilePath(data)
+
+    local success, content = pcall(function()
+        return game:HttpGet(data.url, true)
+    end)
+
+    if not success or not isValidMP3(content) then
+        warn("[HardCoreMusic] Download failed: " .. data.name)
+        return false
+    end
+
+    local writeOK = pcall(function()
+        writefile(path, content)
+    end)
+
+    if not writeOK then
+        warn("[HardCoreMusic] Write failed: " .. data.name)
+        return false
+    end
+
+    if not verifyFile(data) then
+        warn("[HardCoreMusic] File verification failed: " .. data.name)
+        return false
+    end
+
+    return true
+end
+
+local function downloadBatch(list)
+    if #list == 0 then
+        return
+    end
+
+    local index = 0
+    local finished = 0
+    local workerCount = math.min(MAX_CONCURRENT, #list)
+
+    for _ = 1, workerCount do
+        task.spawn(function()
+            while true do
+                index += 1
+
+                local data = list[index]
+
+                if not data then
+                    break
+                end
+
+                pcall(downloadAudio, data)
+            end
+
+            finished += 1
+        end)
+    end
+
+    repeat
+        task.wait(0.05)
+    until finished >= workerCount
+end
+
+local function collectMissingFiles()
+    local missing = {}
+
+    for _, data in ipairs(soundsData) do
+        if not verifyFile(data) then
+            missing[#missing + 1] = data
+        end
+    end
+
+    return missing
+end
+
+local function createSound(data)
+    if not verifyFile(data) then
+        return false
+    end
+
+    local existing = folder:FindFirstChild(data.name)
+
+    if existing and not existing:IsA("Sound") then
+        existing:Destroy()
+        existing = nil
+    end
+
+    if existing and existing.SoundId ~= "" then
+        existing.Volume = data.vol
+        return true
+    end
+
+    local success, assetId = pcall(function()
+        return assetFunction(getFilePath(data))
+    end)
+
+    if not success or type(assetId) ~= "string" or assetId == "" then
+        warn("[HardCoreMusic] Asset registration failed: " .. data.name)
+        return false
+    end
+
+    local sound = existing
+
+    if not sound then
+        sound = Instance.new("Sound")
+        sound.Name = data.name
+    end
+
+    sound.SoundId = assetId
+    sound.Volume = data.vol
+    sound.Looped = false
     sound.Parent = folder
+
+    return true
+end
+
+local function verifySoundsFolder()
+    for _, data in ipairs(soundsData) do
+        local sound = folder:FindFirstChild(data.name)
+
+        if not sound then
+            return false
+        end
+
+        if not sound:IsA("Sound") then
+            return false
+        end
+
+        if sound.SoundId == "" then
+            return false
+        end
+
+        if not verifyFile(data) then
+            return false
+        end
+    end
+
+    return true
+end
+
+local function initializeAllSounds()
+    local retryDelay = RETRY_DELAY
+
+    while true do
+        local missing = collectMissingFiles()
+
+        if #missing > 0 then
+            for _, data in ipairs(missing) do
+                local existing = folder:FindFirstChild(data.name)
+
+                if existing then
+                    existing:Destroy()
+                end
+            end
+
+            downloadBatch(missing)
+        end
+
+        missing = collectMissingFiles()
+
+        if #missing == 0 then
+            local registered = true
+
+            for _, data in ipairs(soundsData) do
+                if not createSound(data) then
+                    registered = false
+                end
+            end
+
+            if registered then
+                local finalMissing = collectMissingFiles()
+
+                if #finalMissing == 0 and verifySoundsFolder() then
+                    return true
+                end
+            end
+        end
+
+        task.wait(retryDelay)
+        retryDelay = math.min(retryDelay * 1.5, MAX_RETRY_DELAY)
+    end
+end
+
+initializeAllSounds()
+
+local allFilesValid = false
+
+while not allFilesValid do
+    local missing = collectMissingFiles()
+
+    if #missing == 0 and verifySoundsFolder() then
+        allFilesValid = true
+    else
+        if #missing > 0 then
+            for _, data in ipairs(missing) do
+                local existing = folder:FindFirstChild(data.name)
+
+                if existing then
+                    existing:Destroy()
+                end
+            end
+
+            downloadBatch(missing)
+        end
+
+        if #collectMissingFiles() == 0 then
+            for _, data in ipairs(soundsData) do
+                createSound(data)
+            end
+        end
+
+        task.wait(1)
+    end
+end
+
+local finalSound = folder:FindFirstChild("ATCHSTARYT")
+
+local hint = Instance.new("Hint", Workspace)
+hint.Text = "Loading... Doors HardCoreMusic V10.6 By HeavenNow :)"
+Debris:AddItem(hint, 3)
+
+if finalSound and finalSound:IsA("Sound") then
+    finalSound.Looped = false
+    finalSound.TimePosition = 0
+    finalSound:Play()
 end

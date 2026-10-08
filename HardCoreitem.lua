@@ -427,9 +427,9 @@ local model = game:GetObjects("rbxassetid://" .. MODEL_ID)[1]
 model.Parent = Entities
 
 game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("By Mr.Key",true)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).titlelocation("The HardCord Mines",true)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).remind("⚠❗This Mode is quite challenging and is recommended for 5-10 players.❗⚠", true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("By Heaven",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).titlelocation("The HardCord Archives",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).remind("⚠This mode is quite challenging and is recommended for 10-15 players.⚠", true)
 
 task.spawn(function()
     local Players = game:GetService("Players")

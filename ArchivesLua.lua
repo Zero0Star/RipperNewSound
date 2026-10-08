@@ -8690,6 +8690,279 @@ end))
 Controller.Start = runEvent
 task.spawn(runEvent)
 end
+function entityBehaviors.A500()
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local Lighting=game:GetService("Lighting")
+local Workspace=game:GetService("Workspace")
+
+local player=Players.LocalPlayer
+local camera=Workspace.CurrentCamera
+
+local CurrentRooms=Workspace:WaitForChild("CurrentRooms")
+local LatestRoom=ReplicatedStorage.GameData.LatestRoom
+local SoundFolder=Workspace:WaitForChild("HardCoreSound")
+
+local A500One=SoundFolder.A500One
+local A500Two=SoundFolder.A500Two
+local A500Three=SoundFolder.A500Three
+local A500Four=SoundFolder.A500Four
+
+local roomChanges=0
+local phase87=false
+local gameEnded=false
+
+local flameModel=nil
+local flameRunning=false
+local flameDamageCooldown=false
+
+
+local function ReplaceTV()
+	for _,v in ipairs(CurrentRooms:GetDescendants()) do
+		if v:IsA("TextLabel") then
+			if v.Name=="Number" then
+				v.Text="??"
+				v.TextColor3=Color3.fromRGB(151,60,255)
+			elseif v.Name=="TextLabel" then
+				v.Text="Y!o#u$ n%e&e%d t#o r!u$n f%a#s$t!e%r!"
+				v.TextColor3=Color3.fromRGB(151,60,255)
+			end
+		end
+
+		if v:IsA("SurfaceGui") or v:IsA("BillboardGui") then
+			if v.Name=="TellerGui" then
+				v.Enabled=true
+			end
+		end
+	end
+end
+
+
+local function HideRoom(room)
+	if not room then return end
+
+	for _,v in ipairs(room:GetDescendants()) do
+		if v:IsA("BasePart") then
+			if v.Name=="Floor" or v.Name=="Ceiling" or v.Name=="Carpet" then
+				v.Transparency=1
+				v.LocalTransparencyModifier=1
+			end
+		end
+	end
+end
+
+
+local hideConnection=CurrentRooms.ChildAdded:Connect(function(room)
+	if gameEnded then return end
+
+	if phase87 then
+		task.wait(.1)
+		HideRoom(room)
+	else
+		task.wait(.2)
+		ReplaceTV()
+	end
+end)
+
+
+LatestRoom.Changed:Connect(function()
+	roomChanges+=1
+end)
+
+
+local function ErrorFlash()
+	local gui=Instance.new("ScreenGui")
+	gui.IgnoreGuiInset=true
+	gui.ResetOnSpawn=false
+	gui.Parent=player.PlayerGui
+
+	local f=Instance.new("Frame")
+	f.Size=UDim2.fromScale(1,1)
+	f.BackgroundColor3=Color3.new(0,0,0)
+	f.BackgroundTransparency=1
+	f.Parent=gui
+
+	for i=1,8 do
+		f.BackgroundTransparency=0
+		task.wait(.035)
+		f.BackgroundTransparency=1
+		task.wait(.035)
+	end
+
+	gui:Destroy()
+end
+
+
+local function Impact()
+	local old=camera.FieldOfView
+	local t=0
+
+	while t<10 and not gameEnded do
+		t+=RunService.RenderStepped:Wait()
+		local p=(10-t)/10
+
+		camera.FieldOfView=old+70*p
+
+		camera.CFrame*=CFrame.new(
+			math.sin(t*20)*.2*p,
+			math.sin(t*12)*.05*p,
+			0
+		)
+	end
+end
+
+
+local function ChangeSky()
+	local sky=Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky",Lighting)
+
+	sky.SkyboxBk="rbxassetid://15983968922"
+	sky.SkyboxDn="rbxassetid://15983966825"
+	sky.SkyboxFt="rbxassetid://15983965025"
+	sky.SkyboxLf="rbxassetid://15983967420"
+	sky.SkyboxRt="rbxassetid://15983966246"
+	sky.SkyboxUp="rbxassetid://15983964246"
+end
+
+
+local function SpawnFlame()
+	local objects=game:GetObjects("rbxassetid://88313881550159")
+	local model=objects[1]
+
+	if not model then return end
+
+	flameModel=model
+	flameModel.Name="Flame of Fury"
+	flameModel.Parent=Workspace
+
+	local root=flameModel.PrimaryPart or flameModel:FindFirstChildWhichIsA("BasePart")
+	if not root then
+		flameModel:Destroy()
+		return
+	end
+
+	local char=player.Character or player.CharacterAdded:Wait()
+	local hrp=char:WaitForChild("HumanoidRootPart")
+
+	flameModel:PivotTo(hrp.CFrame*CFrame.new(0,0,100))
+	flameRunning=true
+
+	RunService:BindToRenderStep("FlameChase",301,function(dt)
+		if not flameRunning or gameEnded or not flameModel.Parent then
+			RunService:UnbindFromRenderStep("FlameChase")
+			return
+		end
+
+		local target=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if not target then return end
+
+		local dir=target.Position-root.Position
+
+		if dir.Magnitude>3 then
+			root.CFrame=CFrame.lookAt(root.Position+dir.Unit*35*dt,target.Position)
+		end
+
+		local params=RaycastParams.new()
+		params.FilterType=Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances={flameModel}
+
+		local hit=Workspace:Raycast(root.Position,dir.Unit*8,params)
+
+		if hit and hit.Instance:IsDescendantOf(target.Parent) and not flameDamageCooldown then
+			flameDamageCooldown=true
+
+			local hum=target.Parent:FindFirstChildOfClass("Humanoid")
+			if hum then hum:TakeDamage(90) end
+
+			task.delay(5,function()
+				flameDamageCooldown=false
+			end)
+		end
+	end)
+end
+
+
+local function RemoveFlame()
+	flameRunning=false
+
+	pcall(function()
+		RunService:UnbindFromRenderStep("FlameChase")
+	end)
+
+	if flameModel then
+		flameModel:Destroy()
+		flameModel=nil
+	end
+end
+
+
+A500One.Looped=true
+A500One:Play()
+task.wait(.5)
+ReplaceTV()
+
+
+while roomChanges<3 do
+	LatestRoom.Changed:Wait()
+end
+
+
+A500One:Stop()
+A500Two:Play()
+
+
+task.delay(5.2,function()
+	ErrorFlash()
+	task.wait(.15)
+	Impact()
+	SpawnFlame()
+end)
+
+
+task.delay(87,function()
+	phase87=true
+
+	ErrorFlash()
+	task.wait(.15)
+
+	Impact()
+	ChangeSky()
+
+	for _,r in ipairs(CurrentRooms:GetChildren()) do
+		HideRoom(r)
+	end
+end)
+
+
+A500Two.Ended:Wait()
+
+
+if roomChanges<50 then
+	A500Three.Looped=true
+	A500Three:Play()
+
+	while roomChanges<50 do
+		task.wait(.1)
+	end
+
+	A500Three:Stop()
+end
+
+
+A500Four:Play()
+
+gameEnded=true
+phase87=false
+
+RemoveFlame()
+
+if hideConnection then
+	hideConnection:Disconnect()
+	hideConnection=nil
+end
+
+camera.FieldOfView=70
+end
 
 local entityConfig = {
     ["rbxassetid://1"] = entityBehaviors.ATCHRipper,
@@ -8713,6 +8986,7 @@ local entityConfig = {
     ["rbxassetid://20"] = entityBehaviors.DeerGod,
     ["rbxassetid://21"] = entityBehaviors.FrostBite,
     ["rbxassetid://22"] = entityBehaviors.HATRED,
+    ["rbxassetid://23"] = entityBehaviors.A500,
     ["rbxassetid://2"] = entityBehaviors.A200
 }
 local checkedEntities = {}

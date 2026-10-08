@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"安全层级,实体绝迹",
-	"无法前往",
-	"无任何新消息",
-	"无任何新消息",
-	"无任何新消息",
 	"披萨派对",
 	"无任何新消息",
-	"无任何新消息"
+	"无任何新消息",
+	"???",
+	"未知",
+	"披萨派对",
+	"未知",
+	"鹿神的房间"
 }
 
 local stopped = false

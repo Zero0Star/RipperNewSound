@@ -3,11 +3,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"无任何新消息",
-	"寻找一份重要文档,给予Honcho回报奖励.",
 	"实体绝迹",
 	"无任何新消息",
 	"无任何新消息",
+	"无任何新消息",
+	"Rage",
 	"无任何新消息",
 	"无任何新消息",
 	"无任何新消息"

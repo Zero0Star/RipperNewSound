@@ -103,7 +103,7 @@ local rawNew = "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/maste
 local rawMP = "https://raw.githubusercontent.com/Zero0Star/RipperMPSound/master/"
 
 local soundsData = {
-    {url = rawMP .. "DreadJumpFace.mp3", name = "DreadJump", vol = 5},
+    {url = rawNew .. "DreadJumpFace.mp3", name = "DreadJump", vol = 5},
     {url = rawMP .. "A120Jump.mp3", name = "A200J", vol = 4},
     {url = rawMP .. "RipperNewSound.mp3", name = "RipperBackgroundSound", vol = 1},
     {url = rawNew .. "RipperDoorend.mp3", name = "RipperExplosionSound", vol = 1},

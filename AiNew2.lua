@@ -3,9 +3,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"未知属性",
 	"请取回重要文件,交给Honcho",
 	"未知属性",
+	"Honcho",
 	"?",
 	"pizza!!!",
 	"?",

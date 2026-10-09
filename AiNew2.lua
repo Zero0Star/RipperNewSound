@@ -3,13 +3,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"无任何信息",
-	"前往重要楼层获取档案",
 	"Honcho的办公室 区域情况:实体绝迹",
 	"无任何信息",
-	"星光圣地 区域情况:世界之外",
 	"无任何信息",
 	"无任何信息",
+	"无任何信息",
+	"无任何信息",
+	"Fatal Error",
 	"无任何信息"
 }
 

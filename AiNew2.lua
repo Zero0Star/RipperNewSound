@@ -3,8 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"Honcho的办公室 区域情况:实体绝迹",
-	"无任何信息",
+	"愤怒 区域情况:实体横行",
+	"Fatal Error",
 	"无任何信息",
 	"无任何信息",
 	"无任何信息",

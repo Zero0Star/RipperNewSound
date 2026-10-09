@@ -3,13 +3,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"重要层级,请前往拿取 区域情况:少量实体",
 	"无任何新消息",
 	"重要层级,请前往拿取 区域情况:少量实体",
 	"愤怒 区域情况:实体横行",
-	"无任何新消息",
+	"未知粘液信息 区域情况:实体绝迹",
 	"无任何新消息",
 	"未知信息,请谨慎前往 区域情况:中量实体",
+	"无任何新消息",
 	"无任何新消息"
 }
 

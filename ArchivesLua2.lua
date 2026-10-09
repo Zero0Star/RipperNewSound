@@ -4850,6 +4850,58 @@ LatestRoom.Changed:Connect(function()
 end)
 
 end
+function entityBehaviors.FireMeld()
+local meldView = workspace:FindFirstChild("MeldView")
+
+local function addFire(obj)
+	if obj:IsA("BasePart") and not obj:FindFirstChildOfClass("Fire") then
+		local fire = Instance.new("Fire")
+		fire.Size = 10
+		fire.Heat = 10
+		fire.Parent = obj
+	end
+end
+
+if meldView then
+	for _, obj in ipairs(meldView:GetDescendants()) do
+		addFire(obj)
+	end
+
+	meldView.DescendantAdded:Connect(function(obj)
+		addFire(obj)
+	end)
+end
+
+task.wait(10)
+
+if meldView and meldView.Parent then
+	meldView:Destroy()
+end
+
+local currentRooms = workspace:FindFirstChild("CurrentRooms")
+
+if currentRooms then
+	for _, model in ipairs(currentRooms:GetDescendants()) do
+		if model:IsA("Model") then
+			local meldData = model:FindFirstChild("MeldData")
+			local meldPads = model:FindFirstChild("MeldPads")
+			local meldViewInside = model:FindFirstChild("MeldView")
+
+			if meldData then
+				meldData:Destroy()
+			end
+
+			if meldPads then
+				meldPads:Destroy()
+			end
+
+			if meldViewInside then
+				meldViewInside:Destroy()
+			end
+		end
+	end
+end
+end
 function entityBehaviors.broadcast()
 loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/AiNew2.lua?raw=true"))()
 end
@@ -4889,6 +4941,7 @@ local entityConfig = {
     ["rbxassetid://70"] = entityBehaviors.JEFFDEATH,
     ["rbxassetid://71"] = entityBehaviors.Baldi,
     ["rbxassetid://72"] = entityBehaviors.Baldi2,
+    ["rbxassetid://73"] = entityBehaviors.FireMeld,
     ["rbxassetid://41"] = entityBehaviors.WH1T3
 }
 local checkedEntities = {}

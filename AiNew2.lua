@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"极大异常,该层级已被神秘液体入侵 区域情况:未知",
 	"重要层级,请前往拿取 区域情况:少量实体",
 	"请联系Honcho",
 	"愤怒 区域情况:实体横行",
 	"披萨派对",
 	"未知信息,请谨慎前往 区域情况:中量实体",
 	"无任何新消息",
-	"无任何新消息"
+	"无任何新消息",
+	"???"
 }
 
 local stopped = false

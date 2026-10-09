@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"披萨派对",
-	"未知信息,请谨慎前往 区域情况:中量实体",
-	"教室",
-	"无任何新消息",
+	"随机楼层 区域情况:未知",
+	"随机楼层 区域情况:未知",
+	"随机楼层 区域情况:未知",
+	"随机楼层 区域情况:未知",
 	"???",
-	"无任何新消息",
-	"鹿神的房间",
-	"无任何新消息"
+	"随机楼层 区域情况:未知",
+	"随机楼层 区域情况:未知",
+	"随机楼层 区域情况:未知"
 }
 
 local stopped = false

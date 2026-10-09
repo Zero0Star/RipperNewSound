@@ -3,11 +3,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
+	"憎恨 区域情况:死区",
+	"鹿神的房间 区域情况:未知",
+	"餐厅 憎恨 区域情况:中量实体",
 	"随机楼层 区域情况:未知",
 	"随机楼层 区域情况:未知",
-	"随机楼层 区域情况:未知",
-	"随机楼层 区域情况:未知",
-	"???",
 	"随机楼层 区域情况:未知",
 	"随机楼层 区域情况:未知",
 	"随机楼层 区域情况:未知"

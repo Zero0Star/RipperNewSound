@@ -3521,6 +3521,1335 @@ local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A7")
 if not sound.IsLoaded then sound.Loaded:Wait() end
 sound:Play()
 end
+function entityBehaviors.SEEKS()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+
+local function GetRoom()
+    local rooms = workspace:FindFirstChild("CurrentRooms")
+    local gameData = ReplicatedStorage:FindFirstChild("GameData")
+
+    if not rooms or not gameData then
+        return nil
+    end
+
+    local latestRoom = gameData:FindFirstChild("LatestRoom")
+
+    if not latestRoom then
+        return nil
+    end
+
+    return rooms:FindFirstChild(tostring(latestRoom.Value))
+end
+
+local function FindFirstBasePartRecursive(instance)
+    if instance:IsA("BasePart") then
+        return instance
+    end
+
+    for _, child in ipairs(instance:GetChildren()) do
+        local found = FindFirstBasePartRecursive(child)
+
+        if found then
+            return found
+        end
+    end
+
+    return nil
+end
+
+local function LoadModel(id, parent)
+    local success, model = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(id))[1]
+    end)
+
+    if success and model then
+        model.Parent = parent or workspace
+
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            end
+        end
+
+        return model
+    end
+
+    return nil
+end
+
+local entityModel = LoadModel(96339158471163, workspace)
+
+if not entityModel then
+    return
+end
+
+local room = GetRoom()
+
+if not room then
+    entityModel:Destroy()
+    return
+end
+
+local entrance = room:FindFirstChild("RoomEntrance")
+
+if not entrance then
+    entityModel:Destroy()
+    return
+end
+
+local targetCF = entrance.CFrame
+    * CFrame.new(-15, 0.9, -50)
+    * CFrame.Angles(math.rad(0), 45, 0)
+
+local success = pcall(function()
+    entityModel:PivotTo(targetCF)
+end)
+
+if not success then
+    local mainPart = FindFirstBasePartRecursive(entityModel)
+
+    if mainPart then
+        mainPart.CFrame = targetCF
+
+        local subPart = mainPart:FindFirstChild("Part")
+
+        if subPart and subPart:IsA("BasePart") then
+            subPart.CFrame = mainPart.CFrame
+        end
+    end
+end
+
+local seekModel = entityModel:FindFirstChild("Seek but TIO", true)
+
+if not seekModel or not seekModel:IsA("Model") then
+    return
+end
+
+local TURN_SPEED = 6
+local UPDATE_INTERVAL = 0.1
+
+local nearestRoot = nil
+local updateTimer = 0
+local isInteracting = false
+local rotationConnection
+local roomConnection
+
+local function GetNearestPlayer()
+    local nearest = nil
+    local shortestDistance = math.huge
+    local modelPosition = seekModel:GetPivot().Position
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local character = player.Character
+
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            local root = character:FindFirstChild("HumanoidRootPart")
+
+            if humanoid and root and humanoid.Health > 0 then
+                local distance = (root.Position - modelPosition).Magnitude
+
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    nearest = root
+                end
+            end
+        end
+    end
+
+    return nearest
+end
+
+local function FindLibraryHintPaper()
+    for _, player in ipairs(Players:GetPlayers()) do
+        local character = player.Character
+
+        if character then
+            for _, obj in ipairs(character:GetDescendants()) do
+                if obj:IsA("Tool") and obj.Name == "LibraryHintPaper" then
+                    return obj
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+local function ShowCaption(message)
+    pcall(function()
+        require(
+            LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game
+        ).caption(message, true)
+    end)
+end
+
+local function ExecuteRemoteScript()
+    task.spawn(function()
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Not-Guestly/Scripts/refs/heads/main/Viridislight-Jug"))()
+        end)
+    end)
+end
+
+local function RemoveEntity()
+    if roomConnection then
+        roomConnection:Disconnect()
+        roomConnection = nil
+    end
+
+    if rotationConnection then
+        rotationConnection:Disconnect()
+        rotationConnection = nil
+    end
+
+    if entityModel and entityModel.Parent then
+        entityModel:Destroy()
+    end
+end
+
+rotationConnection = RunService.Heartbeat:Connect(function(dt)
+    if not seekModel:IsDescendantOf(workspace) then
+        if rotationConnection then
+            rotationConnection:Disconnect()
+            rotationConnection = nil
+        end
+
+        return
+    end
+
+    updateTimer = updateTimer + dt
+
+    if updateTimer >= UPDATE_INTERVAL then
+        updateTimer = 0
+        nearestRoot = GetNearestPlayer()
+    end
+
+    if not nearestRoot or not nearestRoot.Parent then
+        return
+    end
+
+    local currentCF = seekModel:GetPivot()
+    local currentPosition = currentCF.Position
+    local targetPosition = nearestRoot.Position
+
+    local lookPosition = Vector3.new(
+        targetPosition.X,
+        currentPosition.Y,
+        targetPosition.Z
+    )
+
+    if (lookPosition - currentPosition).Magnitude < 0.01 then
+        return
+    end
+
+    local targetRotation = CFrame.lookAt(
+        currentPosition,
+        lookPosition,
+        Vector3.yAxis
+    )
+
+    local alpha = 1 - math.exp(-TURN_SPEED * dt)
+
+    local newCF = currentCF:Lerp(targetRotation, alpha)
+
+    seekModel:PivotTo(newCF)
+end)
+
+local interactionPart = FindFirstBasePartRecursive(seekModel)
+
+if not interactionPart then
+    return
+end
+
+local attachment = Instance.new("Attachment")
+attachment.Name = "InteractionAttachment"
+attachment.Position = Vector3.new(0, 2, 0)
+attachment.Parent = interactionPart
+
+local prompt = Instance.new("ProximityPrompt")
+prompt.Name = "SeekInteraction"
+prompt.ActionText = "互动"
+prompt.ObjectText = "Seek but TIO"
+prompt.Style = Enum.ProximityPromptStyle.Custom
+prompt.KeyboardKeyCode = Enum.KeyCode.E
+prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+prompt.HoldDuration = 0
+prompt.MaxActivationDistance = 12
+prompt.RequiresLineOfSight = false
+prompt.ClickablePrompt = true
+prompt.Enabled = true
+prompt.Parent = attachment
+
+local function FinishInteraction()
+    isInteracting = false
+
+    if prompt.Parent and entityModel.Parent then
+        prompt.Enabled = true
+    end
+end
+
+local function PlayInteractionSound(onFinished)
+    if not interactionPart:IsDescendantOf(workspace) then
+        return nil
+    end
+
+    local sound = Instance.new("Sound")
+    sound.Name = "SeekInteractionSound"
+    sound.SoundId = "rbxassetid://100207909526165"
+    sound.Volume = 1
+    sound.PlaybackSpeed = 1
+    sound.Looped = false
+    sound.Parent = interactionPart
+
+    sound.Ended:Once(function()
+        sound:Destroy()
+
+        if onFinished then
+            onFinished()
+        end
+    end)
+
+    sound:Play()
+
+    return sound
+end
+
+prompt.Triggered:Connect(function(player)
+    if isInteracting then
+        return
+    end
+
+    if player and player ~= LocalPlayer then
+        return
+    end
+
+    if not entityModel.Parent then
+        return
+    end
+
+    isInteracting = true
+    prompt.Enabled = false
+
+    local libraryHintPaper = FindLibraryHintPaper()
+
+    if libraryHintPaper then
+        libraryHintPaper:Destroy()
+
+        ExecuteRemoteScript()
+
+        ShowCaption("我可以去交差了!")
+
+        PlayInteractionSound()
+
+        task.wait(3)
+
+        if not entityModel.Parent then
+            return
+        end
+
+        ShowCaption("谢谢，还有这个给你")
+
+        PlayInteractionSound(FinishInteraction)
+    else
+        ShowCaption("兄弟，这很好，这是我从楼梯房间得来的真皮沙发。")
+
+        PlayInteractionSound(FinishInteraction)
+    end
+end)
+
+local latestRoom = ReplicatedStorage.GameData.LatestRoom
+local roomChangeCount = 0
+
+roomConnection = latestRoom.Changed:Connect(function()
+    roomChangeCount = roomChangeCount + 1
+
+    if roomChangeCount >= 3 then
+        RemoveEntity()
+    end
+end)
+end
+function entityBehaviors.HardcoreHoncho()
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CurrentRooms = Workspace:WaitForChild("CurrentRooms")
+local LiveEntities = Workspace:WaitForChild("LiveEntities")
+
+local partNames = {
+    "LeftAnkle",
+    "LeftLowerLeg",
+    "LeftMiddleLeg",
+    "LeftUpperLeg",
+    "RightAnkle",
+    "RightLowerLeg",
+    "RightMiddleLeg",
+    "RightUpperLeg",
+    "Pelvis"
+}
+
+local partColor = Color3.fromRGB(199, 175, 158)
+local particleColor = ColorSequence.new(Color3.fromRGB(100, 0, 2))
+local random = Random.new()
+local symbols = {"!", "@", "3", "2", "*", "&"}
+
+local function recolor(rig)
+    local coloredParts = 0
+
+    for _, name in ipairs(partNames) do
+        local part = rig:FindFirstChild(name, true)
+        if part and part:IsA("MeshPart") then
+            part.Color = partColor
+            coloredParts += 1
+        end
+    end
+
+    local coloredParticles = 0
+    local head = rig:FindFirstChild("Head", true)
+    if head then
+        for _, instance in ipairs(head:GetDescendants()) do
+            if instance:IsA("ParticleEmitter") and instance.Parent:IsA("Attachment") then
+                instance.Color = particleColor
+                coloredParticles += 1
+            end
+        end
+    end
+
+    return coloredParts == #partNames and coloredParticles > 0
+end
+
+local maxNumber = -math.huge
+for _, room in ipairs(CurrentRooms:GetChildren()) do
+    if room:IsA("Model") then
+        local number = tonumber(room.Name)
+        if number and number > maxNumber then
+            maxNumber = number
+        end
+    end
+end
+
+if maxNumber > -math.huge then
+    local previousRoom = CurrentRooms:FindFirstChild(tostring(maxNumber - 1))
+    if previousRoom then
+        local setup = previousRoom:FindFirstChild("ConfrontationCutsceneSetup", true)
+        local rig = setup and setup:FindFirstChild("HonchoRigInitial", true)
+        if rig then
+            recolor(rig)
+        end
+    end
+end
+
+local entityConnection
+local rigDescendantConnection
+local rigFinished = false
+local archiveStarted = false
+local archiveActive = false
+local roomAddedConnection
+local latestRoomConnection
+local roomConnections = {}
+local labelStates = {}
+
+local function scramble(original)
+    local length = math.max(8, utf8.len(original) or #original)
+    local result = table.create(length)
+    for i = 1, length do
+        result[i] = symbols[random:NextInteger(1, #symbols)]
+    end
+    return table.concat(result)
+end
+
+local function watchLabel(label)
+    if not archiveActive or labelStates[label] then
+        return
+    end
+
+    if not (label:IsA("TextLabel") or label:IsA("TextButton") or label:IsA("TextBox")) then
+        return
+    end
+
+    local state = {original = label.Text}
+    labelStates[label] = state
+
+    task.spawn(function()
+        while archiveActive and label.Parent do
+            local finishAt = os.clock() + 10
+            while archiveActive and label.Parent and os.clock() < finishAt do
+                label.Text = scramble(state.original)
+                task.wait(0.12)
+            end
+
+            if not archiveActive or not label.Parent then
+                break
+            end
+
+            label.Text = state.original
+            task.wait(2)
+        end
+
+        if label.Parent then
+            label.Text = state.original
+        end
+    end)
+end
+
+local function scanDeposit(deposit)
+    if not archiveActive or not deposit:IsA("Model") or deposit.Name ~= "ArchivesPackageDeposit" then
+        return
+    end
+
+    for _, screen in ipairs(deposit:GetDescendants()) do
+        if screen.Name == "Screen" and screen:IsA("BasePart") then
+            for _, textContainer in ipairs(screen:GetDescendants()) do
+                if textContainer.Name == "Text" then
+                    for _, label in ipairs(textContainer:GetDescendants()) do
+                        if label.Name == "Label" then
+                            watchLabel(label)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function scanRoom(room)
+    if not archiveActive then
+        return
+    end
+
+    for _, instance in ipairs(room:GetDescendants()) do
+        if instance.Name == "ArchivesPackageDeposit" and instance:IsA("Model") then
+            scanDeposit(instance)
+        end
+    end
+end
+
+local function watchRoom(room)
+    if not archiveActive or not room:IsA("Model") or not tonumber(room.Name) or roomConnections[room] then
+        return
+    end
+
+    roomConnections[room] = room.DescendantAdded:Connect(function(instance)
+        if not archiveActive then
+            return
+        end
+
+        if instance.Name == "ArchivesPackageDeposit" and instance:IsA("Model") then
+            scanDeposit(instance)
+        else
+            local deposit = instance:FindFirstAncestor("ArchivesPackageDeposit")
+            if deposit and deposit:IsDescendantOf(room) then
+                scanDeposit(deposit)
+            end
+        end
+    end)
+
+    scanRoom(room)
+end
+
+local function stopArchives()
+    if not archiveActive then
+        return
+    end
+
+    archiveActive = false
+
+    if roomAddedConnection then
+        roomAddedConnection:Disconnect()
+        roomAddedConnection = nil
+    end
+
+    if latestRoomConnection then
+        latestRoomConnection:Disconnect()
+        latestRoomConnection = nil
+    end
+
+    for room, connection in pairs(roomConnections) do
+        connection:Disconnect()
+        roomConnections[room] = nil
+    end
+
+    for label, state in pairs(labelStates) do
+        if label.Parent then
+            label.Text = state.original
+        end
+        labelStates[label] = nil
+    end
+end
+
+local function startArchives()
+    if archiveStarted then
+        return
+    end
+
+    archiveStarted = true
+    local latestRoom = ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom")
+    archiveActive = true
+    local changes = 0
+
+    latestRoomConnection = latestRoom.Changed:Connect(function()
+        changes += 1
+        if changes >= 4 then
+            stopArchives()
+        end
+    end)
+
+    roomAddedConnection = CurrentRooms.ChildAdded:Connect(watchRoom)
+
+    for _, room in ipairs(CurrentRooms:GetChildren()) do
+        watchRoom(room)
+    end
+end
+
+local function finishRig()
+    if rigFinished then
+        return
+    end
+
+    rigFinished = true
+
+    if entityConnection then
+        entityConnection:Disconnect()
+        entityConnection = nil
+    end
+
+    if rigDescendantConnection then
+        rigDescendantConnection:Disconnect()
+        rigDescendantConnection = nil
+    end
+
+    startArchives()
+end
+
+local function watchRig(rig)
+    if rigFinished or not rig:IsA("Model") or rig.Name ~= "HonchoRig" then
+        return
+    end
+
+    if entityConnection then
+        entityConnection:Disconnect()
+        entityConnection = nil
+    end
+
+    if rigDescendantConnection then
+        rigDescendantConnection:Disconnect()
+        rigDescendantConnection = nil
+    end
+
+    rigDescendantConnection = rig.DescendantAdded:Connect(function()
+        if not rigFinished and recolor(rig) then
+            finishRig()
+        end
+    end)
+
+    if recolor(rig) then
+        finishRig()
+    end
+end
+
+entityConnection = LiveEntities.ChildAdded:Connect(watchRig)
+
+for _, entity in ipairs(LiveEntities:GetChildren()) do
+    if entity:IsA("Model") and entity.Name == "HonchoRig" then
+        watchRig(entity)
+        break
+    end
+end
+end
+function entityBehaviors.JEFFDEATH()
+for _, model in ipairs(workspace:GetChildren()) do
+    if model.Name == "JeffTheKiller" then
+        local humanoid = model:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Health = 0
+        end
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://102588764079889"
+        sound.Volume = 1
+        sound.Parent = workspace
+        sound:Play()
+        sound.Ended:Connect(function()
+            sound:Destroy()
+        end)
+    end
+end
+end
+function entityBehaviors.Baldi()
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+
+while not player do
+	task.wait()
+	player = Players.LocalPlayer
+end
+
+local LatestRoom = ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom")
+
+local function GetLargestRoom()
+	local rooms = workspace:FindFirstChild("CurrentRooms")
+	if not rooms then return nil end
+
+	local largest
+	local max = -1
+
+	for _, room in pairs(rooms:GetChildren()) do
+		local id = tonumber(room.Name)
+		if id and id > max then
+			max = id
+			largest = room
+		end
+	end
+
+	return largest
+end
+
+local function GetDoorCFrame(room)
+	local door = room and room:FindFirstChild("Door") and room.Door:FindFirstChild("Door")
+	if door and door:IsA("BasePart") then
+		return door.CFrame
+	end
+end
+
+local function LoadBaldi()
+	local success, model = pcall(function()
+		return game:GetObjects("rbxassetid://84406407528761")[1]
+	end)
+
+	if not success or not model then
+		return nil
+	end
+
+	for _, v in pairs(model:GetDescendants()) do
+		if v:IsA("Script") or v:IsA("LocalScript") then
+			v:Destroy()
+		end
+	end
+
+	return model
+end
+
+local room = GetLargestRoom()
+if not room then return end
+
+local cf = GetDoorCFrame(room)
+if not cf then return end
+
+local baldi = LoadBaldi()
+if not baldi then return end
+
+baldi:PivotTo(cf)
+baldi.Parent = workspace
+
+local destroyed = false
+local canStart = false
+local triggered = false
+
+local protectDelete = false
+local megaSound = nil
+local stopMathGame = nil
+
+local function DestroyBaldi()
+	if destroyed then return end
+	destroyed = true
+
+	if megaSound then
+		megaSound:Stop()
+		megaSound = nil
+	end
+
+	if stopMathGame then
+		stopMathGame()
+	end
+
+	if baldi and baldi.Parent then
+		baldi:Destroy()
+	end
+end
+
+local roomChanges = 0
+
+LatestRoom.Changed:Connect(function()
+	roomChanges += 1
+
+	if roomChanges == 1 then
+		local s1 = Instance.new("Sound")
+		s1.SoundId = "rbxassetid://17556446241"
+		s1.Volume = 1
+		s1.Parent = workspace
+		s1:Play()
+
+		s1.Ended:Connect(function()
+			s1:Destroy()
+
+			local s2 = Instance.new("Sound")
+			s2.SoundId = "rbxassetid://100704961414689"
+			s2.Volume = 1
+			s2.Parent = workspace
+			s2:Play()
+
+			s2.Ended:Connect(function()
+				s2:Destroy()
+				canStart = true
+			end)
+		end)
+	end
+
+	if roomChanges >= 3 then
+		if not protectDelete then
+			DestroyBaldi()
+		end
+	end
+end)
+
+local function StartMathGame()
+	local Main_Game = require(player.PlayerGui.MainUI.Initiator.Main_Game)
+
+	math.randomseed(tick())
+
+	local questionIndex = 1
+	local answer = nil
+	local currentQuestion = ""
+
+	local active = false
+	local gameFinished = false
+	local wrongCount = 0
+
+	local chatConnection
+
+	stopMathGame = function()
+		gameFinished = true
+		active = false
+		answer = nil
+		currentQuestion = ""
+
+		if chatConnection then
+			chatConnection:Disconnect()
+			chatConnection = nil
+		end
+	end
+
+	local function createQuestion(level)
+
+		local a,b,c,x,result
+
+		if level == 1 then
+
+			a = math.random(1,5)
+			b = math.random(1,10)
+			x = math.random(1,10)
+
+			answer = a*x+b
+
+			return "Given f(x)="..a.."x+"..b..", find f("..x..")"
+
+		elseif level == 2 then
+
+			a = math.random(2,8)
+			b = math.random(1,10)
+			x = math.random(1,10)
+
+			result = a*x+b
+			answer = x
+
+			return "Given f(x)="..a.."x+"..b..", if f(x)="..result..", find x"
+
+		elseif level == 3 then
+
+			a = math.random(2,8)
+			b = math.random(-10,10)
+			x = math.random(1,10)
+
+			local textB
+
+			if b >= 0 then
+				textB = "+"..b
+			else
+				textB = b
+			end
+
+			answer = a*x+b
+
+			return "Given f(x)="..a.."x"..textB..", find f("..x..")"
+
+		elseif level == 4 then
+
+			a = math.random(1,5)
+			b = math.random(-5,5)
+			c = math.random(-10,10)
+			x = math.random(1,8)
+
+			answer = a*x*x+b*x+c
+
+			return "Given f(x)="..a.."x²+"..b.."x+"..c..", find f("..x..")"
+
+		elseif level == 5 then
+
+			a = math.random(1,5)
+			b = math.random(-5,5)
+			c = math.random(-10,10)
+			x = math.random(1,8)
+
+			result = a*x*x+b*x+c
+			answer = x
+
+			return "Given f(x)="..a.."x²+"..b.."x+"..c..", if f(x)="..result..", find x"
+
+		end
+
+	end
+
+	local function repeatQuestion()
+
+		task.spawn(function()
+
+			while active and not gameFinished do
+
+				Main_Game.caption(
+					"Question "..questionIndex..": "..currentQuestion,
+					true
+				)
+
+				task.wait(5)
+
+			end
+
+		end)
+
+	end
+
+	local function nextQuestion()
+
+		if questionIndex > 5 then
+
+			gameFinished = true
+			active = false
+			answer = nil
+			currentQuestion = ""
+
+			Main_Game.caption(
+				"Game Finished!",
+				true
+			)
+
+			if chatConnection then
+				chatConnection:Disconnect()
+				chatConnection = nil
+			end
+
+			DestroyBaldi()
+
+			return
+
+		end
+
+		currentQuestion = createQuestion(questionIndex)
+
+		active = true
+
+		Main_Game.caption(
+			"Question "..questionIndex..": "..currentQuestion,
+			true
+		)
+
+		repeatQuestion()
+
+	end
+
+	chatConnection = player.Chatted:Connect(function(message)
+
+		if gameFinished then
+			return
+		end
+
+		local num = tonumber(message)
+
+		if not num then
+			return
+		end
+
+		if num == answer then
+
+			active = false
+
+			Main_Game.caption(
+				"Correct!",
+				true
+			)
+
+			task.wait(1)
+
+			questionIndex += 1
+
+			nextQuestion()
+
+		else
+
+			wrongCount += 1
+
+			Main_Game.caption(
+				"Wrong!",
+				true
+			)
+
+			if wrongCount >= 2 then
+
+				gameFinished = true
+				active = false
+				answer = nil
+				currentQuestion = ""
+
+				Main_Game.caption(
+					"Game Failed!",
+					true
+				)
+
+				if chatConnection then
+					chatConnection:Disconnect()
+					chatConnection = nil
+				end
+
+				if megaSound then
+					megaSound:Stop()
+				end
+
+				protectDelete = true
+
+			end
+
+		end
+
+	end)
+
+	nextQuestion()
+
+end
+
+RunService.Heartbeat:Connect(function()
+
+	if destroyed or triggered or not canStart then
+		return
+	end
+
+	if not baldi.Parent then
+		return
+	end
+
+
+	local target =
+		baldi.PrimaryPart
+		or baldi:FindFirstChildWhichIsA("BasePart")
+
+
+	if not target then
+		return
+	end
+
+
+	for _,plr in ipairs(Players:GetPlayers()) do
+
+
+		local character = plr.Character
+
+		local humanoid =
+			character and character:FindFirstChildOfClass("Humanoid")
+
+
+		local root =
+			character and character:FindFirstChild("HumanoidRootPart")
+		if humanoid
+		and humanoid.Health > 0
+		and root then
+
+
+			local distance =
+				(root.Position - target.Position).Magnitude
+
+
+			if distance <= 15 then
+
+
+				triggered = true
+				megaSound =
+					baldi:FindFirstChild(
+						"Baldi Mega Mix",
+						true
+					)
+
+
+				if megaSound then
+					megaSound:Play()
+				end
+
+				StartMathGame()
+
+
+				break
+
+			end
+
+		end
+
+	end
+
+end)
+end
+
+function entityBehaviors.Baldi2()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local LatestRoom = ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom")
+
+local function StopMathGameAndMusic()
+
+	for _,v in ipairs(workspace:GetDescendants()) do
+		if v:IsA("Sound") then
+			v:Stop()
+		end
+	end
+
+	local gui = player:FindFirstChild("PlayerGui")
+	if gui then
+		local mainUI = gui:FindFirstChild("MainUI")
+		if mainUI then
+			local caption = mainUI:FindFirstChild("Caption", true)
+			if caption and caption:IsA("TextLabel") then
+				caption.Text = ""
+			end
+		end
+	end
+
+	pcall(function()
+		for _,connection in ipairs(getconnections(player.Chatted)) do
+			connection:Disable()
+		end
+	end)
+end
+
+StopMathGameAndMusic()
+
+local baldi
+
+for _,v in ipairs(workspace:GetDescendants()) do
+	if v:IsA("Model") and v.Name == "Baldi" then
+		baldi = v
+		break
+	end
+end
+
+if not baldi then
+	return
+end
+
+local destroyed = false
+local damageDone = false
+local targetPlayer
+
+local function DestroyBaldi()
+	if destroyed then return end
+	destroyed = true
+
+	if baldi and baldi.Parent then
+		baldi:Destroy()
+	end
+end
+
+local baldiPart = baldi:FindFirstChild("baldi", true)
+if not baldiPart then
+	return
+end
+
+local attachment1 = baldiPart:FindFirstChild("Attachment1")
+local attachment2 = baldiPart:FindFirstChild("Attachment2")
+
+local baldi2Particle
+
+if attachment1 then
+	local old = attachment1:FindFirstChild("baldi")
+	if old and old:IsA("ParticleEmitter") then
+		old:Destroy()
+	end
+end
+
+if attachment2 then
+	baldi2Particle = attachment2:FindFirstChild("baldi2")
+	if baldi2Particle and baldi2Particle:IsA("ParticleEmitter") then
+		baldi2Particle.Enabled = true
+	end
+end
+
+task.wait(5)
+
+local root = baldi.PrimaryPart or baldi:FindFirstChildWhichIsA("BasePart")
+if not root then return end
+
+local nearest = math.huge
+
+for _,plr in ipairs(Players:GetPlayers()) do
+	local char = plr.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+	if hrp then
+		local d = (root.Position - hrp.Position).Magnitude
+		if d < nearest then
+			nearest = d
+			targetPlayer = plr
+		end
+	end
+end
+
+if not targetPlayer then return end
+
+local function PlayMoveSound()
+
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://1841427728"
+	sound.Volume = 1
+	sound.Parent = baldi
+	sound:Play()
+
+	if baldi2Particle then
+		baldi2Particle.Texture = "rbxassetid://15951405914"
+
+		task.delay(0.15,function()
+			if baldi2Particle then
+				baldi2Particle.Texture = "rbxassetid://15953172586"
+			end
+		end)
+	end
+
+	sound.Ended:Connect(function()
+		sound:Destroy()
+	end)
+end
+
+local function Damage()
+
+	if damageDone then return end
+	damageDone = true
+
+	local humanoid = targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+
+	if humanoid then
+		humanoid:TakeDamage(100)
+
+		local sound = Instance.new("Sound")
+		sound.SoundId = "rbxassetid://98207961689599"
+		sound.Parent = workspace
+		sound:Play()
+
+		sound.Ended:Connect(function()
+			sound:Destroy()
+			DestroyBaldi()
+		end)
+	end
+end
+
+local function RayCheck()
+
+	if damageDone then return end
+
+	local hrp = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+	local root = baldi.PrimaryPart or baldi:FindFirstChildWhichIsA("BasePart")
+
+	if not hrp or not root then return end
+
+	local direction = hrp.Position - root.Position
+
+	if direction.Magnitude <= 15 then
+		Damage()
+	end
+end
+
+local function WatchDeath(character)
+
+	local hum = character:WaitForChild("Humanoid")
+
+	hum.Died:Connect(function()
+		DestroyBaldi()
+	end)
+end
+
+if targetPlayer.Character then
+	WatchDeath(targetPlayer.Character)
+end
+
+targetPlayer.CharacterAdded:Connect(function(character)
+	if not destroyed then
+		WatchDeath(character)
+	end
+end)
+
+task.spawn(function()
+
+	while not destroyed do
+
+		task.wait(3)
+
+		local hrp = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+		local root = baldi.PrimaryPart or baldi:FindFirstChildWhichIsA("BasePart")
+
+		if hrp and root then
+
+			local direction = Vector3.new(
+				hrp.Position.X-root.Position.X,
+				0,
+				hrp.Position.Z-root.Position.Z
+			)
+
+			if direction.Magnitude > 0 then
+
+				local pos = root.Position + direction.Unit * 20
+
+				baldi:PivotTo(
+					CFrame.new(pos.X,pos.Y-2,pos.Z)
+				)
+
+				PlayMoveSound()
+
+			end
+		end
+	end
+end)
+
+local connection
+connection = RunService.Heartbeat:Connect(function()
+
+	if destroyed then
+		connection:Disconnect()
+		return
+	end
+
+	RayCheck()
+end)
+
+local roomCount = 0
+
+LatestRoom.Changed:Connect(function()
+
+	roomCount += 1
+
+	if roomCount >= 20 then
+
+		if connection then
+			connection:Disconnect()
+		end
+
+		DestroyBaldi()
+
+	end
+end)
+
+end
 function entityBehaviors.broadcast()
 loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/AiNew2.lua?raw=true"))()
 end
@@ -3555,6 +4884,11 @@ local entityConfig = {
     ["rbxassetid://65"] = entityBehaviors.A7,
     ["rbxassetid://66"] = entityBehaviors.broadcast,
     ["rbxassetid://67"] = entityBehaviors.ai2,
+    ["rbxassetid://68"] = entityBehaviors.SEEKS,
+    ["rbxassetid://69"] = entityBehaviors.HardcoreHoncho,
+    ["rbxassetid://70"] = entityBehaviors.JEFFDEATH,
+    ["rbxassetid://71"] = entityBehaviors.Baldi,
+    ["rbxassetid://72"] = entityBehaviors.Baldi2,
     ["rbxassetid://41"] = entityBehaviors.WH1T3
 }
 local checkedEntities = {}

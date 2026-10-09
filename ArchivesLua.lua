@@ -3735,101 +3735,110 @@ end
 end)
 end
 function entityBehaviors.DreadJump()
-local BLACK = Color3.new(0, 0, 0)
-local WHITE = Color3.new(1, 1, 1)
+    local BLACK = Color3.new(0, 0, 0)
+    local WHITE = Color3.new(255, 255, 255)
 
-local part = Instance.new("Part")
+    local part = Instance.new("Part")
+    part.Name = "Bound_" .. tick()
+    part.Parent = workspace
+    part.Size = Vector3.new(5, 5, 5)
+    part.Position = Vector3.new(0, 5, 0)
+    part.Anchored = true
+    part.Color = Color3.new(1, 0, 0)
 
-part.Name = "Bound_" .. tick()
-part.Parent = workspace
-part.Size = Vector3.new(5, 5, 5)
-part.Position = Vector3.new(0, 5, 0)
-part.Anchored = true
-part.Color = Color3.new(1, 0, 0)
-local dreadJumpSound = workspace:FindFirstChild("DreadJump")
-if dreadJumpSound and dreadJumpSound:IsA("Sound") then
-    dreadJumpSound:Play()
-end
-
-task.wait(3)
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local SHAKE_INTENSITY = 1
-local SHAKE_DURATION = 15
-local SHAKE_SPEED = 70
-
-local player = Players.LocalPlayer
-if not player then return end
-
-local camera = workspace.CurrentCamera
-local startTime = tick()
-local originalPosition = camera.CFrame.Position
-local connection
-
-connection = RunService.RenderStepped:Connect(function()
-    local elapsed = tick() - startTime
-    
-    if elapsed < SHAKE_DURATION then
-        local decay = 1 - (elapsed / SHAKE_DURATION)
-        local intensity = SHAKE_INTENSITY * decay
-        local time = elapsed * SHAKE_SPEED
-        local offset = Vector3.new(
-            math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
-            math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
-            math.sin(time * 1.0) * intensity * 0.3
-        )
-        local lookVector = camera.CFrame.LookVector
-        local upVector = camera.CFrame.UpVector
-        local rightVector = camera.CFrame.RightVector
-        local currentPos = camera.CFrame.Position
-        local newPos = currentPos + offset
-        camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
-    else
-        if connection then
-            connection:Disconnect()
-        end
+    local dreadJumpSound = workspace:FindFirstChild("HardCoreSound") and workspace:FindFirstChild("HardCoreSound"):FindFirstChild("DreadJump")
+    if dreadJumpSound and dreadJumpSound:IsA("Sound") then
+        dreadJumpSound:Play()
     end
-end)
 
-local function getAllParts()
-    local parts = {}
-    local function collectParts(object)
-        for _, child in ipairs(object:GetChildren()) do
-            if child:IsA("BasePart") then
-                table.insert(parts, child)
+    task.wait(3)
+
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local SHAKE_INTENSITY = 1
+    local SHAKE_DURATION = 15
+    local SHAKE_SPEED = 70
+
+    local player = Players.LocalPlayer
+    if not player then return end
+
+    local camera = workspace.CurrentCamera
+    local startTime = tick()
+    local originalPosition = camera.CFrame.Position
+    local connection
+
+    connection = RunService.RenderStepped:Connect(function()
+        local elapsed = tick() - startTime
+        
+        if elapsed < SHAKE_DURATION then
+            local decay = 1 - (elapsed / SHAKE_DURATION)
+            local intensity = SHAKE_INTENSITY * decay
+            local time = elapsed * SHAKE_SPEED
+            local offset = Vector3.new(
+                math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+                math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+                math.sin(time * 1.0) * intensity * 0.3
+            )
+            local lookVector = camera.CFrame.LookVector
+            local upVector = camera.CFrame.UpVector
+            local rightVector = camera.CFrame.RightVector
+            local currentPos = camera.CFrame.Position
+            local newPos = currentPos + offset
+            camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
+        else
+            if connection then
+                connection:Disconnect()
             end
-            collectParts(child)
         end
-    end
-    collectParts(workspace)
-    return parts
-end
+    end)
 
-local allParts = getAllParts()
-local isPlaying = true  
-local colorSwitchCoroutine = coroutine.create(function()
+    local function getAllParts()
+        local parts = {}
+        local function collectParts(object)
+            for _, child in ipairs(object:GetChildren()) do
+                if child:IsA("BasePart") then
+                    table.insert(parts, child)
+                end
+                collectParts(child)
+            end
+        end
+        collectParts(workspace)
+        return parts
+    end
+
+    local allParts = getAllParts()
+    local isPlaying = true
     local isBlack = true
-    while isPlaying do
-        local targetColor = isBlack and BLACK or WHITE
-        isBlack = not isBlack
-        for _, part in ipairs(allParts) do
-            part.Color = targetColor
+    local lastSwitchTime = tick()
+    local switchInterval = 0.08
+    local heartbeatConnection
+
+    heartbeatConnection = RunService.Heartbeat:Connect(function()
+        if not isPlaying then
+            heartbeatConnection:Disconnect()
+            return
         end
-        task.wait(0.01)
+        local now = tick()
+        if now - lastSwitchTime >= switchInterval then
+            lastSwitchTime = now
+            local targetColor = isBlack and BLACK or WHITE
+            isBlack = not isBlack
+            for _, part in ipairs(allParts) do
+                part.Color = targetColor
+            end
+        end
+    end)
+
+    if dreadJumpSound then
+        dreadJumpSound.Ended:Connect(function()
+            isPlaying = false
+            dreadJumpSound:Destroy()
+        end)
+        dreadJumpSound.Stopped:Connect(function()
+            isPlaying = false
+            dreadJumpSound:Destroy()
+        end)
     end
-end)
-
-coroutine.resume(colorSwitchCoroutine)
-
-startSound.Ended:Connect(function()
-    isPlaying = false
-    startSound:Destroy()
-end)
-
-startSound.Stopped:Connect(function()
-    isPlaying = false
-    startSound:Destroy()
-end)
 end
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")

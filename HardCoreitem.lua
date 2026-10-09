@@ -9,23 +9,19 @@ local player = game.Players.LocalPlayer
 local runService = game:GetService("RunService")
 local workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-
+local Players = game:GetService("Players")
 
 local function removeScreechFromEntities()
     local Entities = ReplicatedStorage:FindFirstChild("Entities")
     if not Entities then
         return
     end
-    
     local screechInstances = {}
-    
     for _, child in ipairs(Entities:GetChildren()) do
         if child.Name == "Screech" then
             table.insert(screechInstances, child)
         end
     end
-    
     for _, screech in ipairs(screechInstances) do
         screech:Destroy()
     end
@@ -46,8 +42,73 @@ require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).titlelocation("The HardCord Archives",true)
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).remind("⚠This mode is quite challenging and is recommended for 10-15 players.⚠", true)
 
+local LIBRARY_ASSET = 71595026288153
+
+local function deleteLibraryUIInWorkspace()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        local char = plr.Character
+        if char and char:IsDescendantOf(workspace) then
+            local tool = char:FindFirstChild("LibraryHintPaper")
+            if tool and tool:IsA("Tool") then
+                local ui = tool:FindFirstChild("UI")
+                if ui then
+                    ui:Destroy()
+                end
+            end
+        end
+    end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "LibraryHintPaper" and obj:IsA("Tool") then
+            local ui = obj:FindFirstChild("UI")
+            if ui then
+                ui:Destroy()
+            end
+        end
+    end
+end
+
+deleteLibraryUIInWorkspace()
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr.Character then
+        plr.Character.ChildAdded:Connect(function(child)
+            if child.Name == "LibraryHintPaper" and child:IsA("Tool") then
+                task.wait()
+                local ui = child:FindFirstChild("UI")
+                if ui then
+                    ui:Destroy()
+                end
+            end
+        end)
+    end
+    plr.CharacterAdded:Connect(function(char)
+        char.ChildAdded:Connect(function(child)
+            if child.Name == "LibraryHintPaper" and child:IsA("Tool") then
+                task.wait()
+                local ui = child:FindFirstChild("UI")
+                if ui then
+                    ui:Destroy()
+                end
+            end
+        end)
+    end)
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function(char)
+        char.ChildAdded:Connect(function(child)
+            if child.Name == "LibraryHintPaper" and child:IsA("Tool") then
+                task.wait()
+                local ui = child:FindFirstChild("UI")
+                if ui then
+                    ui:Destroy()
+                end
+            end
+        end)
+    end)
+end)
+
 task.spawn(function()
-    local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
 
     local REPLACEMENT_CONFIG = {
@@ -56,7 +117,8 @@ task.spawn(function()
         ["shakelight"] = {assetId = 71349337541000},
         ["starvial"] = {assetId = 75495333223363},
         ["starbottle"] = {assetId = 85527257914363},
-        ["knockbackstick"] = {assetId = 128089163384066}
+        ["knockbackstick"] = {assetId = 128089163384066},
+        ["libraryhintpaper"] = {assetId = LIBRARY_ASSET}
     }
 
     local CHECK_INTERVAL = 0.3
@@ -134,43 +196,46 @@ task.spawn(function()
 
     local function findTargetsInWorkspace()
         local targets = {}
-        
         for _, item in ipairs(workspace:GetChildren()) do
             local nameLower = item.Name:lower()
             local config = getItemConfig(nameLower)
-            
             if item:IsA("Model") and config and item.Name ~= "Drops" then
                 table.insert(targets, {target = item, config = config})
             end
-            
             if item:IsA("Tool") and config then
                 table.insert(targets, {target = item, config = config})
             end
-            
             if (item:IsA("BasePart") or item:IsA("MeshPart")) and config then
                 table.insert(targets, {target = item, config = config})
             end
-            
             if item:IsA("Model") and item.Name ~= "Drops" then
                 for _, child in ipairs(item:GetDescendants()) do
                     local childNameLower = child.Name:lower()
                     local childConfig = getItemConfig(childNameLower)
-                    
                     if child:IsA("Model") and childConfig then
                         table.insert(targets, {target = child, config = childConfig})
                     end
-                    
                     if child:IsA("Tool") and childConfig then
                         table.insert(targets, {target = child, config = childConfig})
                     end
-                    
                     if (child:IsA("BasePart") or child:IsA("MeshPart")) and childConfig then
                         table.insert(targets, {target = child, config = childConfig})
                     end
                 end
             end
         end
-        
+        for _, plr in ipairs(Players:GetPlayers()) do
+            local char = plr.Character
+            if char and char:IsDescendantOf(workspace) then
+                local tool = char:FindFirstChild("LibraryHintPaper")
+                if tool and tool:IsA("Tool") then
+                    local config = getItemConfig(tool.Name)
+                    if config then
+                        table.insert(targets, {target = tool, config = config})
+                    end
+                end
+            end
+        end
         return targets
     end
 
@@ -194,9 +259,7 @@ task.spawn(function()
         if not effectModel then return nil end
         effectModel.Name = "FollowEffect"
         effectModel.Parent = workspace
-        
         disableModelCollision(effectModel)
-        
         if not effectModel.PrimaryPart then
             if effectModel:FindFirstChildWhichIsA("BasePart") then
                 effectModel.PrimaryPart = effectModel:FindFirstChildWhichIsA("BasePart")
@@ -205,14 +268,13 @@ task.spawn(function()
                 return nil
             end
         end
-        
         local targetCFrame = getTargetCFrame(target)
         if targetCFrame then
-
-            if assetId == 128089163384066 then
-                targetCFrame = targetCFrame + Vector3.new(0, 3.0, 0)
+            if assetId == LIBRARY_ASSET then
+                effectModel:PivotTo(targetCFrame * CFrame.Angles(math.rad(-90), 180, 0) * CFrame.new(1, 0, 0))
+            else
+                effectModel:PivotTo(targetCFrame)
             end
-            effectModel:PivotTo(targetCFrame)
         end
         return effectModel
     end
@@ -225,29 +287,31 @@ task.spawn(function()
         if not targetCFrame then
             return false
         end
+        if data.config and data.config.assetId == LIBRARY_ASSET then
 
-        if data.config and data.config.assetId == 128089163384066 then
-            targetCFrame = targetCFrame + Vector3.new(-1, 3.5, 1)
+            data.effect:PivotTo(targetCFrame * CFrame.Angles(math.rad(-90), 0, 0) * CFrame.new(0, -0.5, 0))
+        else
+            data.effect:PivotTo(targetCFrame)
         end
-        
-        data.effect:PivotTo(targetCFrame)
         return true
     end
 
     local function startTrackingTarget(target, config)
         if trackedTargets[target] then return trackedTargets[target] end
-        
+        if config.assetId == LIBRARY_ASSET and target:IsA("Tool") then
+            local ui = target:FindFirstChild("UI")
+            if ui then
+                ui:Destroy()
+            end
+        end
         local effectModel = createFollowEffect(target, config.assetId)
         if not effectModel then return end
-        
         hideTarget(target)
-        
         trackedTargets[target] = {
-            effect = effectModel, 
+            effect = effectModel,
             target = target,
             config = config
         }
-        
         local data = trackedTargets[target]
         data.connection = RunService.RenderStepped:Connect(function()
             if not updateEffectPosition(data, target) then
@@ -260,26 +324,21 @@ task.spawn(function()
                 trackedTargets[target] = nil
             end
         end)
-        
         return trackedTargets[target]
     end
 
     local function stopTrackingTarget(target, restoreVisibility)
         local data = trackedTargets[target]
         if not data then return end
-        
         if restoreVisibility then
             restoreTarget(target)
         end
-        
         if data.effect and data.effect.Parent then
             data.effect:Destroy()
         end
-        
         if data.connection then
             data.connection:Disconnect()
         end
-        
         trackedTargets[target] = nil
     end
 
@@ -299,12 +358,10 @@ task.spawn(function()
 
     local function findAllTargets()
         local targets = {}
-        
         local workspaceTargets = findTargetsInWorkspace()
         for _, targetData in ipairs(workspaceTargets) do
             table.insert(targets, targetData)
         end
-        
         local dropsFolder = workspace:FindFirstChild("Drops")
         if dropsFolder then
             for _, item in ipairs(dropsFolder:GetChildren()) do
@@ -316,7 +373,6 @@ task.spawn(function()
                 end
             end
         end
-        
         return targets
     end
 
@@ -326,6 +382,7 @@ task.spawn(function()
             local currentTime = tick()
             if currentTime - lastCheckTime >= CHECK_INTERVAL then
                 lastCheckTime = currentTime
+                deleteLibraryUIInWorkspace()
                 cleanupDestroyedTargets()
                 local allTargets = findAllTargets()
                 for _, targetData in ipairs(allTargets) do
@@ -372,10 +429,10 @@ task.spawn(function()
     end
 
     local function setupPlayerEvents()
-        local player = Players.LocalPlayer
         if player then
             player:GetPropertyChangedSignal("Character"):Connect(function()
                 cleanupDestroyedTargets()
+                deleteLibraryUIInWorkspace()
             end)
             player.AncestryChanged:Connect(function(_, parent)
                 if not parent then
@@ -388,7 +445,7 @@ task.spawn(function()
     initialize()
     setupPlayerEvents()
 end)
------
+
 local hint = Instance.new("Hint", Workspace)
 hint.Text = "LoadingItem... Doors HardCore V10.6 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)

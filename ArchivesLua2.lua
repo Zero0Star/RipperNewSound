@@ -3582,7 +3582,7 @@ local function LoadModel(id, parent)
     return nil
 end
 
-local entityModel = LoadModel(136506697650905, workspace)
+local entityModel = LoadModel(105132379666791, workspace)
 
 if not entityModel then
     return

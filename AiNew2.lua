@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"憎恨 区域情况:死区",
-	"鹿神的房间 区域情况:未知",
-	"餐厅 憎恨 区域情况:中量实体",
 	"无任何信息",
+	"前往重要楼层获取档案",
 	"Honcho的办公室 区域情况:实体绝迹",
 	"无任何信息",
+	"星光圣地 区域情况:世界之外",
 	"无任何信息",
-	"Minecraft"
+	"无任何信息",
+	"无任何信息"
 }
 
 local stopped = false

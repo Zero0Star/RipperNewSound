@@ -3,11 +3,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"愤怒 区域情况:实体横行",
 	"电力异常 区域情况:少量实体",
 	"空气中有毒气,请联系管理员",
 	"教室",
 	"此层及已作废",
+	"未知",
 	"未知",
 	"未知",
 	"未知"

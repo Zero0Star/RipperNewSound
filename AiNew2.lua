@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"未知 区域情况:未知",
-	"随机楼层",
-	"餐厅 区域情况:少量实体",
-	"憎恨 区域情况:死区",
-	"随机楼层",
-	"未知 区域情况:未知",
-	"未知 区域情况:未知",
-	"随机楼层"
+	"ERROR",
+	"ERROR",
+	"ERROR",
+	"ERROR",
+	"ERROR",
+	"ERROR",
+	"ERROR",
+	"ERROR"
 }
 
 local stopped = false

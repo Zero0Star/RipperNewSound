@@ -4,13 +4,13 @@ local RunService = game:GetService("RunService")
 
 local SectorTexts = {
 	"电力异常 区域情况:少量实体",
-	"空气中有毒气,请联系管理员",
-	"教室",
-	"此层及已作废",
-	"未知",
-	"未知",
-	"未知",
-	"未知"
+	"教室 区域情况:少量实体",
+	"此层及已作废 区域情况:未知",
+	"未知 区域情况:未知",
+	"餐厅 区域情况:少量实体",
+	"未知 区域情况:未知",
+	"未知 区域情况:未知",
+	"Minecraft"
 }
 
 local stopped = false

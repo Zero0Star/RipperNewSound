@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
+	"请前往楼层寻找Honcho.区域情况:少量实体",
+	"无任何信息",
+	"寻找的补给 区域情况:少量实体",
 	"愤怒 区域情况:实体横行",
-	"Fatal Error",
-	"无任何信息",
-	"无任何信息",
-	"无任何信息",
-	"无任何信息",
-	"Fatal Error",
-	"无任何信息"
+	"电力异常 区域情况:少量实体",
+	"空气中有毒气,请联系管理员",
+	"未知",
+	"Gathering of the gods. Regional Situation:?"
 }
 
 local stopped = false

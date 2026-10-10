@@ -3582,7 +3582,7 @@ local function LoadModel(id, parent)
     return nil
 end
 
-local entityModel = LoadModel(105132379666791, workspace)
+local entityModel = LoadModel(129203458922421, workspace)
 
 if not entityModel then
     return
@@ -3603,8 +3603,8 @@ if not entrance then
 end
 
 local targetCF = entrance.CFrame
-    * CFrame.new(-15, 0.9, -50)
-    * CFrame.Angles(math.rad(0), 45, 0)
+    * CFrame.new(-15, 0.9, -45)
+    * CFrame.Angles(math.rad(0), 0, 0)
 
 local success = pcall(function()
     entityModel:PivotTo(targetCF)
@@ -3693,6 +3693,14 @@ local function ExecuteRemoteScript()
     task.spawn(function()
         pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/Not-Guestly/Scripts/refs/heads/main/Viridislight-Jug"))()
+        end)
+    end)
+end
+
+local function ExecuteScannerScript()
+    task.spawn(function()
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/DeividComSono/Scripts/main/Scanner.lua"))()
         end)
     end)
 end
@@ -3820,6 +3828,12 @@ local function PlayInteractionSound(onFinished)
     return sound
 end
 
+local seekDialogues = {
+    "兄弟，这很好，这是我从楼梯房间得来的真皮沙发。",
+    "你想买点什么?",
+    "老实说，你应该拿出我想要的东西。"
+}
+
 prompt.Triggered:Connect(function(player)
     if isInteracting then
         return
@@ -3836,32 +3850,116 @@ prompt.Triggered:Connect(function(player)
     isInteracting = true
     prompt.Enabled = false
 
+    local randomDialogue = seekDialogues[math.random(1, #seekDialogues)]
+
+    ShowCaption(randomDialogue)
+
+    PlayInteractionSound(FinishInteraction)
+end)
+
+local asfModel = entityModel:FindFirstChild("asf", true)
+
+local tradeItems = {
+    "Crucifix",
+    "Gift",
+    "SeekJug",
+    "viridisJug",
+    "Subspace",
+    "RedLight",
+    "scanner"
+}
+
+local tradeMessages = {
+    Crucifix = "交换成功!",
+    Gift = "交换成功!",
+    SeekJug = "Seek doesn’t want to give this to you",
+    viridisJug = "交换成功!",
+    Subspace = "交换成功!",
+    RedLight = "交换成功!",
+    scanner = "交换成功!"
+}
+
+local function HandleTrade(itemName)
+    if not entityModel.Parent then
+        return
+    end
+
     local libraryHintPaper = FindLibraryHintPaper()
 
-    if libraryHintPaper then
-        libraryHintPaper:Destroy()
+    if not libraryHintPaper then
+        ShowCaption("You don't have anything to trade...")
+        return
+    end
 
+    local message = tradeMessages[itemName]
+
+    if not message then
+        return
+    end
+
+    if itemName == "SeekJug" then
+        ShowCaption(message)
+        return
+    end
+
+    libraryHintPaper:Destroy()
+
+    ShowCaption(message)
+
+    if itemName == "viridisJug" then
         ExecuteRemoteScript()
+    elseif itemName == "scanner" then
+        ExecuteScannerScript()
+    end
+end
 
-        ShowCaption("我可以去交差了!")
+local function CreateTradePrompt(itemModel, itemName)
+    local tickPart = itemModel:FindFirstChild("Tick", true)
 
-        PlayInteractionSound()
+    if not tickPart or not tickPart:IsA("BasePart") then
+        return
+    end
 
-        task.wait(3)
+    local tradePrompt = Instance.new("ProximityPrompt")
+    tradePrompt.Name = itemName .. "TradeInteraction"
+    tradePrompt.ActionText = "交换"
+    tradePrompt.ObjectText = itemName
+    tradePrompt.Style = Enum.ProximityPromptStyle.Custom
+    tradePrompt.KeyboardKeyCode = Enum.KeyCode.E
+    tradePrompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+    tradePrompt.HoldDuration = 2
+    tradePrompt.MaxActivationDistance = 12
+    tradePrompt.RequiresLineOfSight = false
+    tradePrompt.ClickablePrompt = true
+    tradePrompt.Enabled = true
+    tradePrompt.Parent = tickPart
+
+    tradePrompt.Triggered:Connect(function(player)
+        if player and player ~= LocalPlayer then
+            return
+        end
 
         if not entityModel.Parent then
             return
         end
 
-        ShowCaption("谢谢，还有这个给你")
+        if not tradePrompt.Enabled then
+            return
+        end
 
-        PlayInteractionSound(FinishInteraction)
-    else
-        ShowCaption("兄弟，这很好，这是我从楼梯房间得来的真皮沙发。")
+        HandleTrade(itemName)
+    end)
+end
 
-        PlayInteractionSound(FinishInteraction)
+if asfModel then
+    for _, itemName in ipairs(tradeItems) do
+        local itemModel = asfModel:FindFirstChild(itemName, true)
+
+        if itemModel and itemModel:IsA("Model") then
+            CreateTradePrompt(itemModel, itemName)
+        end
     end
-end)
+end
 
 local latestRoom = ReplicatedStorage.GameData.LatestRoom
 local roomChangeCount = 0
@@ -4902,6 +5000,404 @@ if currentRooms then
 	end
 end
 end
+function entityBehaviors.Bully()
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Debris = game:GetService("Debris")
+local SoundService = game:GetService("SoundService")
+
+local player = Players.LocalPlayer
+
+while not player do
+    task.wait()
+    player = Players.LocalPlayer
+end
+
+local LatestRoom = ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom")
+
+local DoorOffset = Vector3.new(5.5, -1.2, 2.5)
+
+local function GetLargestRoom()
+    local rooms = workspace:FindFirstChild("CurrentRooms")
+    if not rooms then return nil end
+
+    local largest
+    local max = -1
+
+    for _, room in ipairs(rooms:GetChildren()) do
+        local id = tonumber(room.Name)
+
+        if id and id > max then
+            max = id
+            largest = room
+        end
+    end
+
+    return largest
+end
+
+local function GetDoorCFrame(room)
+    local door = room
+        and room:FindFirstChild("Door")
+        and room.Door:FindFirstChild("Door")
+
+    if door and door:IsA("BasePart") then
+        return door.CFrame
+    end
+
+    return nil
+end
+
+local function LoadModel()
+    local success, model = pcall(function()
+        return game:GetObjects("rbxassetid://78322141304566")[1]
+    end)
+
+    if not success or not model then
+        return nil
+    end
+
+    for _, v in ipairs(model:GetDescendants()) do
+        if v:IsA("Script")
+            or v:IsA("LocalScript")
+            or v:IsA("ProximityPrompt") then
+            v:Destroy()
+        end
+    end
+
+    return model
+end
+
+local room = GetLargestRoom()
+if not room then return end
+
+local cf = GetDoorCFrame(room)
+if not cf then return end
+
+local model = LoadModel()
+if not model then return end
+
+for _, v in ipairs(model:GetDescendants()) do
+    if v:IsA("BasePart") then
+        v.Anchored = true
+    end
+end
+
+model:PivotTo(cf + DoorOffset)
+model.Parent = workspace
+
+local destroyed = false
+local roomChanges = 0
+local interacting = false
+local completed = false
+local sound2Played = false
+
+local sounds = {}
+local prompts = {}
+
+for i = 1, 4 do
+    for _, v in ipairs(model:GetDescendants()) do
+        if v:IsA("Sound")
+            and string.lower(v.Name) == "sound" .. i then
+
+            sounds[i] = v
+            break
+        end
+    end
+end
+
+local function DestroyModel()
+    if destroyed then return end
+
+    destroyed = true
+    interacting = false
+
+    for _, prompt in ipairs(prompts) do
+        if prompt and prompt.Parent then
+            prompt.Enabled = false
+        end
+    end
+
+    if model and model.Parent then
+        model:Destroy()
+    end
+end
+
+local function PlayRandomSound()
+    local available = {}
+
+    for i = 1, 4 do
+        local sound = sounds[i]
+
+        if sound and sound.Parent then
+            table.insert(available, sound)
+        end
+    end
+
+    if #available == 0 then return end
+
+    local sound = available[math.random(1, #available)]
+
+    sound:Stop()
+    sound.TimePosition = 0
+    sound:Play()
+end
+
+local function PlaySound2Once()
+    if sound2Played then return end
+
+    sound2Played = true
+
+    local original = sounds[2]
+
+    if not original or not original.Parent then
+        return
+    end
+
+    local sound = original:Clone()
+    sound.Name = "BullySound2"
+    sound.Looped = false
+    sound.Parent = SoundService
+
+    sound.Ended:Connect(function()
+        sound:Destroy()
+    end)
+
+    Debris:AddItem(sound, 120)
+
+    sound.TimePosition = 0
+    sound:Play()
+end
+
+local function PlayFinalSound()
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://2260002994"
+    sound.Volume = 1
+    sound.Looped = false
+    sound.Parent = SoundService
+
+    sound.Ended:Connect(function()
+        sound:Destroy()
+    end)
+
+    Debris:AddItem(sound, 120)
+    sound:Play()
+end
+
+local function DisableCollision()
+    local bullyCount = 0
+
+    for _, v in ipairs(model:GetDescendants()) do
+        if v:IsA("BasePart") then
+            local name = string.lower(v.Name)
+
+            if name == "block" then
+                v.CanCollide = false
+            elseif name == "bully" or name == "bulldy" then
+                if bullyCount < 2 then
+                    v.CanCollide = false
+                    bullyCount += 1
+                end
+            end
+        end
+    end
+end
+
+local function GetCharacterTools()
+    local tools = {}
+    local character = player.Character
+
+    if not character then
+        return tools
+    end
+
+    for _, v in ipairs(character:GetDescendants()) do
+        if v:IsA("Tool") then
+            table.insert(tools, v)
+        end
+    end
+
+    return tools
+end
+
+local function DeleteAllTools()
+    local character = player.Character
+    local backpack = player:FindFirstChildOfClass("Backpack")
+
+    if character then
+        for _, v in ipairs(character:GetDescendants()) do
+            if v:IsA("Tool") then
+                v:Destroy()
+            end
+        end
+    end
+
+    if backpack then
+        for _, v in ipairs(backpack:GetDescendants()) do
+            if v:IsA("Tool") then
+                v:Destroy()
+            end
+        end
+    end
+end
+
+local function DisablePrompts()
+    for _, prompt in ipairs(prompts) do
+        if prompt and prompt.Parent then
+            prompt.Enabled = false
+        end
+    end
+end
+
+local function Interact()
+    if destroyed or interacting or completed then
+        return
+    end
+
+    interacting = true
+
+    local character = player.Character
+
+    if not character then
+        interacting = false
+        return
+    end
+
+    local tools = GetCharacterTools()
+
+    if #tools == 0 then
+        PlayRandomSound()
+
+        task.delay(1, function()
+            if not destroyed and not completed then
+                interacting = false
+            end
+        end)
+
+        return
+    end
+
+    completed = true
+
+    DeleteAllTools()
+
+    DisableCollision()
+
+    DisablePrompts()
+
+    PlaySound2Once()
+
+    interacting = false
+end
+
+local targets = {}
+local added = {}
+
+local function AddTarget(part)
+    if not part or not part:IsA("BasePart") then
+        return
+    end
+
+    if added[part] then
+        return
+    end
+
+    if #targets >= 2 then
+        return
+    end
+
+    added[part] = true
+    table.insert(targets, part)
+end
+
+for _, v in ipairs(model:GetDescendants()) do
+    if v:IsA("BasePart") then
+        local name = string.lower(v.Name)
+
+        if name == "bully" or name == "bulldy" then
+            AddTarget(v)
+        end
+    end
+end
+
+if #targets < 2 then
+    for _, v in ipairs(model:GetDescendants()) do
+        if v:IsA("BasePart") then
+            local current = v.Parent
+
+            while current and current ~= model do
+                local name = string.lower(current.Name)
+
+                if name == "bully" or name == "bulldy" then
+                    AddTarget(v)
+                    break
+                end
+
+                current = current.Parent
+            end
+        end
+    end
+end
+
+for i, part in ipairs(targets) do
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "BullyPromptAttachment"
+    attachment.Position = Vector3.new(
+        0,
+        part.Size.Y / 2 + 0.5,
+        0
+    )
+    attachment.Parent = part
+
+    local prompt = Instance.new("ProximityPrompt")
+    prompt.Name = "BullyInteraction"
+    prompt.ActionText = "Interact"
+    prompt.ObjectText = "Bully"
+    prompt.HoldDuration = 2
+    prompt.MaxActivationDistance = 20
+    prompt.RequiresLineOfSight = false
+    prompt.Enabled = true
+    prompt.Style = Enum.ProximityPromptStyle.Custom
+    prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
+    prompt.ClickablePrompt = true
+
+    if i == 1 then
+        prompt.KeyboardKeyCode = Enum.KeyCode.E
+        prompt.UIOffset = Vector2.new(-65, 0)
+    else
+        prompt.KeyboardKeyCode = Enum.KeyCode.F
+        prompt.UIOffset = Vector2.new(65, 0)
+    end
+
+    prompt.Parent = attachment
+
+    table.insert(prompts, prompt)
+
+    prompt.Triggered:Connect(function(triggeringPlayer)
+        if triggeringPlayer and triggeringPlayer ~= player then
+            return
+        end
+
+        Interact()
+    end)
+end
+
+local roomConnection
+
+roomConnection = LatestRoom.Changed:Connect(function()
+    roomChanges += 1
+
+    if roomChanges >= 4 then
+        if roomConnection then
+            roomConnection:Disconnect()
+            roomConnection = nil
+        end
+
+        DestroyModel()
+        PlayFinalSound()
+    end
+end)
+end
 function entityBehaviors.broadcast()
 loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/AiNew2.lua?raw=true"))()
 end
@@ -4942,6 +5438,7 @@ local entityConfig = {
     ["rbxassetid://71"] = entityBehaviors.Baldi,
     ["rbxassetid://72"] = entityBehaviors.Baldi2,
     ["rbxassetid://73"] = entityBehaviors.FireMeld,
+    ["rbxassetid://74"] = entityBehaviors.Bully,
     ["rbxassetid://41"] = entityBehaviors.WH1T3
 }
 local checkedEntities = {}

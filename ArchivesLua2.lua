@@ -5398,6 +5398,714 @@ roomConnection = LatestRoom.Changed:Connect(function()
     end
 end)
 end
+function entityBehaviors.Ruge()
+local MODEL_ID = "rbxassetid://94224558672758"
+local ANIMATION_ID = "rbxassetid://130915603316866"
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local LatestRoom = game.ReplicatedStorage.GameData.LatestRoom
+
+
+local function GetLargestRoom()
+
+	local rooms = workspace:FindFirstChild("CurrentRooms")
+
+	if not rooms then
+		return nil
+	end
+
+	local largest
+	local max = -1
+
+	for _,room in pairs(rooms:GetChildren()) do
+
+		local id = tonumber(room.Name)
+
+		if id and id > max then
+			max = id
+			largest = room
+		end
+
+	end
+
+	return largest
+end
+
+
+local function GetDoorCFrame(room)
+
+	local doorFolder = room:FindFirstChild("Door")
+
+	if not doorFolder then
+		return nil
+	end
+
+	local door = doorFolder:FindFirstChild("Door")
+
+	if door and door:IsA("BasePart") then
+		return door.CFrame
+	end
+
+end
+
+
+local function LoadModel()
+
+	local success,model = pcall(function()
+
+		return game:GetObjects(MODEL_ID)[1]
+
+	end)
+
+
+	if not success or not model then
+		return nil
+	end
+
+
+	for _,v in pairs(model:GetDescendants()) do
+
+		if v:IsA("Script") or v:IsA("LocalScript") then
+			v:Destroy()
+		end
+
+	end
+
+
+	return model
+end
+
+
+local function PlayAnimation(model)
+
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+
+	if not humanoid then
+		return
+	end
+
+
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+
+
+	if not animator then
+
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+
+	end
+
+
+	local animation = Instance.new("Animation")
+
+	animation.AnimationId = ANIMATION_ID
+
+
+	local track = animator:LoadAnimation(animation)
+
+	track.Priority = Enum.AnimationPriority.Action
+	track.Looped = true
+	track:Play()
+
+end
+
+
+local function GetNearestPlayer(position)
+
+	local nearest
+	local distance = math.huge
+
+
+	for _,player in pairs(Players:GetPlayers()) do
+
+		local character = player.Character
+
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+
+
+		if root then
+
+			local dis = (root.Position - position).Magnitude
+
+
+			if dis < distance then
+
+				distance = dis
+				nearest = root
+
+			end
+
+		end
+
+	end
+
+
+	return nearest
+end
+
+
+local function SmoothLook(model)
+
+	local root =
+		model.PrimaryPart
+		or model:FindFirstChildWhichIsA("BasePart")
+
+
+	if not root then
+		return
+	end
+
+
+	RunService.Heartbeat:Connect(function()
+
+		if not model.Parent then
+			return
+		end
+
+
+		local target = GetNearestPlayer(root.Position)
+
+
+		if target then
+
+			local lookCF = CFrame.lookAt(
+				root.Position,
+				Vector3.new(
+					target.Position.X,
+					root.Position.Y,
+					target.Position.Z
+				)
+			)
+
+
+			TweenService:Create(
+
+				root,
+
+				TweenInfo.new(
+					0.25,
+					Enum.EasingStyle.Sine,
+					Enum.EasingDirection.Out
+				),
+
+				{
+					CFrame = lookCF
+				}
+
+			):Play()
+
+		end
+
+	end)
+
+end
+
+
+local function CreateInteraction(model)
+
+	local part = model:FindFirstChild("UpperTorso", true)
+
+
+	if not part or not part:IsA("BasePart") then
+		return
+	end
+
+
+	local prompt = Instance.new("ProximityPrompt")
+
+
+	prompt.Name = "LibraryInteraction"
+	prompt.ActionText = "Interact"
+	prompt.ObjectText = ""
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.HoldDuration = 2
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt.Style = Enum.ProximityPromptStyle.Custom
+
+
+	prompt.Parent = part
+
+
+
+	prompt.Triggered:Connect(function(player)
+
+
+		local character = player.Character
+
+		if not character then
+			return
+		end
+
+
+		local tool =
+			character:FindFirstChild("LibraryHintPaper")
+			or player.Backpack:FindFirstChild("LibraryHintPaper")
+
+
+
+		local MainGame =
+			require(
+				player.PlayerGui.MainUI.Initiator.Main_Game
+			)
+
+
+
+		if not tool then
+
+
+			MainGame.caption(
+				"This document is really important, did you tell me that you gave it to Seek???",
+				true
+			)
+
+
+
+		else
+
+
+			tool:Destroy()
+
+
+
+			local success,newModel = pcall(function()
+
+				return game:GetObjects(
+					"rbxassetid://70636286183373"
+				)[1]
+
+			end)
+
+
+
+			if success and newModel then
+
+				newModel.Parent = workspace
+				newModel:PivotTo(part.CFrame)
+
+			end
+
+
+
+			MainGame.caption(
+				"I’m going to report your work attitude to Honcho.",
+				true
+			)
+
+		end
+
+	end)
+
+end
+
+
+local room = GetLargestRoom()
+
+if not room then
+	return
+end
+
+
+local doorCF = GetDoorCFrame(room)
+
+if not doorCF then
+	return
+end
+
+
+local model = LoadModel()
+
+if not model then
+	return
+end
+
+
+model:PivotTo(
+	doorCF * CFrame.new(0,5,10)
+)
+
+
+model.Parent = workspace
+
+
+PlayAnimation(model)
+
+SmoothLook(model)
+
+CreateInteraction(model)
+
+
+
+task.spawn(function()
+
+	local count = 0
+
+
+	while model.Parent do
+
+		LatestRoom.Changed:Wait()
+
+
+		count += 1
+
+
+		if count >= 5 then
+
+			model:Destroy()
+
+			break
+
+		end
+
+	end
+
+end)
+end
+function entityBehaviors.Ruge2()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local model = workspace:FindFirstChild("Urge")
+
+if not model then
+	warn("没有找到 Urge")
+	return
+end
+
+
+local SPEED = 40
+local DAMAGE = 50
+local RANGE = 5
+local ATTACK_DELAY = 2
+local MAX_KILLS = 3
+
+
+local kills = 0
+local attackCooldown = false
+local currentTarget = nil
+
+
+local function GetRoot()
+
+	return model.PrimaryPart
+		or model:FindFirstChild("HumanoidRootPart")
+		or model:FindFirstChildWhichIsA("BasePart")
+
+end
+
+
+
+local function PlayAnimation(id,loop)
+
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+
+	if not humanoid then
+		warn("没有Humanoid")
+		return
+	end
+
+
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+
+	if not animator then
+
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+
+	end
+
+
+	local animation = Instance.new("Animation")
+	animation.AnimationId = "rbxassetid://"..id
+
+
+	local track = animator:LoadAnimation(animation)
+
+	track.Priority = Enum.AnimationPriority.Action
+	track.Looped = loop
+	track:Play()
+
+
+	return track
+
+end
+
+
+
+local function PlaySound(id)
+
+	local sound = Instance.new("Sound")
+
+	sound.SoundId = "rbxassetid://"..id
+	sound.Volume = 1
+	sound.Parent = model
+
+	sound:Play()
+
+
+	sound.Ended:Connect(function()
+
+		sound:Destroy()
+
+	end)
+
+end
+
+
+
+local function GetNearestPlayer()
+
+	local root = GetRoot()
+
+	if not root then
+		return
+	end
+
+
+	local target
+	local min = math.huge
+
+
+	for _,player in pairs(Players:GetPlayers()) do
+
+		local char = player.Character
+
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+
+		if hrp and hum and hum.Health > 0 then
+
+			local dis =
+				(hrp.Position-root.Position).Magnitude
+
+
+			if dis < min then
+
+				min = dis
+				target = player
+
+			end
+
+		end
+
+	end
+
+
+	return target
+
+end
+
+
+
+local function Attack(player)
+
+	if attackCooldown then
+		return
+	end
+
+
+	attackCooldown = true
+
+
+	local root = GetRoot()
+
+	local char = player.Character
+
+	local targetRoot =
+		char and char:FindFirstChild("HumanoidRootPart")
+
+
+	if targetRoot then
+
+
+		local distance =
+			(targetRoot.Position-root.Position).Magnitude
+
+
+		if distance <= RANGE then
+
+
+			local rayParams = RaycastParams.new()
+
+			rayParams.FilterType =
+				Enum.RaycastFilterType.Exclude
+
+			rayParams.FilterDescendantsInstances =
+			{
+				model
+			}
+
+
+
+			local result =
+				workspace:Raycast(
+					root.Position,
+					(targetRoot.Position-root.Position),
+					rayParams
+				)
+
+
+
+			if result then
+
+
+				local hum =
+					result.Instance.Parent:FindFirstChildOfClass("Humanoid")
+					or result.Instance.Parent.Parent:FindFirstChildOfClass("Humanoid")
+
+
+				if hum then
+
+					hum:TakeDamage(DAMAGE)
+
+
+					PlaySound(140695149439373)
+
+
+					if hum.Health <= 0 then
+
+						kills += 1
+						currentTarget = nil
+
+
+						if kills >= MAX_KILLS then
+
+							model:Destroy()
+							return
+
+						end
+
+					end
+
+				end
+
+			end
+
+		end
+
+	end
+
+
+	task.wait(ATTACK_DELAY)
+
+	attackCooldown = false
+
+end
+
+
+
+local function Follow(player)
+
+	local root = GetRoot()
+
+	if not root then
+		return
+	end
+
+
+	local char = player.Character
+
+	local targetRoot =
+		char and char:FindFirstChild("HumanoidRootPart")
+
+
+	if not targetRoot then
+		return
+	end
+
+
+
+	local targetPosition =
+		Vector3.new(
+			targetRoot.Position.X,
+			root.Position.Y,
+			targetRoot.Position.Z
+		)
+
+
+
+	local distance =
+		(targetPosition-root.Position).Magnitude
+
+
+
+	local newCF =
+		CFrame.lookAt(
+			root.Position,
+			targetPosition
+		)
+
+
+
+	model:PivotTo(
+		newCF:Lerp(
+			root.CFrame,
+			0.9
+		)
+	)
+
+
+
+	if distance > RANGE then
+
+		model:PivotTo(
+			model:GetPivot()
+			+ newCF.LookVector * SPEED * RunService.Heartbeat:Wait()
+		)
+
+	else
+
+		Attack(player)
+
+	end
+
+end
+
+
+
+PlayAnimation(111408250277560,false)
+
+
+task.wait(5)
+
+
+
+PlayAnimation(70636286183373,true)
+
+PlaySound(138890398994853)
+
+
+
+while model.Parent do
+
+
+	if not currentTarget then
+
+		currentTarget =
+			GetNearestPlayer()
+
+	end
+
+
+	if currentTarget then
+
+		Follow(currentTarget)
+
+	else
+
+		task.wait()
+
+	end
+
+
+	RunService.Heartbeat:Wait()
+
+end
+end
 function entityBehaviors.broadcast()
 loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/AiNew2.lua?raw=true"))()
 end
@@ -5439,6 +6147,8 @@ local entityConfig = {
     ["rbxassetid://72"] = entityBehaviors.Baldi2,
     ["rbxassetid://73"] = entityBehaviors.FireMeld,
     ["rbxassetid://74"] = entityBehaviors.Bully,
+    ["rbxassetid://75"] = entityBehaviors.Ruge,
+    ["rbxassetid://76"] = entityBehaviors.Ruge2,
     ["rbxassetid://41"] = entityBehaviors.WH1T3
 }
 local checkedEntities = {}

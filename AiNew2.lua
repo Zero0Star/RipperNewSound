@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"ERROR",
-	"ERROR",
-	"ERROR",
-	"ERROR",
-	"ERROR",
-	"ERROR",
-	"ERROR",
-	"ERROR"
+	"愤怒 区域情况:实体横行",
+	"憎恨 区域情况:死区",
+	"教室 区域情况:大量实体",
+	"天堂 区域情况:美好?",
+	"??? 区域情况:未知",
+	"暂无消息",
+	"暂无消息",
+	"Minecraft 区域情况:?"
 }
 
 local stopped = false

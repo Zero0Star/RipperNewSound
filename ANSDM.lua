@@ -435,7 +435,7 @@ end
 
 
 CreateFollowerSystem(1,89102835650735,"QWQ75321")
-CreateFollowerSystem(115878511638478,79523224142535,"goat_qiu")
+CreateFollowerSystem(115878511638478,74919870184678,"goat_qiu")
 CreateFollowerSystem(137290604674399,114265802440184,"Nssys123")
 CreateFollowerSystem(14806821870,96998158567562,"sppvve")
 CreateFollowerSystem(135367832132409,71505836701563,"woshiniruier")

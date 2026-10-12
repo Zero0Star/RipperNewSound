@@ -5399,7 +5399,7 @@ roomConnection = LatestRoom.Changed:Connect(function()
 end)
 end
 function entityBehaviors.Ruge()
-local MODEL_ID = "rbxassetid://94224558672758"
+local MODEL_ID = "rbxassetid://140098892770388"
 local ANIMATION_ID = "rbxassetid://130915603316866"
 
 local Players = game:GetService("Players")

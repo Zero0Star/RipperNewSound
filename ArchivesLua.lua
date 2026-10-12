@@ -3311,6 +3311,7 @@ local function ExecuteJumpScare()
 	container:Destroy()
 
 end
+
 ExecuteJumpScare()
 end
 

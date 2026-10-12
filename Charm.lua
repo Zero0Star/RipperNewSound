@@ -354,7 +354,7 @@ bloom.Parent = Lighting
 	{
 		Name="友好协议",
 		Icon="rbxassetid://2614876855",
-		Description="。(需要成就 Indescribable)",
+		Description="Null (需要成就 Indescribable)",
 		Function=function()
 
 			local TextChatService =

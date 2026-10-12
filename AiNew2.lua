@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"没有选择。",
-	"Null",
-	"Null",
-	"Null",
-	"Null",
-	"Null",
-	"Null",
-	"Null"
+	"园丁的厕所 区域情况:少量实体",
+	"被淹没的档案 区域情况:少量实体",
+	"世界之外 区域情况:少量实体",
+	"ROOMS 区域情况:大量实体",
+	"&%@#￥& 区域情况:@#……&￥",
+	"通风不良 区域情况:少量实体",
+	"电力短路 区域情况:少量实体",
+	"披萨派对 区域情况:少量实体"
 }
 
 local stopped = false

@@ -5750,7 +5750,6 @@ local RunService = game:GetService("RunService")
 local model = workspace:FindFirstChild("Urge")
 
 if not model then
-	warn("没有找到 Urge")
 	return
 end
 

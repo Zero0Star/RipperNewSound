@@ -3114,7 +3114,7 @@ local images = {
 }
 
 local function PlayA200J()
-	local sound = workspace:FindFirstChild("A200J", true)
+	local sound = workspace:WaitForChild("HardCoreSound"):FindFirstChild("A200J")
 
 	if sound and sound:IsA("Sound") then
 		sound.Volume = 3
@@ -3128,7 +3128,6 @@ local function PlayA200J()
 	end
 end
 
-
 local function DamagePlayer()
 
 	local character = player.Character or player.CharacterAdded:Wait()
@@ -3139,7 +3138,6 @@ local function DamagePlayer()
 	end
 
 end
-
 
 local function ScreenShake(power,time)
 
@@ -3165,7 +3163,6 @@ local function ScreenShake(power,time)
 	end)
 end
 
-
 local function ExecuteJumpScare()
 
 	DamagePlayer()
@@ -3174,13 +3171,11 @@ local function ExecuteJumpScare()
 	container.Name="A200J_Jumpscare"
 	container.Parent=player.PlayerGui
 
-
 	local gui = Instance.new("ScreenGui")
 	gui.Parent=container
 	gui.IgnoreGuiInset=true
 	gui.ResetOnSpawn=false
 	gui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
-
 
 	local red = Instance.new("Frame")
 	red.Parent=gui
@@ -3189,7 +3184,6 @@ local function ExecuteJumpScare()
 	red.BackgroundTransparency=1
 	red.BorderSizePixel=0
 	red.ZIndex=1
-
 
 	local img = Instance.new("ImageLabel")
 	img.Parent=gui
@@ -3201,16 +3195,13 @@ local function ExecuteJumpScare()
 	img.ScaleType=Enum.ScaleType.Fit
 	img.ZIndex=5
 
-
 	PlayA200J()
-
 
 	TweenService:Create(
 		red,
 		TweenInfo.new(.1),
 		{BackgroundTransparency=.3}
 	):Play()
-
 
 	img.Image="rbxassetid://"..images[1]
 
@@ -3227,7 +3218,6 @@ local function ExecuteJumpScare()
 
 	task.wait(.15)
 
-
 	img.Image="rbxassetid://"..images[2]
 
 	TweenService:Create(
@@ -3241,7 +3231,6 @@ local function ExecuteJumpScare()
 	ScreenShake(12,.35)
 
 	task.wait(.12)
-
 
 	img.Image="rbxassetid://"..images[3]
 
@@ -3272,7 +3261,6 @@ local function ExecuteJumpScare()
 
 	end)
 
-
 	TweenService:Create(
 		img,
 		TweenInfo.new(.3,Enum.EasingStyle.Exponential),
@@ -3281,16 +3269,13 @@ local function ExecuteJumpScare()
 		}
 	):Play()
 
-
 	TweenService:Create(
 		red,
 		TweenInfo.new(.1),
 		{BackgroundTransparency=.05}
 	):Play()
 
-
 	ScreenShake(25,.8)
-
 
 	for i=1,8 do
 
@@ -3302,7 +3287,6 @@ local function ExecuteJumpScare()
 
 	end
 
-
 	task.wait(.8)
 
 	glitch=false
@@ -3310,13 +3294,11 @@ local function ExecuteJumpScare()
 	img.Position=UDim2.fromScale(.5,.5)
 	img.Rotation=0
 
-
 	TweenService:Create(
 		img,
 		TweenInfo.new(.5),
 		{ImageTransparency=1}
 	):Play()
-
 
 	TweenService:Create(
 		red,
@@ -3324,14 +3306,11 @@ local function ExecuteJumpScare()
 		{BackgroundTransparency=1}
 	):Play()
 
-
 	task.wait(.7)
 
 	container:Destroy()
 
 end
-
-
 ExecuteJumpScare()
 end
 

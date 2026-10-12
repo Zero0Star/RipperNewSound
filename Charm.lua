@@ -354,7 +354,7 @@ bloom.Parent = Lighting
 	{
 		Name="友好协议",
 		Icon="rbxassetid://2614876855",
-		Description="四神将不会再对你感兴趣,同时你在也没有办法使用星光与月光道具。(需要成就 Indescribable)",
+		Description="。(需要成就 Indescribable)",
 		Function=function()
 
 			local TextChatService =
@@ -362,6 +362,21 @@ bloom.Parent = Lighting
 
 			TextChatService.TextChannels.RBXGeneral:SendAsync(
 				"选择 友好协议"
+			)
+
+		end
+	},
+	{
+		Name="快枪手",
+		Icon="rbxassetid://97594928468157",
+		Description="兄弟，这酷极了! (在游戏内你将随机分配精英枪械。) (需要成就 Quick Draw)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 快枪手"
 			)
 
 		end

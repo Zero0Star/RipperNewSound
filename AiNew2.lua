@@ -3,12 +3,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"天堂 区域情况:美好?",
 	"吱吱的跑酷 区域情况:未知",
-	"办公室 区域情况:少量实体",
+	"Null 区域情况:Null",
+	"请取的重要文件前往Honcho的办公室",
 	"空气中有毒气 请谨慎前往 区域情况:少量实体",
 	"暂无消息",
-	"暂无消息",
+	"Null",
 	"晚餐 区域情况:少量实体",
 	"暂无消息"
 }

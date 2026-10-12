@@ -3,9 +3,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"教室 区域情况:大量实体",
 	"天堂 区域情况:美好?",
 	"??? 区域情况:未知",
+	"办公室",
 	"暂无消息",
 	"暂无消息",
 	"暂无消息",

@@ -3501,28 +3501,8 @@ local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A3")
 if not sound.IsLoaded then sound.Loaded:Wait() end
 sound:Play()
 end
-function entityBehaviors.A4()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A4")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
-end
-function entityBehaviors.A5()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A5")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
-end
-function entityBehaviors.A6()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A6")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
-end
-function entityBehaviors.A7()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A7")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
-end
-function entityBehaviors.SEEKS()
 
+function entityBehaviors.SEEKS()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -6134,10 +6114,6 @@ local entityConfig = {
     ["rbxassetid://59"] = entityBehaviors.A1,
     ["rbxassetid://60"] = entityBehaviors.A2,
     ["rbxassetid://61"] = entityBehaviors.A3,
-    ["rbxassetid://62"] = entityBehaviors.A4,
-    ["rbxassetid://63"] = entityBehaviors.A5,
-    ["rbxassetid://64"] = entityBehaviors.A6,
-    ["rbxassetid://65"] = entityBehaviors.A7,
     ["rbxassetid://66"] = entityBehaviors.broadcast,
     ["rbxassetid://67"] = entityBehaviors.ai2,
     ["rbxassetid://68"] = entityBehaviors.SEEKS,

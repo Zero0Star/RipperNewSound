@@ -10706,6 +10706,26 @@ local flipAngle = math.rad(360) * curve * flipDirection
 camera.CFrame = camera.CFrame * CFrame.Angles(0, 0, flipAngle)
 end)
 end
+function entityBehaviors.A4()
+local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A4")
+if not sound.IsLoaded then sound.Loaded:Wait() end
+sound:Play()
+end
+function entityBehaviors.A5()
+local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A5")
+if not sound.IsLoaded then sound.Loaded:Wait() end
+sound:Play()
+end
+function entityBehaviors.A6()
+local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A6")
+if not sound.IsLoaded then sound.Loaded:Wait() end
+sound:Play()
+end
+function entityBehaviors.A7()
+local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A7")
+if not sound.IsLoaded then sound.Loaded:Wait() end
+sound:Play()
+end
 local entityConfig = {
     ["rbxassetid://1"] = entityBehaviors.ATCHRipper,
     ["rbxassetid://3"] = entityBehaviors.AMIN60,
@@ -10742,6 +10762,10 @@ local entityConfig = {
     ["rbxassetid://33"] = entityBehaviors.MOSCJ,
     ["rbxassetid://34"] = entityBehaviors.A500F,
     ["rbxassetid://35"] = entityBehaviors.Smiler,
+    ["rbxassetid://62"] = entityBehaviors.A4,
+    ["rbxassetid://63"] = entityBehaviors.A5,
+    ["rbxassetid://64"] = entityBehaviors.A6,
+    ["rbxassetid://65"] = entityBehaviors.A7,
     ["rbxassetid://2"] = entityBehaviors.A200
 }
 local checkedEntities = {}

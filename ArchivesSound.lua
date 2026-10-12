@@ -191,7 +191,6 @@ local function downloadAudio(data)
     end)
 
     if not success or not isValidMP3(content) then
-        warn("[HardCoreMusic] Download failed: " .. data.name)
         return false
     end
 
@@ -200,12 +199,10 @@ local function downloadAudio(data)
     end)
 
     if not writeOK then
-        warn("[HardCoreMusic] Write failed: " .. data.name)
         return false
     end
 
     if not verifyFile(data) then
-        warn("[HardCoreMusic] File verification failed: " .. data.name)
         return false
     end
 
@@ -278,7 +275,6 @@ local function createSound(data)
     end)
 
     if not success or type(assetId) ~= "string" or assetId == "" then
-        warn("[HardCoreMusic] Asset registration failed: " .. data.name)
         return false
     end
 

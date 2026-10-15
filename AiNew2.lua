@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"愤怒 区域情况:尸体横行",
-	"电力短路 区域情况:少量实体",
+	"挑战区 获得勋章 区域情况:大量实体",
+	"愤怒 区域情况:实体横行",
 	"重要文件 区域情况:少量实体",
 	"标本 区域情况:大量实体",
 	"&%@#￥& 区域情况:@#……&￥",
 	"通风不良 区域情况:少量实体",
 	"海洋世界  区域情况:少量实体",
-	"Minecraft 区域情况:少量实体"
+	"地狱 区域情况:大量实体"
 }
 
 local stopped = false

@@ -91,7 +91,7 @@ CLText.TextWrapped = true
 CLText.TextXAlignment = Enum.TextXAlignment.Left
 CLText.TextYAlignment = Enum.TextYAlignment.Top
 CLText.Text =
-"1. The Archive updated / Fixed all the bugs, so now monsters won't disappear because of differences between devices."
+"1. Fixed known BUG / The Hotel is about to get a makeover, and version 10.7 will add 20 entities.."
 CLText.Parent = CL
 
 local TL = Instance.new("TextLabel")

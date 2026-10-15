@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
-local function flipAllPlayers()
+local function applyFlipToAll()
 	for _, player in ipairs(Players:GetPlayers()) do
 		local char = player.Character
 		if char and char:FindFirstChild("HumanoidRootPart") then
@@ -9,6 +10,8 @@ local function flipAllPlayers()
 		end
 	end
 end
+
+RunService.Heartbeat:Connect(applyFlipToAll)
 
 local function playSound(id, vol, speed)
 	local sound = Instance.new("Sound")
@@ -24,7 +27,6 @@ end
 
 playSound("129084748747846", 1, 0.8)
 task.wait(1)
-flipAllPlayers()
-playSound("135669001382610", 5, 0.8)
-task.wait(3)
-playSound("134282584923413", 3, 1.1)
+playSound("135669001382610", 5, 0.5)
+task.wait(8)
+playSound("134282584923413", 3, 1.3)

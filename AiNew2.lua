@@ -3,13 +3,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"挑战区 获得勋章 区域情况:大量实体",
-	"地狱 区域情况:大量实体",
 	"暂无信息 区域情况:暂无信息",
 	"暂无信息 区域情况:暂无信息",
 	"暂无信息 区域情况:暂无信息",
 	"通风不良 区域情况:少量实体",
 	"愤怒 区域情况:实体横行",
+	"暂无信息 区域情况:暂无信息",
+	"暂无信息 区域情况:暂无信息",
 	"暂无信息 区域情况:暂无信息"
 }
 

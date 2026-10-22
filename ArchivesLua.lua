@@ -9,7 +9,7 @@ loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entityBehaviors = {}
 function entityBehaviors.ATCHRipper()
-    local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
+ local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
     local backgroundSound = hardCoreSound and hardCoreSound:FindFirstChild("RipperBackgroundSound")
     if backgroundSound and backgroundSound:IsA("Sound") then
         backgroundSound:Stop()
@@ -147,31 +147,13 @@ function entityBehaviors.ATCHRipper()
     local isJumpScaring = false
     local ripper = nil
     local ripperAsset = nil
+    local isRipperDespawning = false
 
     local function StopRipperMovement()
         if activeRipperTween then
             activeRipperTween:Cancel()
             activeRipperTween = nil
         end
-    end
-
-    local function LoadDeathModel()
-        local DEATH_MODEL_ID = "104190508011063"
-
-        local success, loadedModels = pcall(function()
-            return game:GetObjects(
-                "rbxassetid://" .. DEATH_MODEL_ID
-            )
-        end)
-
-        if success and loadedModels and loadedModels[1] then
-            local deathModel = loadedModels[1]
-            deathModel.Name = "Death"
-            deathModel.Parent = workspace
-            return deathModel
-        end
-
-        return nil
     end
 
     local function TriggerRipperJumpScare(
@@ -185,11 +167,7 @@ function entityBehaviors.ATCHRipper()
 
         StopRipperMovement()
         isJumpScaring = true
-
-        if ripperAsset and ripperAsset.Parent then
-            ripperAsset:Destroy()
-            ripperAsset = nil
-        end
+        local currentRipperAsset = ripperAsset
 
         local player = Players:GetPlayerFromCharacter(playerChar)
 
@@ -204,9 +182,81 @@ function entityBehaviors.ATCHRipper()
             playerGui = player:WaitForChild("PlayerGui", 5)
         end
 
-        if not playerGui then
+        local camera = workspace.CurrentCamera
+        local rootPart = playerChar:FindFirstChild("HumanoidRootPart")
+        local humanoid = playerChar:FindFirstChildWhichIsA("Humanoid")
+
+        if not playerGui or not camera or not rootPart or not humanoid then
             isJumpScaring = false
             return
+        end
+
+        local function prepareRipperObject(object)
+            if not object then
+                return
+            end
+
+            local ripe = object:FindFirstChild("ripe", true)
+
+            if ripe then
+                local face1 = ripe:FindFirstChild("Face1", true)
+
+                if face1 then
+                    if face1:IsA("Decal") or face1:IsA("Texture") then
+                        face1.Texture = "rbxassetid://11816152645"
+                    elseif face1:IsA("ImageLabel") or face1:IsA("ImageButton") then
+                        face1.Image = "rbxassetid://11816152645"
+                    end
+                end
+            end
+
+            for _, desc in ipairs(object:GetDescendants()) do
+                if desc:IsA("ParticleEmitter") then
+                    desc.Rate = 9999
+                    task.delay(0.25, function()
+                        if desc and desc.Parent then
+                            desc.TimeScale = 0
+                        end
+                    end)
+                elseif desc:IsA("Sound") and string.lower(desc.Name) ~= "jumpscare" then
+                    desc.Volume = 0
+                end
+            end
+        end
+
+        local function findJumpscareSound(object)
+            if not object then
+                return nil
+            end
+
+            for _, desc in ipairs(object:GetDescendants()) do
+                if desc:IsA("Sound") and string.lower(desc.Name) == "jumpscare" then
+                    return desc
+                end
+            end
+
+            return nil
+        end
+
+        local jumpscareSource = findJumpscareSound(currentRipper)
+            or findJumpscareSound(currentRipperAsset)
+        local modelJumpscareSound = jumpscareSource and jumpscareSource:Clone() or nil
+
+        if modelJumpscareSound then
+            for _, desc in ipairs(modelJumpscareSound:GetDescendants()) do
+                if desc:IsA("Sound") and string.lower(desc.Name) == "static" then
+                    desc:Destroy()
+                end
+            end
+        end
+
+        prepareRipperObject(currentRipper)
+        prepareRipperObject(currentRipperAsset)
+
+        if modelJumpscareSound then
+            modelJumpscareSound.Looped = false
+            modelJumpscareSound.PlayOnRemove = false
+            modelJumpscareSound.Parent = workspace
         end
 
         local noiseGui = Instance.new("ScreenGui")
@@ -216,6 +266,7 @@ function entityBehaviors.ATCHRipper()
         noiseGui.Parent = playerGui
 
         local staticImg = Instance.new("ImageLabel")
+        staticImg.Name = "ImageLabel"
         staticImg.BackgroundTransparency = 1
         staticImg.Size = UDim2.new(1, 0, 1, 0)
         staticImg.Image = "rbxassetid://236542974"
@@ -223,137 +274,45 @@ function entityBehaviors.ATCHRipper()
         staticImg.Parent = noiseGui
 
         local images = {
-            "rbxassetid://236542974",
-            "rbxassetid://12784032030"
+            8482795900,
+            236542974,
+            184251462,
+            236777652
         }
 
-        local imgIndex = 1
-
-        task.spawn(function()
-            while staticImg and staticImg.Parent do
-                staticImg.Image = images[imgIndex]
-                imgIndex = imgIndex % #images + 1
-                task.wait(0.03)
+        local noiseConnection = RunService.RenderStepped:Connect(function()
+            if staticImg and staticImg.Parent then
+                staticImg.Image = "rbxassetid://" .. tostring(images[math.random(1, #images)])
             end
         end)
 
-        local deathModel = workspace:FindFirstChild("Death")
-
-        if not deathModel then
-            deathModel = LoadDeathModel()
-        end
-
-        if not deathModel
-            or not deathModel:FindFirstChild("Ripe")
-        then
-            noiseGui:Destroy()
-            isJumpScaring = false
-            return
-        end
-
-        local originalRipe = deathModel:FindFirstChild("Ripe")
-        local ripClone = originalRipe:Clone()
-        ripClone.Parent = workspace
-
-        if ripClone:IsA("BasePart") then
-            ripClone.Position = originalRipe.Position
-        elseif ripClone:IsA("Model") then
-            ripClone:PivotTo(originalRipe:GetPivot())
-        end
-
-        local ripeObject = ripClone:FindFirstChild("ripe")
-
-        if ripeObject then
-            local particleEmitter =
-                ripeObject:FindFirstChild("ParticleEmitter")
-
-            if particleEmitter
-                and particleEmitter:IsA("ParticleEmitter")
-            then
-                particleEmitter.Texture =
-                    "rbxassetid://11816152645"
-            end
-        end
-
-        for _, desc in ipairs(ripClone:GetDescendants()) do
-            if desc:IsA("ParticleEmitter") then
-                task.spawn(function()
-                    desc.Rate = 9999
-                    task.wait(0.25)
-
-                    if desc and desc.Parent then
-                        desc.TimeScale = 0
-                    end
-                end)
-            elseif desc:IsA("Sound") then
-                desc.Volume = 0
-            end
-        end
-
-        originalRipe:Destroy()
-
         local screamSound = Instance.new("Sound")
         screamSound.SoundId = "rbxassetid://372770465"
-        screamSound.Volume = 10
+        screamSound.Volume = 0
         screamSound.PlaybackSpeed = 0.7
         screamSound.Parent = workspace
 
-        local explodeSound = Instance.new("Sound")
-        local explosionSound = workspace:FindFirstChild(
-            "RipperExplosionSound"
-        )
-
-        if explosionSound then
-            explodeSound.SoundId = explosionSound.SoundId
-        end
-
-        explodeSound.Volume = 10
-        explodeSound.PlaybackSpeed = 1
-        explodeSound.Parent = workspace
-
-        local camera = workspace.CurrentCamera
-        local rootPart =
-            playerChar:FindFirstChild("HumanoidRootPart")
-
-        local humanoid =
-            playerChar:FindFirstChildWhichIsA("Humanoid")
-
-        if rootPart then
-            rootPart.Anchored = true
-        end
-
-        explodeSound:Play()
-
-        local cameraShakerModule =
-            game.ReplicatedStorage:FindFirstChild(
-                "CameraShaker"
-            )
+        local cameraShakerModule = game.ReplicatedStorage:FindFirstChild("CameraShaker")
 
         if cameraShakerModule then
-            local explosionCameraShaker =
-                require(cameraShakerModule)
+            local success, CameraShaker = pcall(require, cameraShakerModule)
 
-            local explosionCamShake =
-                explosionCameraShaker.new(
+            if success and CameraShaker then
+                local jumpScareCamShake = CameraShaker.new(
                     Enum.RenderPriority.Camera.Value,
                     function(shakeCf)
                         if camera then
-                            camera.CFrame =
-                                camera.CFrame * shakeCf
+                            camera.CFrame = camera.CFrame * shakeCf
                         end
                     end
                 )
 
-            explosionCamShake:Start()
-            explosionCamShake:ShakeOnce(
-                50,
-                400,
-                0.1,
-                0.7,
-                2,
-                1
-            )
+                jumpScareCamShake:Start()
+                jumpScareCamShake:ShakeOnce(8, 26, 0.03, 0.28, 0.3, 0.35)
+            end
         end
+
+        rootPart.Anchored = true
 
         local originalCameraType = camera.CameraType
         camera.CameraType = Enum.CameraType.Scriptable
@@ -366,18 +325,6 @@ function entityBehaviors.ATCHRipper()
         targetPart.Anchored = true
         targetPart.Position = snapshottedRipperPosition
         targetPart.Parent = workspace
-
-        local visualDeathModel = LoadDeathModel()
-
-        if visualDeathModel then
-            visualDeathModel:PivotTo(
-                CFrame.lookAt(
-                    targetPart.Position,
-                    targetPart.Position
-                        + Vector3.new(0, 180, 0)
-                )
-            )
-        end
 
         local camFocus = Instance.new("Part")
         camFocus.Transparency = 1
@@ -405,24 +352,31 @@ function entityBehaviors.ATCHRipper()
 
         local renderConnection
 
-        renderConnection =
-            RunService.RenderStepped:Connect(function()
-                if camFocus
-                    and camFocus.Parent
-                    and camera
-                then
-                    camera.CFrame = camFocus.CFrame
-                elseif renderConnection then
-                    renderConnection:Disconnect()
-                end
-            end)
+        renderConnection = RunService.RenderStepped:Connect(function()
+            if camFocus and camFocus.Parent and camera then
+                camera.CFrame = camFocus.CFrame
+            elseif renderConnection then
+                renderConnection:Disconnect()
+            end
+        end)
 
         turnTween:Play()
         turnTween.Completed:Wait()
+        task.wait(0.3)
 
-        task.wait(1)
+        if modelJumpscareSound and modelJumpscareSound.Parent then
+            modelJumpscareSound:Play()
+        end
 
-        screamSound.Volume = 0
+        if modelJumpscareSound and modelJumpscareSound.Parent then
+            local soundStartedAt = os.clock()
+
+            repeat
+                RunService.Heartbeat:Wait()
+            until (os.clock() - soundStartedAt >= 0.25 and not modelJumpscareSound.IsPlaying)
+                or os.clock() - soundStartedAt >= 6
+        end
+
         screamSound:Play()
 
         TweenService:Create(
@@ -433,7 +387,7 @@ function entityBehaviors.ATCHRipper()
             }
         ):Play()
 
-        task.wait(3)
+        task.wait(1)
 
         TweenService:Create(
             staticImg,
@@ -443,7 +397,15 @@ function entityBehaviors.ATCHRipper()
             }
         ):Play()
 
-        task.wait(2)
+        task.wait(3)
+
+        if rootPart and rootPart.Parent then
+            rootPart.Anchored = false
+        end
+
+        if humanoid and humanoid.Parent then
+            humanoid:TakeDamage(125)
+        end
 
         TweenService:Create(
             staticImg,
@@ -461,18 +423,12 @@ function entityBehaviors.ATCHRipper()
             }
         ):Play()
 
-        task.wait(1)
-
-        if rootPart and rootPart.Parent then
-            rootPart.Anchored = false
-        end
-
-        if humanoid and humanoid.Parent then
-            humanoid:TakeDamage(100)
-        end
-
         if renderConnection then
             renderConnection:Disconnect()
+        end
+
+        if noiseConnection then
+            noiseConnection:Disconnect()
         end
 
         if camera then
@@ -491,40 +447,30 @@ function entityBehaviors.ATCHRipper()
             camFocus:Destroy()
         end
 
-        if ripClone then
-            ripClone:Destroy()
-        end
-
         if screamSound then
             screamSound:Destroy()
         end
 
-        if explodeSound then
-            explodeSound:Destroy()
-        end
-
-        if deathModel then
-            deathModel:Destroy()
-        end
-
-        if visualDeathModel then
-            visualDeathModel:Destroy()
+        if modelJumpscareSound then
+            modelJumpscareSound:Destroy()
         end
 
         if currentRipper and currentRipper.Parent then
             currentRipper:Destroy()
         end
 
-        ripper = nil
+        if currentRipperAsset then
+            currentRipperAsset:Destroy()
+        end
 
-        local remotesFolder =
-            game.ReplicatedStorage:FindFirstChild(
-                "RemotesFolder"
-            )
+        ripper = nil
+        ripperAsset = nil
+        isRipperDespawning = true
+
+        local remotesFolder = game.ReplicatedStorage:FindFirstChild("RemotesFolder")
 
         if remotesFolder then
-            local deathHint =
-                remotesFolder:FindFirstChild("DeathHint")
+            local deathHint = remotesFolder:FindFirstChild("DeathHint")
 
             if deathHint then
                 firesignal(
@@ -539,23 +485,16 @@ function entityBehaviors.ATCHRipper()
             end
         end
 
-        local gameStats =
-            game.ReplicatedStorage:FindFirstChild(
-                "GameStats"
-            )
+        local gameStats = game.ReplicatedStorage:FindFirstChild("GameStats")
 
         if gameStats then
-            local playerStat = gameStats:FindFirstChild(
-                "Player_" .. player.Name
-            )
+            local playerStat = gameStats:FindFirstChild("Player_" .. player.Name)
 
             if playerStat then
-                local total =
-                    playerStat:FindFirstChild("Total")
+                local total = playerStat:FindFirstChild("Total")
 
                 if total then
-                    local deathCause =
-                        total:FindFirstChild("DeathCause")
+                    local deathCause = total:FindFirstChild("DeathCause")
 
                     if deathCause then
                         deathCause.Value = "Ripper"
@@ -681,7 +620,8 @@ function entityBehaviors.ATCHRipper()
     end
 
     local function ExecuteRipperPathfinding()
-        local RIPPER_MODEL_ID = "104570339911705"
+        isRipperDespawning = false
+        local RIPPER_MODEL_ID = "107119131634727"
 
         local success, loadedAsset = pcall(function()
             return game:GetObjects(
@@ -710,6 +650,7 @@ function entityBehaviors.ATCHRipper()
 
         ripper = basePart:Clone()
         ripper.Anchored = true
+        ripper.CanQuery = true
         ripper.Parent = workspace
 
         local orderedRooms = getOrderedRooms()
@@ -722,7 +663,6 @@ function entityBehaviors.ATCHRipper()
             return
         end
 
-        -- 房间数>10时从倒数第9个房间开始
         local MAX_RIPPER_ROOMS = 10
         local startRoomIndex = 1
 
@@ -757,8 +697,8 @@ function entityBehaviors.ATCHRipper()
             return
         end
 
-        local heightOffset = Vector3.new(0, 1, 0)
-        local speedFactor = 89
+        local heightOffset = Vector3.new(0, -0.3, 0)
+        local speedFactor = 100
 
         ripper.CFrame =
             startNode.CFrame + heightOffset
@@ -770,31 +710,31 @@ function entityBehaviors.ATCHRipper()
             )
 
         if cameraShakerModule then
-            local CameraShakerModule =
-                require(cameraShakerModule)
+            local loaded, CameraShakerModule = pcall(require, cameraShakerModule)
 
-            local camera = workspace.CurrentCamera
+            if loaded and CameraShakerModule then
+                cameraShaker = CameraShakerModule.new(
+                    Enum.RenderPriority.Camera.Value + 1,
+                    function(shakerTransform)
+                        local camera = workspace.CurrentCamera
 
-            cameraShaker = CameraShakerModule.new(
-                Enum.RenderPriority.Camera.Value,
-                function(shakerTransform)
-                    if camera then
-                        camera.CFrame =
-                            camera.CFrame
-                            * shakerTransform
+                        if camera then
+                            camera.CFrame = camera.CFrame * shakerTransform
+                        end
                     end
-                end
-            )
+                )
 
-            cameraShaker:Start()
+                cameraShaker:Start()
+            end
         end
 
-        local hasShaken = false
+        local lastProximityShake = 0
 
         task.spawn(function()
             while ripper
                 and ripper.Parent
                 and not isJumpScaring
+                and not isRipperDespawning
             do
                 RunService.RenderStepped:Wait()
 
@@ -802,94 +742,71 @@ function entityBehaviors.ATCHRipper()
 
                 if player and player.Character then
                     local character = player.Character
+                    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+                    local rootPart = character:FindFirstChild("HumanoidRootPart")
 
-                    local humanoid =
-                        character:FindFirstChildWhichIsA(
-                            "Humanoid"
-                        )
+                    if humanoid and rootPart and humanoid.Health > 0 then
+                        local distance = (ripper.Position - rootPart.Position).Magnitude
 
-                    local rootPart =
-                        character:FindFirstChild(
-                            "HumanoidRootPart"
-                        )
-
-                    if humanoid
-                        and rootPart
-                        and humanoid.Health > 0
-                        and not character:GetAttribute(
-                            "Hiding"
-                        )
-                    then
-                        local origin = ripper.Position
-                        local target = rootPart.Position
-
-                        local distance = (
-                            origin - target
-                        ).Magnitude
-
-                        if distance < 213
+                        if distance <= 80
                             and cameraShaker
+                            and os.clock() - lastProximityShake >= 0.12
                         then
-                            if not hasShaken then
-                                local amplitude =
-                                    math.max(
-                                        0,
-                                        21
-                                            * (
-                                                1
-                                                - distance
-                                                    / 152
-                                            )
-                                    )
+                            local alpha = math.clamp(1 - distance / 80, 0, 1)
+                            local amplitude = (0.3 + 8.2 * (alpha ^ 1.35)) * 3
+                            local roughness = 45 + 35 * alpha
+                            local positionInfluence = 0.35 + 0.4 * alpha
+                            local rotationInfluence = 0.3 + 0.4 * alpha
 
-                                cameraShaker:ShakeOnce(
-                                    amplitude,
-                                    14,
-                                    5,
-                                    1,
-                                    1,
-                                    6
-                                )
+                            cameraShaker:ShakeOnce(
+                                amplitude,
+                                roughness,
+                                0.01,
+                                0.16,
+                                positionInfluence,
+                                rotationInfluence
+                            )
 
-                                hasShaken = true
-                            end
-                        else
-                            hasShaken = false
+                            lastProximityShake = os.clock()
                         end
 
-                        local difference =
-                            target - origin
+                        if not character:GetAttribute("Hiding") then
+                            local camera = workspace.CurrentCamera
 
-                        if difference.Magnitude > 0 then
-                            local raycastParams =
-                                RaycastParams.new()
+                            if camera then
+                                local toRipper = ripper.Position - camera.CFrame.Position
+                                local cameraDistance = toRipper.Magnitude
 
-                            raycastParams.FilterType =
-                                Enum.RaycastFilterType.Exclude
+                                if cameraDistance > 0 then
+                                    local lookDot = camera.CFrame.LookVector:Dot(toRipper.Unit)
+                                    local raycastParams = RaycastParams.new()
+                                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                                    raycastParams.FilterDescendantsInstances = { character }
 
-                            raycastParams.FilterDescendantsInstances =
-                                {
-                                    ripper
-                                }
+                                    local raycastResult = workspace:Raycast(
+                                        camera.CFrame.Position,
+                                        toRipper,
+                                        raycastParams
+                                    )
 
-                            local raycastResult =
-                                workspace:Raycast(
-                                    origin,
-                                    difference.Unit * 66,
-                                    raycastParams
-                                )
+                                    local hitRipper = raycastResult
+                                        and raycastResult.Instance
+                                        and (
+                                            raycastResult.Instance == ripper
+                                            or raycastResult.Instance:IsDescendantOf(ripper)
+                                        )
 
-                            if raycastResult
-                                and raycastResult.Instance
-                                and raycastResult.Instance:IsDescendantOf(
-                                    character
-                                )
-                            then
-                                TriggerRipperJumpScare(
-                                    ripper,
-                                    character,
-                                    ripper.Position
-                                )
+                                    if distance <= 50
+                                        and lookDot >= 0.86
+                                        and hitRipper
+                                    then
+                                        TriggerRipperJumpScare(
+                                            ripper,
+                                            character,
+                                            ripper.Position
+                                        )
+                                    end
+                                end
                             end
                         end
                     end
@@ -1029,6 +946,10 @@ function entityBehaviors.ATCHRipper()
             return
         end
 
+        if isJumpScaring then
+            return
+        end
+
         if not reachedFinalRoom
             or completedRoomIndex
                 < targetRoomIndex
@@ -1037,9 +958,7 @@ function entityBehaviors.ATCHRipper()
                 ripper:Destroy()
             end
 
-            if ripperAsset
-                and ripperAsset.Parent
-            then
+            if ripperAsset then
                 ripperAsset:Destroy()
             end
 
@@ -1048,11 +967,11 @@ function entityBehaviors.ATCHRipper()
             return
         end
 
-        -- 根据玩家距离动态选择终点音效与震动
+        isRipperDespawning = true
         local NEAR_EXPLOSION_DISTANCE = 80
         local FAR_EXPLOSION_DISTANCE = 220
         local SHAKE_MAX_DISTANCE = 350
-        local MAX_EXPLOSION_SHAKE = 300
+        local MAX_EXPLOSION_SHAKE = 24
 
         local localPlayer = Players.LocalPlayer
         local playerRoot = nil
@@ -1074,7 +993,6 @@ function entityBehaviors.ATCHRipper()
                 ).Magnitude
         end
 
-        -- 查找 RushNew 部件（可能存在于模型中）
         local rushNew = nil
 
         if ripper and ripper.Parent then
@@ -1091,7 +1009,6 @@ function entityBehaviors.ATCHRipper()
 
         if not rushNew
             and ripperAsset
-            and ripperAsset.Parent
         then
             rushNew =
                 ripperAsset:FindFirstChild(
@@ -1105,7 +1022,6 @@ function entityBehaviors.ATCHRipper()
         if ripperDistance
             <= NEAR_EXPLOSION_DISTANCE
         then
-            -- 很近：使用原爆炸音效
             local explosionSound =
                 hardCoreSound and hardCoreSound:FindFirstChild("RipperExplosionSound")
 
@@ -1123,7 +1039,6 @@ function entityBehaviors.ATCHRipper()
         elseif ripperDistance
             <= FAR_EXPLOSION_DISTANCE
         then
-            -- 中等距离：使用 RushNew.Despawn2
             local despawn2 =
                 rushNew
                 and rushNew:FindFirstChild(
@@ -1138,7 +1053,6 @@ function entityBehaviors.ATCHRipper()
                 explodeSound.Parent = ripper
             end
         else
-            -- 很远：使用 RushNew.Despawn3
             local despawn3 =
                 rushNew
                 and rushNew:FindFirstChild(
@@ -1154,7 +1068,6 @@ function entityBehaviors.ATCHRipper()
             end
         end
 
-        -- 安全回退：若找不到 Despawn2/Despawn3，使用原爆炸音效
         if not explodeSound then
             local explosionSound =
                 hardCoreSound and hardCoreSound:FindFirstChild("RipperExplosionSound")
@@ -1176,7 +1089,6 @@ function entityBehaviors.ATCHRipper()
             explodeSound:Play()
         end
 
-        -- 震动幅度计算
         local shakeAmplitude = 0
 
         if ripperDistance
@@ -1227,11 +1139,11 @@ function entityBehaviors.ATCHRipper()
 
             endExplosionCamShake:ShakeOnce(
                 shakeAmplitude,
-                400,
-                0.1,
-                0.7,
-                2,
-                1
+                28,
+                0.03,
+                0.4,
+                0.25,
+                0.35
             )
         end
 
@@ -1240,27 +1152,14 @@ function entityBehaviors.ATCHRipper()
         local finalRipperPosition = nil
 
         if ripper and ripper.Parent then
-            finalRipperPosition =
-                ripper.Position
-
+            finalRipperPosition = ripper.Position
             ripper.Anchored = false
             ripper.CanCollide = false
             ripper.CanTouch = false
             ripper.CanQuery = false
         end
 
-        if ripperAsset
-            and ripperAsset.Parent
-        then
-            ripperAsset:Destroy()
-            ripperAsset = nil
-        end
-
-        if isJumpScaring
-            or not ripper
-            or not ripper.Parent
-        then
-            ripper = nil
+        if isJumpScaring or not ripper or not ripper.Parent then
             return
         end
 
@@ -1268,17 +1167,11 @@ function entityBehaviors.ATCHRipper()
 
         if player and player.Character then
             local character = player.Character
-
-            local humanoid =
-                character:FindFirstChildWhichIsA(
-                    "Humanoid"
-                )
+            local humanoid = character:FindFirstChildWhichIsA("Humanoid")
 
             if humanoid
                 and humanoid.Health > 0
-                and not character:GetAttribute(
-                    "Hiding"
-                )
+                and not character:GetAttribute("Hiding")
                 and finalRipperPosition
             then
                 TriggerRipperJumpScare(
@@ -1286,21 +1179,29 @@ function entityBehaviors.ATCHRipper()
                     character,
                     finalRipperPosition
                 )
-
                 return
             end
         end
 
         local fallingRipper = ripper
-
-        ripper = nil
+        local fallingAsset = ripperAsset
         ripperAsset = nil
 
         task.delay(10, function()
-            if fallingRipper
-                and fallingRipper.Parent
-            then
+            if fallingRipper and fallingRipper.Parent then
                 fallingRipper:Destroy()
+            end
+
+            if fallingAsset then
+                fallingAsset:Destroy()
+            end
+
+            if ripper == fallingRipper then
+                ripper = nil
+            end
+
+            if ripperAsset == fallingAsset then
+                ripperAsset = nil
             end
         end)
     end
@@ -1349,7 +1250,6 @@ function entityBehaviors.ATCHRipper()
             0.5
         )
     end
-
     runFinalCameraShake()
 end
 
@@ -9763,7 +9663,7 @@ sound1:Destroy()
 sound2:Destroy()
 end
 function entityBehaviors.REBOUNDSW()
-    local testModelId = 91875007809375
+    local testModelId = 129306212463084
 
     local function PlayPreloadedSound(soundName, volume)
         volume = volume or 1
@@ -9853,6 +9753,55 @@ function entityBehaviors.REBOUNDSW()
             camera.CFrame = camera.CFrame * cf
         end)
         camShake:Start()
+        local proximityCamShake = CameraShaker.new(
+            Enum.RenderPriority.Camera.Value + 1,
+            function(shakeCf)
+                local currentCamera = workspace.CurrentCamera
+                if currentCamera then
+                    currentCamera.CFrame = currentCamera.CFrame * shakeCf
+                end
+            end
+        )
+        proximityCamShake:Start()
+
+        local lastProximityShake = 0
+        task.spawn(function()
+            local RunService = game:GetService("RunService")
+            local player = game.Players.LocalPlayer
+
+            while primaryPart and primaryPart.Parent do
+                RunService.RenderStepped:Wait()
+
+                local character = player and player.Character
+                local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
+                local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+
+                if humanoid and rootPart and humanoid.Health > 0 then
+                    local distance = (primaryPart.Position - rootPart.Position).Magnitude
+
+                    if distance <= 80 and os.clock() - lastProximityShake >= 0.12 then
+                        local alpha = math.clamp(1 - distance / 80, 0, 1)
+                        local amplitude = (0.3 + 8.2 * (alpha ^ 1.35)) * 3
+                        local roughness = (45 + 35 * alpha) * 0.25
+                        local positionInfluence = 0.35 + 0.4 * alpha
+                        local rotationInfluence = 0.3 + 0.4 * alpha
+
+                        proximityCamShake:ShakeOnce(
+                            amplitude,
+                            roughness,
+                            0.01,
+                            0.16,
+                            positionInfluence,
+                            rotationInfluence
+                        )
+
+                        lastProximityShake = os.clock()
+                    end
+                end
+            end
+
+            proximityCamShake:Stop()
+        end)
 
         local v305 = 2
         local v306 = 1.2
@@ -9916,7 +9865,7 @@ function entityBehaviors.REBOUNDSW()
             v323.BackgroundTransparency = 1
             v323.Position = UDim2.new(0.486631036, 0, 0.479363143, 0)
             v323.Size = UDim2.new(0.0267379656, 0, 0.0387096703, 0)
-            v323.Image = "rbxassetid://79906427468430"
+            v323.Image = "rbxassetid://97823818277141"
             
             v324.Name = "JSSIZE"
             v324.Parent = vu321
@@ -10173,6 +10122,7 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
             wait()
         until sound4.IsPlaying == false
     end
+
 end
 function entityBehaviors.JEFFGUN2()
 local RunService = game:GetService("RunService")

@@ -39,7 +39,6 @@ OS.Color = Color3.fromRGB(255, 222, 189)
 OS.Thickness = 6
 OS.Parent = MC
 
--- Changelog Window
 local CL = Instance.new("Frame")
 CL.Name = "ChangelogContainer"
 CL.Size = UDim2.new(0.22, 0, 0.7, 0)
@@ -91,7 +90,7 @@ CLText.TextWrapped = true
 CLText.TextXAlignment = Enum.TextXAlignment.Left
 CLText.TextYAlignment = Enum.TextYAlignment.Top
 CLText.Text =
-"1. Fixed known BUG / The Hotel is about to get a makeover, and version 10.7 will add 20 entities.."
+"1. Fixed known BUG / In version V10.6.5, 'THE BACKROOMS' will be added to the archives"
 CLText.Parent = CL
 
 local TL = Instance.new("TextLabel")
@@ -118,7 +117,7 @@ TI.Name = "TopImage"
 TI.Size = UDim2.new(0.9, 0, 0.3, 0)
 TI.Position = UDim2.new(0.05, 0, 0.12, 0)
 TI.BackgroundTransparency = 1
-TI.Image = "rbxassetid://119904477151805"
+TI.Image = "rbxassetid://112781160951405"
 TI.ScaleType = Enum.ScaleType.Crop
 TI.Parent = MC
 local C2 = Instance.new("UICorner")

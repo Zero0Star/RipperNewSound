@@ -3,11 +3,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"⚠极其重要楼层⚠ 区域情况:实体横行",
-	"重要文件 区域情况:少量实体",
+	"暂无信息 区域情况:实体横行",
+	"暂无信息 区域情况:少量实体",
 	"暂无信息 区域情况:暂无信息",
+	"暂无信息 区域情况:超乎想象",
 	"暂无信息 区域情况:暂无信息",
-	"Minecraft 区域情况:暂无信息",
 	"暂无信息 区域情况:暂无信息",
 	"DreamCore 区域情况:?",
 	"星光圣地 区域情况:世界之外"

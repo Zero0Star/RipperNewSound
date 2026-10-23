@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"暂无信息 区域情况:实体横行",
-	"暂无信息 区域情况:少量实体",
+	"愤怒 区域情况:实体横行",
+	"无效楼层 区域情况:少量实体",
+	"无效楼层 区域情况:暂无信息",
+	"无效楼层 区域情况:暂无信息",
+	"无效楼层 区域情况:暂无信息",
 	"暂无信息 区域情况:暂无信息",
-	"暂无信息 区域情况:超乎想象",
-	"暂无信息 区域情况:暂无信息",
-	"暂无信息 区域情况:暂无信息",
-	"DreamCore 区域情况:?",
-	"星光圣地 区域情况:世界之外"
+	"无效楼层 区域情况:暂无信息",
+	"无效楼层 区域情况:暂无信息"
 }
 
 local stopped = false

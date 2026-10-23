@@ -634,13 +634,13 @@ PB.MouseButton1Click:Connect(function()
     
     local RunService = game:GetService("RunService")
     local items = {
-        "HardcoreOne",
-        "HardcoreTwo",
         "HardcoreSound",
+        "HardcoreTwo",
+        "HardcoreOne",
         "HardcoreM", 
-        "HardcoreITEM",
+        "HardcoremUSIC",
         "HardcoreFour",
-        "HardcoremUSIC"
+        "HardcoreITEM"
     }
     local found = {}
     local connection = nil
@@ -692,9 +692,9 @@ PB.MouseButton1Click:Connect(function()
 
     task.spawn(function()
         local scriptUrls = {
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/HotelSound.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua2.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua.lua?raw=true",
-            "https://github.com/Zero0Star/RipperNewSound/blob/master/HotelSound.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/Charm.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/Music.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour.lua?raw=true",

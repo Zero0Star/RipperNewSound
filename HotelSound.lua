@@ -322,5 +322,5 @@ while not allFilesValid do
 end
 
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... HardCoreSound V10.6.3 By HeavenNow :)"
+hint.Text = "Loading... HardCoreSound V10.6.3 By Mr.key & HeavenNow & Number303 :)"
 Debris:AddItem(hint, 3)

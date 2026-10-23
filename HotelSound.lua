@@ -55,6 +55,8 @@ local soundsData = {
     {url = rawNew .. "MultiMonster4.mp3", name = "M4", vol = 2},
     {url = rawMP .. "ReboundMovings.mp3", name = "ReboundMovings", vol = 1},
     {url = rawNew .. "Silence.mp3", name = "Silence", vol = 1},
+    {url = rawNew .. "MultiMonsterRebound.mp3", name = "MultiMonsterRebound", vol = 1},
+    {url = rawNew .. "MultiMonsterRipper.mp3", name = "MRS", vol = 1},
     {url = rawNew .. "SilenceFar.mp3", name = "SilenceFar", vol = 1},
     {url = rawNew .. "NoRunning.mp3", name = "DeerGodMusic", vol = 1},
     {url = rawNew .. "FrostbitePhase1.mp3", name = "F1", vol = 1},

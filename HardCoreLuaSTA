@@ -634,7 +634,7 @@ PB.MouseButton1Click:Connect(function()
     
     local RunService = game:GetService("RunService")
     local items = {
-        "HardcoreSound",
+        "HardCoreSound",
         "HardcoreTwo",
         "HardcoreOne",
         "HardcoreM", 
@@ -707,7 +707,7 @@ PB.MouseButton1Click:Connect(function()
                     loadstring(remoteCode)()
                 end)
                 if _ < #scriptUrls then 
-                    wait(5)
+                    wait(3)
                 end
             end
         end

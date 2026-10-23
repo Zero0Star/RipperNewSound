@@ -90,12 +90,12 @@ CLText.TextWrapped = true
 CLText.TextXAlignment = Enum.TextXAlignment.Left
 CLText.TextYAlignment = Enum.TextYAlignment.Top
 CLText.Text =
-"1. Fixed known BUG / In version V10.6.5, 'THE BACKROOMS' will be added to the archives"
+"1. HeavenNow fixed The Hotel slow service problem. / In version V10.6.5, 'THE BACKROOMS' will be added to the archives"
 CLText.Parent = CL
 
 local TL = Instance.new("TextLabel")
 TL.Name = "Title"
-TL.Text = "HardCore V10.6"
+TL.Text = "HardCore V10.6.3"
 TL.FontFace = CF
 TL.TextSize = 32
 TL.TextColor3 = Color3.fromRGB(255, 240, 230)
@@ -636,6 +636,7 @@ PB.MouseButton1Click:Connect(function()
     local items = {
         "HardcoreOne",
         "HardcoreTwo",
+        "HardcoreSound",
         "HardcoreM", 
         "HardcoreITEM",
         "HardcoreFour",
@@ -659,10 +660,10 @@ PB.MouseButton1Click:Connect(function()
             
             pcall(function()
                 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-                    .caption("HardCore Loading: " .. count .. "/6", true)
+                    .caption("HardCore Loading: " .. count .. "/7", true)
             end)
             
-            if count == 6 then
+            if count == 7 then
                 isDone = true
                 if connection then
                     connection:Disconnect()
@@ -693,6 +694,7 @@ PB.MouseButton1Click:Connect(function()
         local scriptUrls = {
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua2.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/HardCoreLua.lua?raw=true",
+            "https://github.com/Zero0Star/RipperNewSound/blob/master/HotelSound.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/Charm.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/Music.lua?raw=true",
             "https://github.com/Zero0Star/RipperNewSound/blob/master/LuaFour.lua?raw=true",

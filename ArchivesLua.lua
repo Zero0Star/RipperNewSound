@@ -3004,6 +3004,7 @@ function entityBehaviors.A200Jump()
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 
@@ -3014,7 +3015,8 @@ local images = {
 }
 
 local function PlayA200J()
-	local sound = workspace:WaitForChild("HardCoreSound"):FindFirstChild("A200J")
+	local soundFolder = workspace:WaitForChild("HardCoreSound")
+	local sound = soundFolder:FindFirstChild("A200J")
 
 	if sound and sound:IsA("Sound") then
 		sound.Volume = 3
@@ -3029,187 +3031,210 @@ local function PlayA200J()
 end
 
 local function DamagePlayer()
-
 	local character = player.Character or player.CharacterAdded:Wait()
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 
 	if humanoid then
 		humanoid:TakeDamage(100)
 	end
-
 end
 
-local function ScreenShake(power,time)
+local function ScreenShake(power, duration)
+	local start = os.clock()
+	local shakeName = "A200J_Shake_" .. HttpService:GenerateGUID(false)
 
-	local camera = workspace.CurrentCamera
-	local start = tick()
+	RunService:BindToRenderStep(
+		shakeName,
+		Enum.RenderPriority.Camera.Value + 1,
+		function()
+			if os.clock() - start >= duration then
+				RunService:UnbindFromRenderStep(shakeName)
+				return
+			end
 
-	local connection
+			local camera = workspace.CurrentCamera
 
-	connection = RunService.RenderStepped:Connect(function()
-
-		if tick()-start >= time then
-			connection:Disconnect()
-			return
+			if camera then
+				camera.CFrame = camera.CFrame * CFrame.new(
+					math.random(-power, power) / 100,
+					math.random(-power, power) / 100,
+					0
+				)
+			end
 		end
-
-		camera.CFrame =
-			camera.CFrame *
-			CFrame.new(
-				math.random(-power,power)/100,
-				math.random(-power,power)/100,
-				0
-			)
-	end)
+	)
 end
 
 local function ExecuteJumpScare()
-
 	DamagePlayer()
 
+	local playerGui = player:WaitForChild("PlayerGui")
+
+	local oldContainer = playerGui:FindFirstChild("A200J_Jumpscare")
+
+	if oldContainer then
+		oldContainer:Destroy()
+	end
+
 	local container = Instance.new("Folder")
-	container.Name="A200J_Jumpscare"
-	container.Parent=player.PlayerGui
+	container.Name = "A200J_Jumpscare"
+	container.Parent = playerGui
 
 	local gui = Instance.new("ScreenGui")
-	gui.Parent=container
-	gui.IgnoreGuiInset=true
-	gui.ResetOnSpawn=false
-	gui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+	gui.Name = "JumpscareGui"
+	gui.Parent = container
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.DisplayOrder = 999
 
 	local red = Instance.new("Frame")
-	red.Parent=gui
-	red.Size=UDim2.fromScale(1,1)
-	red.BackgroundColor3=Color3.fromRGB(120,0,0)
-	red.BackgroundTransparency=1
-	red.BorderSizePixel=0
-	red.ZIndex=1
+	red.Parent = gui
+	red.Size = UDim2.fromScale(1, 1)
+	red.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+	red.BackgroundTransparency = 1
+	red.BorderSizePixel = 0
+	red.ZIndex = 1
 
 	local img = Instance.new("ImageLabel")
-	img.Parent=gui
-	img.AnchorPoint=Vector2.new(.5,.5)
-	img.Position=UDim2.fromScale(.5,.5)
-	img.Size=UDim2.fromOffset(120,120)
-	img.BackgroundTransparency=1
-	img.ImageTransparency=1
-	img.ScaleType=Enum.ScaleType.Fit
-	img.ZIndex=5
+	img.Parent = gui
+	img.AnchorPoint = Vector2.new(0.5, 0.5)
+	img.Position = UDim2.fromScale(0.5, 0.5)
+	img.Size = UDim2.fromOffset(120, 120)
+	img.BackgroundTransparency = 1
+	img.ImageTransparency = 1
+	img.ScaleType = Enum.ScaleType.Fit
+	img.ZIndex = 5
 
-	PlayA200J()
+	task.spawn(PlayA200J)
 
 	TweenService:Create(
 		red,
-		TweenInfo.new(.1),
-		{BackgroundTransparency=.3}
-	):Play()
-
-	img.Image="rbxassetid://"..images[1]
-
-	TweenService:Create(
-		img,
-		TweenInfo.new(.12,Enum.EasingStyle.Back),
+		TweenInfo.new(0.1),
 		{
-			ImageTransparency=0,
-			Size=UDim2.fromOffset(450,450)
+			BackgroundTransparency = 0.3
 		}
 	):Play()
 
-	ScreenShake(8,.25)
-
-	task.wait(.15)
-
-	img.Image="rbxassetid://"..images[2]
+	img.Image = "rbxassetid://" .. images[1]
 
 	TweenService:Create(
 		img,
-		TweenInfo.new(.15,Enum.EasingStyle.Back),
+		TweenInfo.new(
+			0.12,
+			Enum.EasingStyle.Back,
+			Enum.EasingDirection.Out
+		),
 		{
-			Size=UDim2.fromOffset(900,900)
+			ImageTransparency = 0,
+			Size = UDim2.fromOffset(450, 450)
 		}
 	):Play()
 
-	ScreenShake(12,.35)
+	ScreenShake(8, 0.25)
 
-	task.wait(.12)
+	task.wait(0.15)
 
-	img.Image="rbxassetid://"..images[3]
+	img.Image = "rbxassetid://" .. images[2]
 
-	local glitch=true
+	TweenService:Create(
+		img,
+		TweenInfo.new(
+			0.15,
+			Enum.EasingStyle.Back,
+			Enum.EasingDirection.Out
+		),
+		{
+			Size = UDim2.fromOffset(900, 900)
+		}
+	):Play()
+
+	ScreenShake(12, 0.35)
+
+	task.wait(0.12)
+
+	img.Image = "rbxassetid://" .. images[3]
+
+	local glitch = true
 
 	task.spawn(function()
-
-		while glitch do
-
-			img.Position=UDim2.new(
+		while glitch and img.Parent do
+			img.Position = UDim2.new(
 				0.5,
-				math.random(-35,35),
+				math.random(-35, 35),
 				0.5,
-				math.random(-35,35)
+				math.random(-35, 35)
 			)
 
-			img.Rotation=math.random(-15,15)
+			img.Rotation = math.random(-15, 15)
 
-			img.Size=UDim2.fromOffset(
-				math.random(800,1200),
-				math.random(800,1200)
+			img.Size = UDim2.fromOffset(
+				math.random(800, 1200),
+				math.random(800, 1200)
 			)
 
-			img.ImageTransparency=math.random(0,4)/10
+			img.ImageTransparency = math.random(0, 4) / 10
 
-			task.wait(.035)
+			task.wait(0.035)
 		end
-
 	end)
 
 	TweenService:Create(
 		img,
-		TweenInfo.new(.3,Enum.EasingStyle.Exponential),
+		TweenInfo.new(
+			0.3,
+			Enum.EasingStyle.Exponential,
+			Enum.EasingDirection.Out
+		),
 		{
-			Size=UDim2.fromOffset(2200,2200)
+			Size = UDim2.fromOffset(2200, 2200)
 		}
 	):Play()
 
 	TweenService:Create(
 		red,
-		TweenInfo.new(.1),
-		{BackgroundTransparency=.05}
+		TweenInfo.new(0.1),
+		{
+			BackgroundTransparency = 0.05
+		}
 	):Play()
 
-	ScreenShake(25,.8)
+	ScreenShake(25, 0.8)
 
-	for i=1,8 do
+	for i = 1, 8 do
+		img.ImageTransparency = 0.4
+		task.wait(0.04)
 
-		img.ImageTransparency=.4
-		task.wait(.04)
-
-		img.ImageTransparency=0
-		task.wait(.04)
-
+		img.ImageTransparency = 0
+		task.wait(0.04)
 	end
 
-	task.wait(.8)
+	task.wait(0.8)
 
-	glitch=false
+	glitch = false
 
-	img.Position=UDim2.fromScale(.5,.5)
-	img.Rotation=0
+	img.Position = UDim2.fromScale(0.5, 0.5)
+	img.Rotation = 0
 
 	TweenService:Create(
 		img,
-		TweenInfo.new(.5),
-		{ImageTransparency=1}
+		TweenInfo.new(0.5),
+		{
+			ImageTransparency = 1
+		}
 	):Play()
 
 	TweenService:Create(
 		red,
-		TweenInfo.new(.6),
-		{BackgroundTransparency=1}
+		TweenInfo.new(0.6),
+		{
+			BackgroundTransparency = 1
+		}
 	):Play()
 
-	task.wait(.7)
+	task.wait(0.7)
 
 	container:Destroy()
-
 end
 
 ExecuteJumpScare()
@@ -10742,5 +10767,5 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCore V10.6 By HeavenNow :)"
+hint.Text = "Loading... Doors HardCore V10.6.3 By HeavenNow :)"
 game.Debris:AddItem(hint, 3)

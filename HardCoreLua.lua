@@ -5,36 +5,528 @@ local marker = Instance.new("BoolValue")
 marker.Name = "HardcoreOne"
 marker.Value = true
 marker.Parent = workspace
-local function GitAud(soundgit, filename)
-    local url = soundgit
-    local FileName = filename
-    writefile(FileName .. ".mp3", game:HttpGet(url))
-    return (getcustomasset or getsynasset)(FileName .. ".mp3")
-end
-local function CustomGitSound(soundlink, vol, filename)
-    local sound = Instance.new("Sound")
-    sound.SoundId = GitAud(soundlink, filename)
-    sound.Parent = workspace
-    sound.Name = filename or "Music"
-    sound.Volume = vol
-    sound:Play()
-    return sound
-end
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local DG_MUSIC_URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true"
-local LOCAL_FILE_NAME = "DeerGodMusic"
-local function GetCachedAudio(url, filename)
-    local filePath = filename .. ".mp3"
-    if isfile and isfile(filePath) then
-        return getcustomasset(filePath)
-    end
-    writefile(filePath, game:HttpGet(url))
-    return getcustomasset(filePath)
-end
-
-local cachedAudioAsset = GetCachedAudio(DG_MUSIC_URL, LOCAL_FILE_NAME)
 local entityBehaviors = {}
 
+function entityBehaviors.ForstBite2()
+function GetRoom()
+	local rooms = workspace:FindFirstChild("CurrentRooms")
+	local gameData = game.ReplicatedStorage:FindFirstChild("GameData")
+	local latestRoom = gameData and gameData:FindFirstChild("LatestRoom")
+
+	if not rooms or not latestRoom then
+		return nil
+	end
+
+	return rooms:FindFirstChild(tostring(latestRoom.Value))
+end
+
+function LoadCustomInstance(source, parent)
+	local model
+
+	while task.wait() and not model do
+		local success, result = pcall(function()
+			return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+		end)
+
+		if success and result then
+			model = result
+		end
+
+		if model then
+			model.Parent = parent or workspace
+
+			for _, v in ipairs(model:GetDescendants()) do
+				if v:IsA("Script") or v:IsA("LocalScript") then
+					v:Destroy()
+				end
+			end
+		end
+	end
+
+	return model
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local camera = workspace.CurrentCamera
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local s = LoadCustomInstance("83840759413024", workspace)
+if not s then
+	return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart")
+if not entity then
+	s:Destroy()
+	return
+end
+
+local firstRoom = GetRoom()
+if not firstRoom or not firstRoom:FindFirstChild("RoomEntrance") then
+	s:Destroy()
+	return
+end
+
+entity.CFrame = firstRoom.RoomEntrance.CFrame * CFrame.new(0, 5, -15)
+
+local effectNames = {
+	"face",
+	"Heylois",
+	"BlackTrai2l",
+	"BlackTrai3l"
+}
+
+local function SetEntityEffectsEnabled(state)
+	local attachment = entity:FindFirstChild("Attachment")
+	if not attachment then
+		return
+	end
+
+	for _, name in ipairs(effectNames) do
+		local effect = attachment:FindFirstChild(name)
+		if effect and effect:IsA("ParticleEmitter") or effect and effect:IsA("Trail") or effect and effect:IsA("Beam") then
+			effect.Enabled = state
+		elseif effect and effect:IsA("Light") then
+			effect.Enabled = state
+		end
+	end
+end
+
+SetEntityEffectsEnabled(false)
+
+local staticSounds = {}
+
+for _, v in ipairs(s:GetDescendants()) do
+	if v:IsA("Sound") and v.Name == "Static Effect" then
+		v.Looped = true
+		v:Play()
+		table.insert(staticSounds, v)
+	end
+end
+
+local hardcore = workspace:FindFirstChild("HardCoreSound")
+local music
+
+local function PlayMusic(name, looped, waitForLoad)
+	if music then
+		music:Stop()
+		music:Destroy()
+		music = nil
+	end
+
+	if not hardcore then
+		return nil
+	end
+
+	local source = hardcore:FindFirstChild(name)
+	if not source or not source:IsA("Sound") then
+		return nil
+	end
+
+	music = source:Clone()
+	music.Parent = workspace
+	music.Looped = looped
+
+	if waitForLoad and not music.IsLoaded then
+		local started = os.clock()
+
+		while music.Parent and not music.IsLoaded and os.clock() - started < 3 do
+			task.wait()
+		end
+	end
+
+	music:Play()
+	return music
+end
+
+PlayMusic("F1", true)
+
+local frost = Instance.new("ColorCorrectionEffect")
+frost.Parent = game.Lighting
+
+TweenService:Create(
+	frost,
+	TweenInfo.new(10),
+	{
+		TintColor = Color3.fromRGB(217, 250, 255),
+		Saturation = -0.7,
+		Contrast = 0.2
+	}
+):Play()
+
+local light = Instance.new("PointLight")
+light.Range = 60
+light.Brightness = 99999
+light.Parent = entity
+
+TweenService:Create(
+	light,
+	TweenInfo.new(3),
+	{
+		Brightness = 0
+	}
+):Play()
+
+local finished = false
+local camShake
+local cameraShakerModule = ReplicatedStorage:FindFirstChild("CameraShaker")
+
+if cameraShakerModule then
+	local success, shaker = pcall(require, cameraShakerModule)
+
+	if success and shaker then
+		camShake = shaker.new(
+			Enum.RenderPriority.Camera.Value,
+			function(cf)
+				camera = workspace.CurrentCamera
+
+				if camera then
+					camera.CFrame = camera.CFrame * cf
+				end
+			end
+		)
+
+		camShake:Start()
+
+		task.spawn(function()
+			while entity.Parent and not finished do
+				camera = workspace.CurrentCamera
+
+				if camera then
+					local distance = (camera.CFrame.Position - entity.Position).Magnitude
+					local power = math.clamp(1 - distance / 120, 0, 1)
+
+					if power > 0 then
+						camShake:ShakeOnce(
+							power * 8,
+							40,
+							0.05,
+							0.35,
+							Vector3.new(0.15, 0.15, 0.15),
+							Vector3.new(1, 1, 1)
+						)
+					end
+				end
+
+				task.wait(0.15)
+			end
+		end)
+	end
+end
+
+task.wait(5)
+
+for _, v in ipairs(staticSounds) do
+	v:Stop()
+end
+
+SetEntityEffectsEnabled(true)
+
+pcall(function()
+	entity.Ambience:Play()
+	entity.AmbienceFar:Play()
+end)
+
+local function LerpNumberSequenceToOne(sequence, alpha)
+	local keypoints = {}
+
+	for _, keypoint in ipairs(sequence.Keypoints) do
+		local value = keypoint.Value + (1 - keypoint.Value) * alpha
+		local envelope = keypoint.Envelope * (1 - alpha)
+
+		table.insert(
+			keypoints,
+			NumberSequenceKeypoint.new(
+				keypoint.Time,
+				value,
+				envelope
+			)
+		)
+	end
+
+	return NumberSequence.new(keypoints)
+end
+
+local finalFadeStarted = false
+
+local function StartFinalFade(duration)
+	if finalFadeStarted then
+		return
+	end
+
+	finalFadeStarted = true
+	duration = math.max(tonumber(duration) or 5, 0.1)
+
+	pcall(function()
+		entity.Ambience:Stop()
+		entity.AmbienceFar:Stop()
+	end)
+
+	SetEntityEffectsEnabled(false)
+
+	local des = Instance.new("Sound")
+	des.SoundId = "rbxassetid://111715441853991"
+	des.Volume = 0.5
+	des.Parent = workspace
+	des:Play()
+	Debris:AddItem(des, math.max(duration + 2, 10))
+
+	local particleData = {}
+
+	for _, v in ipairs(s:GetDescendants()) do
+		if v:IsA("BasePart") then
+			TweenService:Create(
+				v,
+				TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{
+					Transparency = 1
+				}
+			):Play()
+		elseif v:IsA("Decal") or v:IsA("Texture") then
+			TweenService:Create(
+				v,
+				TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{
+					Transparency = 1
+				}
+			):Play()
+		elseif v:IsA("Light") then
+			TweenService:Create(
+				v,
+				TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{
+					Brightness = 0
+				}
+			):Play()
+		elseif v:IsA("ParticleEmitter") then
+			table.insert(
+				particleData,
+				{
+					Object = v,
+					Transparency = v.Transparency
+				}
+			)
+		end
+	end
+
+	local fadeValue = Instance.new("NumberValue")
+	fadeValue.Value = 0
+
+	local changedConnection
+	changedConnection = fadeValue:GetPropertyChangedSignal("Value"):Connect(function()
+		for _, data in ipairs(particleData) do
+			if data.Object and data.Object.Parent then
+				data.Object.Transparency = LerpNumberSequenceToOne(
+					data.Transparency,
+					fadeValue.Value
+				)
+			end
+		end
+	end)
+
+	local particleTween = TweenService:Create(
+		fadeValue,
+		TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+		{
+			Value = 1
+		}
+	)
+
+	particleTween:Play()
+
+	particleTween.Completed:Connect(function()
+		if changedConnection then
+			changedConnection:Disconnect()
+		end
+
+		for _, data in ipairs(particleData) do
+			if data.Object and data.Object.Parent then
+				data.Object.Transparency = NumberSequence.new(1)
+				data.Object.Enabled = false
+			end
+		end
+
+		fadeValue:Destroy()
+	end)
+
+	if frost and frost.Parent then
+		TweenService:Create(
+			frost,
+			TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+			{
+				TintColor = Color3.fromRGB(255, 255, 255),
+				Saturation = 0,
+				Contrast = 0
+			}
+		):Play()
+	end
+end
+
+local roomCount = 0
+local gameData = ReplicatedStorage:FindFirstChild("GameData")
+local latestRoom = gameData and gameData:FindFirstChild("LatestRoom")
+
+if not latestRoom then
+	finished = true
+end
+
+task.spawn(function()
+	if not latestRoom then
+		return
+	end
+
+	while roomCount < 5 and not finished do
+		latestRoom.Changed:Wait()
+
+		if finished then
+			break
+		end
+
+		roomCount += 1
+
+		local room = GetRoom()
+
+		if room and room:FindFirstChild("RoomEntrance") and entity.Parent then
+			local value = Instance.new("CFrameValue")
+			value.Value = entity.CFrame
+
+			local connection
+			connection = value:GetPropertyChangedSignal("Value"):Connect(function()
+				if entity.Parent then
+					entity.CFrame = value.Value
+				end
+			end)
+
+			local tween = TweenService:Create(
+				value,
+				TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{
+					Value = room.RoomEntrance.CFrame * CFrame.new(0, 5, -15)
+				}
+			)
+
+			tween:Play()
+			tween.Completed:Wait()
+
+			if connection then
+				connection:Disconnect()
+			end
+
+			value:Destroy()
+		end
+
+		if roomCount == 3 then
+			PlayMusic("F2", true)
+		elseif roomCount == 5 then
+			local f3 = PlayMusic("F3", false, true)
+			local fadeDuration = 5
+
+			if f3 and f3.TimeLength > 0 then
+				fadeDuration = f3.TimeLength
+			end
+
+			StartFinalFade(fadeDuration)
+
+			if f3 then
+				local ended = false
+				local endedConnection
+
+				endedConnection = f3.Ended:Connect(function()
+					ended = true
+				end)
+
+				local started = os.clock()
+
+				while f3.Parent and not ended and os.clock() - started < fadeDuration + 2 do
+					task.wait()
+				end
+
+				if endedConnection then
+					endedConnection:Disconnect()
+				end
+			else
+				task.wait(fadeDuration)
+			end
+
+			finished = true
+			break
+		end
+	end
+end)
+
+task.spawn(function()
+	while not finished do
+		task.wait(1)
+
+		if finished then
+			break
+		end
+
+		local safe = false
+		local lighter = chr:FindFirstChild("Lighter")
+
+		if lighter and lighter:FindFirstChild("Handle") then
+			local holder = lighter.Handle:FindFirstChild("EffectsHolder")
+
+			if holder and holder:FindFirstChild("AttachOn") then
+				local main = holder.AttachOn:FindFirstChild("MainLight")
+
+				if main and main:IsA("PointLight") then
+					safe = main.Enabled
+				end
+			end
+		end
+
+		if not safe then
+			pcall(function()
+				local humanoid = chr:FindFirstChildOfClass("Humanoid")
+
+				if humanoid and humanoid.Health > 0 then
+					humanoid.Health -= 5
+				end
+			end)
+		end
+	end
+end)
+
+repeat
+	task.wait()
+until finished
+
+dmg = false
+roomChanged = true
+
+if camShake then
+	pcall(function()
+		camShake:Stop()
+	end)
+end
+
+pcall(function()
+	entity.Ambience:Stop()
+	entity.AmbienceFar:Stop()
+end)
+
+SetEntityEffectsEnabled(false)
+
+if music then
+	music:Stop()
+	music:Destroy()
+	music = nil
+end
+
+if s and s.Parent then
+	s:Destroy()
+end
+
+if frost and frost.Parent then
+	frost:Destroy()
+end
+end
 
 function entityBehaviors.HATREDJN()
 local Players = game:GetService("Players")
@@ -1310,494 +1802,20 @@ if existingFigure then
 	bindFigure(existingFigure)
 end
 end
--------
-function entityBehaviors.GodOFOne()
-    for _, model in pairs(workspace.CurrentRooms:GetDescendants()) do
-    if model.Name == "DropCeiling" and model.Parent and model.Parent.Name == "Parts" then
-        model:Destroy()
-    end
-end
-
-local camera = workspace:FindFirstChild("Camera")
-if camera then
-    local skyboxPart = camera:FindFirstChild("SkyboxPart")
-    if skyboxPart then skyboxPart:Destroy() end
-end
-task.wait(1)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("What this?",true)
-task.wait(1)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).remind("???", true)
-wait(1)
-local Lighting = game:GetService("Lighting")
-local Sky = Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky", Lighting)
-
-Sky.SkyboxBk = "rbxassetid://15983968922"
-Sky.SkyboxDn = "rbxassetid://15983966825"
-Sky.SkyboxFt = "rbxassetid://15983965025"
-Sky.SkyboxLf = "rbxassetid://15983967420"
-Sky.SkyboxRt = "rbxassetid://15983966246"
-Sky.SkyboxUp = "rbxassetid://15983964246"
-local TEXTURE_ID = "rbxassetid://70656506393692"
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BossTextureUI"
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-local texture = Instance.new("ImageLabel")
-texture.Name = "BossTexture"
-texture.Image = TEXTURE_ID
-texture.BackgroundTransparency = 1
-texture.Size = UDim2.fromOffset(900, 500) 
-texture.ScaleType = Enum.ScaleType.Stretch
-texture.Position = UDim2.new(0.5, 0, 0, -220)  
-texture.AnchorPoint = Vector2.new(0.5, 0)
-texture.Visible = true
-texture.Parent = screenGui
-local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local entity = spawner.Create({
-	Entity = {
-		Name = "dfsa",
-		Asset = "70789280044418",
-		HeightOffset = 10},Lights = {Flicker = {Enabled = true,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 20, 0.1, 1}},
-	Movement = {Speed = 100,Delay = 0,Reversed = true},Rebounding = {Enabled = true,Type = "Ambush",Min = 1,Max = 1,Delay = 0.1,},Damage = {Enabled = true,Range = 40,Amount = 1},
-	Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {"You died by the The devourer of gods", "???", "Wait, who is this guy?","I’m not clear about his background, but anyway, you must be careful.","See you..."},Cause = ""},})
-entity:SetCallback("OnRebounding", function(startOfRebound)
-	local entityModel = entity.Model
-	local main = entityModel:WaitForChild("Main")
-	local attachment = main:WaitForChild("Attachment")
-	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
-	local sounds = {
-		footsteps = main:WaitForChild("Footsteps"),
-		playSound = main:WaitForChild("PlaySound"),
-		switch = main:WaitForChild("Switch"),
-		switchBack = main:WaitForChild("SwitchBack")
-	}
-	for _, c in attachment:GetChildren() do
-		c.Enabled = (not startOfRebound)
-	end
-	for _, c in AttachmentSwitch:GetChildren() do
-		c.Enabled = startOfRebound
-	end
-	if startOfRebound == true then
-		sounds.footsteps.PlaybackSpeed = 0.35
-		sounds.playSound.PlaybackSpeed = 0.25
-		sounds.switch:Play()
-	else
-		sounds.footsteps.PlaybackSpeed = 0.25
-		sounds.playSound.PlaybackSpeed = 0.16
-		sounds.switchBack:Play()
-	end
-end)
-entity:Run()
-function GetRoom()
-    local gruh = workspace.CurrentRooms
-    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
-end
-local plr = game.Players.LocalPlayer
-local chr = plr.Character or plr.CharacterAdded:Wait()
-local tweenservice = game:GetService("TweenService")
-function LoadCustomInstance(source, parent)
-    local model
-    local function NormalizeGitHubURL(url)
-        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
-            return url .. "?raw=true"
-        end
-        return url
-    end
-    while task.wait() and not model do
-        if tonumber(source) then
-            local success, result = pcall(function()
-                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
-            end)
-            if success and result then
-                model = result
-            end
-        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
-            local url = NormalizeGitHubURL(source)
-            local success, result = pcall(function()
-                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
-                local content = game:HttpGet(url)
-                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
-                    writefile(filename, content)
-                    local assetFunc = getcustomasset or getsynasset
-                    local obj = game:GetObjects(assetFunc(filename))[1]
-                    delfile(filename)
-                    return obj
-                else
-                    return nil
-                end
-            end)
-            if success and result then
-                model = result
-            end
-        else
-            break
-        end
-
-        if model then
-            model.Parent = parent or workspace
-            for _, obj in ipairs(model:GetDescendants()) do
-                if obj:IsA("Script") or obj:IsA("LocalScript") then
-                    obj:Destroy()
-                end
-            end
-            pcall(function()
-                model:SetAttribute("LoadedByExecutor", true)
-            end)
-        end
-    end
-
-    return model
-end
-
-local s = LoadCustomInstance(82138419401558, workspace)
-if not s then
-    return
-end
-
-local entity = s:FindFirstChildWhichIsA("BasePart")
-entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(15, 100, 15)
-entity.Part.CFrame = entity.CFrame
-pcall(function()
-local room = workspace.CurrentRooms:FindFirstChild(
-    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
-)
-if room then
-    for _, obj in ipairs(room:GetDescendants()) do
-        if obj.Name == "PlaySound" and obj:IsA("Sound") then
-            obj:Stop()
-            obj.Playing = false
-            obj.TimePosition = 0
-            obj.Looped = false
-        end
-    end
-end
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
-end)
-wait(5)
-local plr = game.Players.LocalPlayer
-local chr = plr.Character or plr.CharacterAdded:Wait()
-local tweenservice = game:GetService("TweenService")
-
-function LoadCustomInstance(source, parent)
-    local model
-
-    local function NormalizeGitHubURL(url)
-        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
-            return url .. "?raw=true"
-        end
-        return url
-    end
-
-    while task.wait() and not model do
-        if tonumber(source) then
-            local success, result = pcall(function()
-                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
-            end)
-            if success and result then
-                model = result
-            end
-        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
-            local url = NormalizeGitHubURL(source)
-            local success, result = pcall(function()
-                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
-                local content = game:HttpGet(url)
-                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
-                    writefile(filename, content)
-                    local assetFunc = getcustomasset or getsynasset
-                    local obj = game:GetObjects(assetFunc(filename))[1]
-                    delfile(filename)
-                    return obj
-                else
-                    warn("Executor không hỗ trợ file APIs.")
-                    return nil
-                end
-            end)
-            if success and result then
-                model = result
-            end
-        else
-            break
-        end
-
-        if model then
-            model.Parent = parent or workspace
-            for _, obj in ipairs(model:GetDescendants()) do
-                if obj:IsA("Script") or obj:IsA("LocalScript") then
-                    obj:Destroy()
-                end
-            end
-            pcall(function()
-                model:SetAttribute("LoadedByExecutor", true)
-            end)
-        end
-    end
-
-    return model
-end
-local s = LoadCustomInstance(86700013599003, workspace)
-if not s then
-    return
-end
-
-local entity = s:FindFirstChildWhichIsA("BasePart")
-entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(1, 0, 1)
-entity.Part.CFrame = entity.CFrame
-
-pcall(function()
-local room = workspace.CurrentRooms:FindFirstChild(
-    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
-)
-if room then
-    for _, obj in ipairs(room:GetDescendants()) do
-        if obj.Name == "PlaySound" and obj:IsA("Sound") then
-            obj:Stop()
-            obj.Playing = false
-            obj.TimePosition = 0
-            obj.Looped = false
-        end
-    end
-end
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
-end)
-DestroyWithDelay()
-end
------
-function entityBehaviors.GodOfTwo()
- function GetRoom()
-    local gruh = workspace.CurrentRooms
-    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
-end
-local plr = game.Players.LocalPlayer
-local chr = plr.Character or plr.CharacterAdded:Wait()
-local tweenservice = game:GetService("TweenService")
-function LoadCustomInstance(source, parent)
-    local model
-
-    local function NormalizeGitHubURL(url)
-        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
-            return url .. "?raw=true"
-        end
-        return url
-    end
-    while task.wait() and not model do
-        if tonumber(source) then
-            local success, result = pcall(function()
-                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
-            end)
-            if success and result then
-                model = result
-            end
-        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
-            local url = NormalizeGitHubURL(source)
-            local success, result = pcall(function()
-                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
-                local content = game:HttpGet(url)
-                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
-                    writefile(filename, content)
-                    local assetFunc = getcustomasset or getsynasset
-                    local obj = game:GetObjects(assetFunc(filename))[1]
-                    delfile(filename)
-                    return obj
-                else
-                    return nil
-                end
-            end)
-            if success and result then
-                model = result
-            end
-        else
-            break
-        end
-        if model then
-            model.Parent = parent or workspace
-            for _, obj in ipairs(model:GetDescendants()) do
-                if obj:IsA("Script") or obj:IsA("LocalScript") then
-                    obj:Destroy()
-                end
-            end
-            pcall(function()
-                model:SetAttribute("LoadedByExecutor", true)
-            end)
-        end
-    end
-    return model
-end
-local s = LoadCustomInstance(86700013599003, workspace)
-if not s then
-    return
-end
-local entity = s:FindFirstChildWhichIsA("BasePart")
-entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(1, 0, 1)
-end
-
-function entityBehaviors.GodOFThree()
-local function makeEntity(asset)
-    local e = spawner.Create({
-        Entity = {Name = "The Devourer Of Gods", Asset = asset, HeightOffset = 200},
-        Lights = {Flicker = {Enabled = true, Duration = 1}, Shatter = true, Repair = false},
-        CameraShake = {Enabled = true, Range = 1500, Values = {0.5, 20, 0.1, 1}},
-        Movement = {Speed = 70, Delay = 0, Reversed = false},Rebounding = {
-Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = true, Range = 40, Amount = 200},
-        Crucifixion = {Enabled = true, Range = 40, Resist = true, Break = true},
-        Death = {Type = "Curious", Hints = {
-            "You died by the The devourer of gods", "???", "Wait, who is this guy?",
-            "I’m not clear about his background, but anyway, you must be careful.", "See you..."
-        }}
-    })
-    
-    e:SetCallback("OnRebounding", function(s)
-        local m = e.Model.Main
-        local a1, a2 = m.Attachment, m.AttachmentSwitch
-        for _, c in a1:GetChildren() do c.Enabled = not s end
-        for _, c in a2:GetChildren() do c.Enabled = s end
-        local spd = s and 0.35 or 0.25
-        m.Footsteps.PlaybackSpeed = spd
-        m.PlaySound.PlaybackSpeed = s and 0.25 or 0.16
-        (s and m.Switch or m.SwitchBack):Play()
-    end)
-    
-    return e
-end
-
-local assets = {
-    "104227777289979",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "140679368116066",
-    "104227777289979" 
-}
-for i = 1, 17 do
-    spawn(function()
-        local entity = makeEntity(assets[i])
-        entity:Run()
-    end)
-    
-    if i < 17 then
-        wait(0.5)
-    end
-end
-end
-
-function entityBehaviors.GodOFFour()
-local entity = spawner.Create({
-	Entity = {
-		Name = "The Devourer Of Gods",
-		Asset = "74255725774689",
-		HeightOffset = 10},Lights = {Flicker = {Enabled = true,Duration = 1},Shatter = true,Repair = false},Earthquake = {Enabled = false},
-	    CameraShake = {Enabled = true,Range = 1500,Values = {0.5, 20, 0.1, 1}},Movement = {Speed = 500,Delay = 0,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},
-	    Damage = {Enabled = true,Range = 200,Amount = 200},Crucifixion = {Enabled = true,Range = 40,Resist = true,Break = true},Death = {Type = "Curious",Hints = {"You died by the The devourer of gods", "???", "Wait, who is this guy?","I’m not clear about his background, but anyway, you must be careful.","See you..."},Cause = ""},})
-entity:SetCallback("OnRebounding", function(startOfRebound)
-	local entityModel = entity.Model
-	local main = entityModel:WaitForChild("Main")
-	local attachment = main:WaitForChild("Attachment")
-	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
-	local sounds = {
-		footsteps = main:WaitForChild("Footsteps"),
-		playSound = main:WaitForChild("PlaySound"),
-		switch = main:WaitForChild("Switch"),
-		switchBack = main:WaitForChild("SwitchBack")
-	}
-	for _, c in attachment:GetChildren() do
-		c.Enabled = (not startOfRebound)
-	end
-	for _, c in AttachmentSwitch:GetChildren() do
-		c.Enabled = startOfRebound
-	end
-	if startOfRebound == true then
-		sounds.footsteps.PlaybackSpeed = 0.35
-		sounds.playSound.PlaybackSpeed = 0.25
-		sounds.switch:Play()
-	else
-		sounds.footsteps.PlaybackSpeed = 0.25
-		sounds.playSound.PlaybackSpeed = 0.16
-		sounds.switchBack:Play()
-	end
-end)
-entity:Run()
-end
-
-local Z367_MUSIC_URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/Z367Music.mp3?raw=true"
-local Z367_MUSIC_FILENAME = "Z367Music_V36"
-local Z367_MUSIC_SOUND_NAME = "Z367Music_Preloaded"
-local Z367_MUSIC_VOLUME = 4.4
-
-local function preloadZ367Music()
-    local sound = workspace:FindFirstChild(Z367_MUSIC_SOUND_NAME)
-
-    if sound and not sound:IsA("Sound") then
-        sound:Destroy()
-        sound = nil
-    end
-
-    if not sound then
-        sound = Instance.new("Sound")
-        sound.Name = Z367_MUSIC_SOUND_NAME
-        sound.Looped = false
-        sound.Parent = workspace
-    end
-
-    sound.Volume = Z367_MUSIC_VOLUME
-    sound.Looped = false
-
-    -- Never autoplay during preload.
-    pcall(function()
-        sound:Stop()
-        sound.TimePosition = 0
-    end)
-
-    local ok, err = pcall(function()
-        if type(writefile) ~= "function" or type(game.HttpGet) ~= "function" then
-            error("executor file/http functions unavailable")
-        end
-
-        local path = Z367_MUSIC_FILENAME .. ".mp3"
-        writefile(path, game:HttpGet(Z367_MUSIC_URL))
-
-        local getter = getcustomasset or getsynasset
-        if not getter then
-            error("getcustomasset/getsynasset unavailable")
-        end
-
-        sound.SoundId = getter(path)
-
-        -- Decode/cache the custom asset now so the first encounter does not
-        -- wait for the sound to become ready after a target is already locked.
-        pcall(function()
-            game:GetService("ContentProvider"):PreloadAsync({sound})
-        end)
-    end)
-
-    if not ok then
-        warn("[Z-367] Music preload failed:", err)
-    end
-
-    return sound
-end
-
-local Z367_PRELOADED_MUSIC = preloadZ367Music()
 
 function entityBehaviors.Z367Game()
+local Z367_MUSIC_VOLUME = 4.4
+local Z367_PRELOADED_MUSIC = workspace:WaitForChild("HardCoreSound"):WaitForChild("Z367")
+
+if Z367_PRELOADED_MUSIC:IsA("Sound") then
+    Z367_PRELOADED_MUSIC.Volume = Z367_MUSIC_VOLUME
+    Z367_PRELOADED_MUSIC.Looped = false
+    pcall(function()
+        Z367_PRELOADED_MUSIC:Stop()
+        Z367_PRELOADED_MUSIC.TimePosition = 0
+    end)
+end
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -1810,12 +1828,10 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local camera = workspace.CurrentCamera
 
---// Configuration
 local CONFIG = {
     Duration = 42,
     MaxPressure = 5,
 
-    -- Mouse physics
     MouseSensitivity = 0.00205,
     Friction = 0.875,
     MaxSpeed = 0.027,
@@ -1823,17 +1839,15 @@ local CONFIG = {
     OuterLimit = 0.445,
     Spring = 0.00082,
 
-    -- Pressure
     RecoveryRate = 1.45,
     BaseDrainRate = 0.48,
     DistanceDrain = 1.55,
 
-    -- Phase thresholds: 0-25 / 25-50 / 50-75 / 75-100%
     Phase = {
         [1] = {
             MinEventDelay = 4.0,
             MaxEventDelay = 6.2,
-            ImpactForce = 0.105, -- stronger than old early phase
+            ImpactForce = 0.105,
             ShakeMagnitude = 18,
             ShakeRoughness = 120,
             ShakeFadeIn = 0.06,
@@ -1870,11 +1884,10 @@ local CONFIG = {
             InputMultiplier = 0.96,
         },
 
-        -- V3.1: Phase 4 is only a little easier, not trivial.
         [4] = {
-            MinEventDelay = 2.75, -- V3.2 easier final phase
+            MinEventDelay = 2.75,
             MaxEventDelay = 4.45,
-            ImpactForce = 0.150,  -- easier to recover from
+            ImpactForce = 0.150,
             ShakeMagnitude = 30,
             ShakeRoughness = 200,
             ShakeFadeIn = 0.10,
@@ -1886,17 +1899,11 @@ local CONFIG = {
         },
     },
 
-    -- Optional executor music.
-    MusicUrl = Z367_MUSIC_URL,
-    MusicFilename = Z367_MUSIC_FILENAME,
-
-    -- Roblox asset fallbacks. Replace with your own if desired.
     ImpactSoundId = "",
     WarningSoundId = "",
     HeartbeatSoundId = "",
 }
 
---// Runtime state
 local state = {
     active = false,
     dead = false,
@@ -1919,7 +1926,6 @@ local state = {
     oldMouseIcon = UserInputService.MouseIconEnabled,
 }
 
---// Utilities
 local function clamp01(x)
     return math.clamp(x, 0, 1)
 end
@@ -1964,9 +1970,6 @@ local function stroke(parent, color, thickness, transparency)
     }, parent)
 end
 
---// Z-367 music is preloaded outside entityBehaviors.Z367Game().
--- The game body only starts/stops the persistent workspace Sound.
-
 local function playOneShot(soundId, volume, speed)
     if not soundId or soundId == "" then return end
     local s = new("Sound", {
@@ -1978,8 +1981,6 @@ local function playOneShot(soundId, volume, speed)
     Debris:AddItem(s, 5)
 end
 
---// CameraShaker integration
--- Every major Z-367 impact routes through this function.
 local function runCameraShake(magnitude, roughness, fadeIn, fadeOut, posInfluence, rotInfluence)
     local cameraShakerModule = ReplicatedStorage:FindFirstChild("CameraShaker")
     if not cameraShakerModule then
@@ -2020,12 +2021,10 @@ local function runCameraShake(magnitude, roughness, fadeIn, fadeOut, posInfluenc
     return ok
 end
 
--- Short strong shake used by win/death sequences.
 local function runFinalCameraShake()
     return runCameraShake(30, 200, 0.1, 0.2, 2, 0.5)
 end
 
--- Fallback visual shake if CameraShaker isn't present.
 local fallbackShake = {
     power = 0,
     endAt = 0,
@@ -2036,9 +2035,6 @@ local function requestFallbackShake(power, duration)
     fallbackShake.endAt = math.max(fallbackShake.endAt, os.clock() + (duration or 0.25))
 end
 
--- Full-minigame low-frequency camera motion.
--- This is an independent shaker that stays active for the WHOLE game.
--- The strong hit at 6 seconds is a separate effect and does not replace it.
 local gameCameraShaker = nil
 
 local function stopGameCameraShake()
@@ -2055,7 +2051,7 @@ local function runGameCameraShake()
 
     local cameraShakerModule = ReplicatedStorage:FindFirstChild("CameraShaker")
     if not cameraShakerModule then
-        -- Very small full-duration fallback if CameraShaker is unavailable.
+
         requestFallbackShake(0.004, CONFIG.Duration)
         return false
     end
@@ -2075,7 +2071,6 @@ local function runGameCameraShake()
 
         gameCameraShaker:Start()
 
-        -- User-requested full-game subtle shake.
         gameCameraShaker:ShakeOnce(
             10,
             10,
@@ -2116,7 +2111,6 @@ local function shakeForPhase(multiplier)
     end
 end
 
---// UI
 local function buildUI()
     local old = playerGui:FindFirstChild("Z367_V31")
     if old then old:Destroy() end
@@ -2138,10 +2132,6 @@ local function buildUI()
         ZIndex = 1,
     }, gui)
 
-    -- Full-screen opening fade.
-    -- IMPORTANT: keep it hidden until the minigame actually starts.
-    -- The old version spawned this fully opaque during script initialization,
-    -- which caused a permanent black screen while Z-367 was still chasing.
     local introFade = new("Frame", {
         Name = "GameFade",
         Size = UDim2.fromScale(1,1),
@@ -2171,7 +2161,6 @@ local function buildUI()
         ZIndex = 20,
     }, gui)
 
-    -- Vignette using four gradients so no external image is required.
     local vignetteTop = new("Frame", {
         Size = UDim2.new(1,0,0.24,0),
         BackgroundColor3 = Color3.new(0,0,0),
@@ -2208,7 +2197,6 @@ local function buildUI()
     vignetteRight.Parent = gui
     vignetteRight.UIGradient.Rotation = 180
 
-    -- Scanlines
     local scanHolder = new("Frame", {
         Name = "Scanlines",
         Size = UDim2.fromScale(1,1),
@@ -2454,13 +2442,10 @@ local function buildUI()
     }
 end
 
--- Do not create the minigame UI during script initialization.
--- It is created only when startGame() is actually called for the locked player.
 local ui = nil
 
---// Full game fade-in
 local function runGameFadeIn()
-    -- Only cover the screen once the minigame has REALLY started.
+
     ui.IntroFade.Visible = true
     ui.IntroFade.Active = false
     ui.IntroFade.BackgroundTransparency = 0
@@ -2469,7 +2454,6 @@ local function runGameFadeIn()
     ui.Timer.TextTransparency = 1
     ui.PhaseText.TextTransparency = 1
 
-    -- Short black hold makes the transition feel deliberate.
     task.wait(0.35)
 
     tween(
@@ -2488,7 +2472,6 @@ local function runGameFadeIn()
         tween(ui.PhaseText, TweenInfo.new(0.65, Enum.EasingStyle.Quad), {TextTransparency = 0})
     end)
 
-    -- Fail-safe: GameFade must never be allowed to remain over the game.
     task.delay(1.8, function()
         if ui.IntroFade and ui.IntroFade.Parent then
             ui.IntroFade.BackgroundTransparency = 1
@@ -2498,7 +2481,6 @@ local function runGameFadeIn()
     end)
 end
 
---// UI effects
 local function setWarning(text, duration, strong)
     if not state.active or state.ending then return end
     ui.Warning.Text = text
@@ -2607,7 +2589,6 @@ local function glitchBurst(intensity, duration)
     end)
 end
 
---// Impact/event helpers
 local function addForce(force, multiplier)
     state.ballVelocity += force * (multiplier or 1)
 end
@@ -2621,13 +2602,11 @@ local function doImpact(strengthMultiplier, warningText)
     setWarning(warningText or ">> IMPACT DETECTED <<", 0.45, true)
     playOneShot(CONFIG.WarningSoundId, 1.2, 1)
 
-    -- Tiny telegraph.
     task.wait(math.max(0.10, 0.22 - state.phase * 0.025))
 
     local direction = randomUnit2()
     addForce(direction * p.ImpactForce * strengthMultiplier)
 
-    -- V3.1: EVERY impact gets screen/camera shake.
     shakeForPhase(strengthMultiplier)
 
     flashScreen(Color3.fromRGB(255,245,245), 0.12, 0.025, 0.32)
@@ -2654,7 +2633,6 @@ local function doDistortion()
     state.inverted = true
     state.distortion = math.max(state.distortion, 0.85)
 
-    -- Distortion starts with a real camera hit too.
     shakeForPhase(0.58)
     glitchBurst(1.65, 0.8)
     impactBlur(19)
@@ -2677,14 +2655,12 @@ local function doPressureSurge()
     if not state.active or state.ending then return end
     setWarning("PRESSURE SURGE", 0.75, true)
 
-    -- Visual hit and camera shake on surge.
     shakeForPhase(0.72)
     flashScreen(Color3.fromRGB(255,70,70), 0.56, 0.05, 0.50)
     pulseDanger(0.8)
     impactBlur(15)
     glitchBurst(1.1, 0.42)
 
-    -- Phase 4 made slightly less punishing.
     local drain = ({0.20,0.28,0.36,0.36})[state.phase]
     state.pressure = math.max(0, state.pressure - drain)
 
@@ -2695,7 +2671,6 @@ local function doBlackout()
     if not state.active or state.ending then return end
     setWarning("VISUAL FEED LOST", 0.5, true)
 
-    -- Entry impact.
     shakeForPhase(0.62)
     glitchBurst(1.35, 0.32)
 
@@ -2705,14 +2680,12 @@ local function doBlackout()
     tween(ui.Ball, TweenInfo.new(0.10), {BackgroundTransparency = 0.82})
     tween(ui.SafeZone, TweenInfo.new(0.10), {BackgroundTransparency = 1})
 
-    -- Phase 4 blackout shortened.
     local duration = ({0.62,0.78,0.92,0.88})[state.phase]
 
     task.delay(duration, function()
         if not state.active then return end
         state.blackout = false
 
-        -- Restoration gets a smaller shake so every major visual jolt is felt.
         shakeForPhase(0.32)
         flashScreen(Color3.fromRGB(225,235,255), 0.34, 0.03, 0.28)
         tween(ui.Root, TweenInfo.new(0.22), {BackgroundTransparency = 0.46})
@@ -2754,7 +2727,7 @@ local function chooseEvent()
     elseif phase == 3 then
         pool = {"HeavyImpact","HeavyImpact","DoubleImpact","Surge","Distortion","Blackout","Corruption"}
     else
-        -- Phase 4 V3.1: fewer chained/double events, more single heavy impacts.
+
         pool = {
             "HeavyImpact","HeavyImpact","HeavyImpact",
             "Impact",
@@ -2774,7 +2747,6 @@ local function scheduleNextEvent(now)
     state.nextEventAt = now + p.MinEventDelay + math.random() * (p.MaxEventDelay - p.MinEventDelay)
 end
 
---// Phase handling
 local function calculatePhase(progress)
     if progress < 0.25 then return 1 end
     if progress < 0.50 then return 2 end
@@ -2789,13 +2761,11 @@ local function enterPhase(newPhase)
 
     setWarning("PHASE " .. tostring(newPhase) .. " // ESCALATION", 0.9, true)
 
-    -- Phase transition itself gets camera shake.
     shakeForPhase(0.55 + newPhase * 0.08)
     flashScreen(Color3.fromRGB(235,235,245), 0.52, 0.04, 0.42)
     glitchBurst(0.8 + newPhase * 0.18, 0.42)
 end
 
---// Input
 local function lockMouse()
     state.oldMouseBehavior = UserInputService.MouseBehavior
     state.oldMouseIcon = UserInputService.MouseIconEnabled
@@ -2837,7 +2807,6 @@ local function connectInput()
     end))
 end
 
---// End sequences
 local function disconnectAll()
     for _, c in ipairs(state.connections) do
         pcall(function() c:Disconnect() end)
@@ -2848,11 +2817,8 @@ end
 local function cleanup()
     state.active = false
 
-    -- Stop the independent full-game micro shake only when the minigame ends.
     stopGameCameraShake()
 
-    -- Defensive screen release. Even if an end sequence errors later,
-    -- this prevents GameFade from trapping the player behind black.
     if ui and ui.IntroFade and ui.IntroFade.Parent then
         ui.IntroFade.BackgroundTransparency = 1
         ui.IntroFade.Visible = false
@@ -2866,9 +2832,6 @@ local function cleanup()
         pcall(function() t:Cancel() end)
     end
     table.clear(state.tweens)
-
-    -- Z367_PRELOADED_MUSIC is persistent and must not be destroyed here.
-    -- Playback is controlled by the encounter controller/stopAmbient().
 
     if state.heartbeat then
         pcall(function()
@@ -2907,7 +2870,6 @@ local function surviveSequence()
     cleanup()
     safeDestroy(ui.Gui)
 
-    -- Success removes Z-367 immediately.
     showSurviveEffect()
 
     if _G.Z367IntegratedResult then
@@ -2983,8 +2945,6 @@ local function showKillEffect()
         image.Position = UDim2.new(0.5 + shakeX, 0, 0.5 + shakeY, 0)
     end
 
-    -- Use the requested Doors/executor kill signal when available.
-    -- Fallback to Humanoid.Health = 0 so failure still actually kills the player.
     local signalWorked = pcall(function()
         if type(replicatesignal) ~= "function" then
             error("replicatesignal unavailable")
@@ -3046,24 +3006,20 @@ local function deathSequence()
 
     task.wait(0.08)
 
-    -- Exact Z-367 kill presentation requested by the user.
     showKillEffect()
 
     cleanup()
     safeDestroy(ui and ui.Gui)
 
-    -- Only after the player has failed/died is Z-367 released to leave.
     if _G.Z367IntegratedResult then
         pcall(_G.Z367IntegratedResult, "lose")
     end
 end
 
---// Main visual update
 local function updatePressureVisual(percent, inCenter)
     percent = clamp01(percent)
     ui.PressureFill.Size = UDim2.new(percent,0,1,0)
 
-    -- White -> amber -> red
     local r, g, b
     if percent > 0.55 then
         local t = (percent - 0.55) / 0.45
@@ -3106,20 +3062,15 @@ local function updateTimer()
     ui.Timer.Text = string.format("%02d:%02d", mins, secs)
 end
 
--- Timestamp is set by the encounter controller exactly when the
--- preloaded music begins, so the 6-second climax stays synchronized.
 local Z367MusicStartedAt = nil
 
---// Main
 local function startGame()
     if state.active or state.ending then return end
 
-    -- Rebuild UI if another cleanup/respawn removed it before the encounter starts.
     if not ui or not ui.Gui or not ui.Gui.Parent then
         ui = buildUI()
     end
 
-    -- Nothing from the minigame exists onscreen before this point.
     ui.Gui.Enabled = true
     if ui.Blur then ui.Blur.Enabled = true end
     if ui.Color then ui.Color.Enabled = true end
@@ -3143,21 +3094,13 @@ local function startGame()
     lockMouse()
     connectInput()
 
-    -- Music is NOT created here. It was preloaded when the script loaded
-    -- and is started only after Z-367 has locked/approached a player.
     state.music = Z367_PRELOADED_MUSIC
 
     runGameFadeIn()
 
-    -- Sync the six-second difficulty/climax transition to music playback.
     local gameStartedAt = Z367MusicStartedAt or os.clock()
     local warmupBurstPlayed = false
 
-    -- The full 42-second micro shake is started by the shared encounter
-    -- ambience so locked players and spectators begin it at the same moment.
-
-    -- Keep random events out of the first 6 seconds.
-    -- Passing +2 here means the first normal event lands roughly at 6-8.2s.
     scheduleNextEvent(gameStartedAt + 2.0)
 
     local last = gameStartedAt
@@ -3170,7 +3113,6 @@ local function startGame()
 
         camera = workspace.CurrentCamera
 
-        -- Fallback shake only when CameraShaker isn't available.
         if fallbackShake.endAt > now and camera then
             local p = fallbackShake.power
             local rx = math.rad((math.random()-0.5) * p * 90)
@@ -3183,25 +3125,22 @@ local function startGame()
             fallbackShake.power = 0
         end
 
-        -- Time/phase
         state.remaining -= dt
         state.progress = clamp01(1 - state.remaining / CONFIG.Duration)
 
         local elapsed = now - gameStartedAt
         local warmup = elapsed < 6
 
-        -- At exactly ~6 seconds, difficulty snaps from the easy opening
-        -- into the normal game and gives one pronounced camera hit.
         if not warmupBurstPlayed and elapsed >= 6 then
             warmupBurstPlayed = true
 
             runCameraShake(
-                34,   -- magnitude
-                220,  -- roughness
-                0.05, -- fade in
-                0.62, -- fade out
-                2.2,  -- position influence
-                0.55  -- rotation influence
+                34,
+                220,
+                0.05,
+                0.62,
+                2.2,
+                0.55
             )
 
             flashScreen(Color3.fromRGB(245,245,255), 0.34, 0.025, 0.32)
@@ -3216,9 +3155,6 @@ local function startGame()
 
         local phaseCfg = CONFIG.Phase[state.phase]
 
-        -- First six seconds: deliberately very easy and calm.
-        -- Afterwards: still less ordinary ball wandering than v3.4 so the
-        -- 42-second game stays demanding without becoming exhausting.
         local driftStrength
         local randomStrength
 
@@ -3235,13 +3171,11 @@ local function startGame()
             math.cos(now*2.2 + state.phase*0.7) * driftStrength
         )
 
-        -- Small random instability.
         state.ballVelocity += Vector2.new(
             (math.random()-0.5) * randomStrength,
             (math.random()-0.5) * randomStrength
         )
 
-        -- Gentle spring toward center so control feels physical rather than impossible.
         local center = Vector2.new(0.5,0.5)
         local towardCenter = center - state.ballPos
         state.ballVelocity += towardCenter * CONFIG.Spring
@@ -3253,12 +3187,12 @@ local function startGame()
         if warmup then
             maxSpeed *= 0.58
         else
-            -- Slightly lower ordinary movement ceiling for the shorter 42s game.
+
             maxSpeed *= 0.92
         end
 
         if state.phase == 4 then
-            -- Preserve the final-phase mercy from the previous version.
+
             maxSpeed *= 0.94
         end
 
@@ -3268,14 +3202,12 @@ local function startGame()
 
         state.ballPos += state.ballVelocity
 
-        -- Circular-ish arena clamp using normalized center distance.
         local offset = state.ballPos - center
         local dist = offset.Magnitude
         if dist > CONFIG.OuterLimit then
             state.ballPos = center + offset.Unit * CONFIG.OuterLimit
             state.ballVelocity = -state.ballVelocity * 0.46
 
-            -- Border impact also shakes the screen.
             shakeForPhase(0.22)
             pulseDanger(0.35)
             glitchBurst(0.38,0.10)
@@ -3300,7 +3232,6 @@ local function startGame()
                 CONFIG.BaseDrainRate + distancePenalty
             ) * phaseCfg.DrainMultiplier
 
-            -- Final phase V3.1 extra mercy.
             if state.phase == 4 then
                 drain *= 0.92
             end
@@ -3312,11 +3243,8 @@ local function startGame()
         updatePressureVisual(state.pressure/CONFIG.MaxPressure,inCenter)
         updateTimer()
 
-        -- Distortion naturally decays.
         state.distortion = math.max(0,state.distortion-dt*0.65)
 
-        -- Event scheduler
-        -- No random attacks during the six-second easy opening.
         if not warmup and now >= state.nextEventAt then
             local eventName = chooseEvent()
             local fn = EVENT_FUNCTIONS[eventName]
@@ -3340,7 +3268,6 @@ local function startGame()
     end))
 end
 
---// Safety cleanup if character disappears
 table.insert(state.connections, player.CharacterRemoving:Connect(function()
     if state.active then
         cleanup()
@@ -3348,10 +3275,7 @@ table.insert(state.connections, player.CharacterRemoving:Connect(function()
     end
 end))
 
--- Integrated controller calls startGame() only for the selected target.
-
 _G.Z367StartSelectedMinigame = startGame
-
 
 local Z367LockedPlayer = nil
 local Z367EncounterStarted = false
@@ -3427,16 +3351,11 @@ local attackSound = nil
 local pandemoniumEyesBeam = nil
 local resolved = false
 
--- Shared encounter generation. Incrementing this cancels delayed observer
--- cleanup from an older encounter without leaving background tasks behind.
 local encounterSerial = 0
 
--- Shared spectator/target camera shaker for the entire 42-second encounter.
 local ambientCameraShaker = nil
 local CachedCameraShaker = nil
 
--- Forward declarations because target-death and spectator timeout callbacks
--- need these functions before their bodies appear later in the file.
 local removeZ367
 local releaseBackToSpawnerPath
 
@@ -3489,8 +3408,6 @@ local function findEntityAudio()
         end
     end
 
-    -- Preload model sounds BEFORE chasing starts. This avoids the spectator
-    -- hearing Attack/Bang noticeably later than the locked player.
     local preloadList = {}
     if attackSound and attackSound:IsA("Sound") then
         table.insert(preloadList, attackSound)
@@ -3520,7 +3437,6 @@ local function playRandomBang()
     end
 end
 
--- Every major minigame shake can call this too.
 _G.Z367PlayModelBang = playRandomBang
 
 local function getCachedCameraShaker()
@@ -3576,8 +3492,6 @@ local function startAmbientMicroShake()
 
         ambientCameraShaker:Start()
 
-        -- Same requested low shake, but now it begins for EVERY client
-        -- at encounter start and lasts throughout the entire 42 seconds.
         ambientCameraShaker:ShakeOnce(
             10,
             10,
@@ -3657,20 +3571,12 @@ local function startSoundManager()
 
         local elapsed = os.clock() - chaseStartTime
 
-        -- At six seconds the encounter enters its climax on EVERY client.
-        -- Fire one Bang immediately so spectator audio does not feel late.
         if not climaxStarted and elapsed >= 6 then
             climaxStarted = true
             bangTimer = 0
             nextBangInterval = math.random(2,6)
 
             playRandomBang()
-
-            -- The locked player already gets the minigame's dedicated strong
-            -- six-second shake. Spectators receive the matching camera hit here.
-            if not isThisPlayerLocked() then
-                spectatorClimaxShake()
-            end
         end
 
         if climaxStarted and elapsed < (CONFIG.Duration + 6) then
@@ -3695,11 +3601,7 @@ local function startAmbientForEveryone()
     Z367MusicStartedAt = chaseStartTime
 
     encounterSerial += 1
-    local thisEncounter = encounterSerial
 
-    -- Music was downloaded and preloaded when this script loaded.
-    -- Every client starts it as soon as Z-367 reaches the selected player,
-    -- regardless of whether that client is the locked target or a spectator.
     if Z367_PRELOADED_MUSIC and Z367_PRELOADED_MUSIC.Parent then
         pcall(function()
             Z367_PRELOADED_MUSIC.Volume = Z367_MUSIC_VOLUME
@@ -3708,29 +3610,14 @@ local function startAmbientForEveryone()
         end)
     end
 
-    -- Full-duration micro shake also starts at the exact same encounter point.
     startAmbientMicroShake()
     startSoundManager()
-
-    if not isThisPlayerLocked() then
-        task.delay(CONFIG.Duration + 0.10, function()
-            if encounterSerial ~= thisEncounter then return end
-            if resolved or not soundSystemActive then return end
-
-            resolved = true
-
-            if removeZ367 then
-                removeZ367()
-            end
-        end)
-    end
 end
 
 local function stopAmbient()
     soundSystemActive=false
     isShakingCamera=false
 
-    -- Cancel any pending observer-side 42 second cleanup from this encounter.
     encounterSerial += 1
 
     stopAmbientMicroShake()
@@ -3749,8 +3636,6 @@ local function stopAmbient()
         pcall(function() snd:Stop() end)
     end
 
-    -- Keep the preloaded Sound in workspace permanently.
-    -- Only stop/reset playback between encounters.
     if Z367_PRELOADED_MUSIC and Z367_PRELOADED_MUSIC.Parent then
         pcall(function()
             Z367_PRELOADED_MUSIC:Stop()
@@ -3794,13 +3679,9 @@ local function watchSelectedPlayerDeath(plr)
         return
     end
 
-    -- IMPORTANT: only the player selected/locked by THIS Z-367 is watched.
-    -- Deaths of unrelated players do not affect the music.
     selectedPlayerDeathConnection = humanoid.Died:Connect(function()
         if SELECTED_PLAYER == plr or Z367LockedPlayer == plr then
-            -- Only the player selected by THIS Z-367 matters.
-            -- Their death immediately ends the encounter ambience on every
-            -- client and returns Z-367 to its normal spawner path.
+
             stopZ367MusicOnly()
 
             if releaseBackToSpawnerPath then
@@ -3835,15 +3716,13 @@ local function startEncounterHold()
         local char = SELECTED_PLAYER.Character
         local root = char and char:FindFirstChild("HumanoidRootPart")
         if not root then
-            -- Keep the entity at its last position until the failure result releases it.
+
             return
         end
 
         local frontPos = root.Position + root.CFrame.LookVector * HOLD_DISTANCE
         entityModel:SetPrimaryPartCFrame(CFrame.lookAt(frontPos, root.Position))
 
-        -- Once held in front of the target, failure departure continues away
-        -- from the player in the same forward direction.
         lockedDepartureDirection = root.CFrame.LookVector
     end)
 end
@@ -3906,10 +3785,7 @@ removeZ367 = function()
 end
 
 releaseBackToSpawnerPath = function()
-    -- The selected/locked player died or failed.
-    -- Stop every custom movement override and let the original entity spawner
-    -- continue its normal path. This encounter is permanently resolved, so
-    -- Z-367 will NOT select another player afterwards.
+
     TARGET_LOCKED = true
     resolved = true
 
@@ -3925,9 +3801,6 @@ releaseBackToSpawnerPath = function()
     Z367LockedPlayer = nil
     lockedDepartureDirection = nil
 
-    -- Intentionally DO NOT call startDeparture().
-    -- With our CFrame overrides disconnected, the original spawner movement
-    -- is free to resume from here.
 end
 
 _G.Z367IntegratedResult=function(result)
@@ -3948,22 +3821,17 @@ local function beginSelectedPlayerEncounter()
 
     setEyes(true)
 
-    -- Everyone gets the atmosphere.
     startAmbientForEveryone()
 
-    -- Only the locked target gets the actual game.
-    if isThisPlayerLocked() and not Z367EncounterStarted then
+    if not Z367EncounterStarted then
         local starter = _G.Z367StartSelectedMinigame
         if type(starter) == "function" then
             Z367EncounterStarted = true
             task.spawn(function()
-                local ok, err = pcall(starter)
+                local ok = pcall(starter)
                 if not ok then
-                    -- Allow retry instead of permanently marking the encounter as started.
                     Z367EncounterStarted = false
-                    warn("[Z-367] Minigame failed to start:", err)
 
-                    -- Never leave an accidental fade over the player's screen.
                     if ui and ui.IntroFade and ui.IntroFade.Parent then
                         ui.IntroFade.BackgroundTransparency = 1
                         ui.IntroFade.Visible = false
@@ -3993,8 +3861,6 @@ local function fadeAttackForEncounter()
         return
     end
 
-    -- Z-367 has reached the player: keep Attack audible,
-    -- but smoothly push it into the background under the music.
     pcall(function()
         TweenService:Create(
             attackSound,
@@ -4011,7 +3877,6 @@ local function startNearestPlayerChase()
     chaseConnection=RunService.Heartbeat:Connect(function(dt)
         if resolved or not entityModel or not entityModel.Parent or not entityModel.PrimaryPart then return end
 
-        -- Select exactly once. Dead players are ignored.
         if not SELECTED_PLAYER then
             local plr,root,d=getNearestAlivePlayer(entityModel.PrimaryPart.Position)
 
@@ -4020,10 +3885,8 @@ local function startNearestPlayerChase()
                 SELECTED_USER_ID=plr.UserId
                 Z367LockedPlayer=plr
 
-                -- Only this selected player is watched for death.
                 watchSelectedPlayerDeath(plr)
 
-                -- Attack starts only after Z-367 has actually acquired a player.
                 playAttackOnTargetLock()
             else
                 setEyes(false)
@@ -4033,8 +3896,7 @@ local function startNearestPlayerChase()
 
         local _,hum,targetRoot=aliveCharacter(SELECTED_PLAYER)
         if not hum or not targetRoot then
-            -- Once Z-367 has selected somebody, losing that target ends this
-            -- encounter. Restore the normal path and never lock a replacement.
+
             releaseBackToSpawnerPath()
             return
         end
@@ -4045,16 +3907,11 @@ local function startNearestPlayerChase()
         local distance=delta.Magnitude
 
         if distance <= GAME_TRIGGER_DISTANCE then
-            -- Lock once at roughly 3 studs, start the minigame, and keep
-            -- Z-367 held in front of THIS player for the whole minigame.
-            -- It only leaves after the player fails/dies.
+
             lockedDepartureDirection = targetRoot.CFrame.LookVector
 
             disableCustomChase()
 
-            -- Reaching the selected player's front is the common sync point
-            -- on every client: Attack fades, music starts, Bang timing starts,
-            -- full-duration micro shake starts, and only the locked player gets UI.
             fadeAttackForEncounter()
             beginSelectedPlayerEncounter()
             startEncounterHold()
@@ -4069,17 +3926,16 @@ local function startNearestPlayerChase()
     end)
 end
 
-local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
-local entity = spawner.Create({ 
-	Entity = { 
-		Name = "Z-367", 
-		Asset = "100118518576966", 
-HeightOffset = -3},Lights = {Flicker = {Enabled = true,Duration = 1.5},Shatter = false,Repair = false}, 
-Earthquake = {Enabled = false},CameraShake = {Enabled = false,Range = 20,Values = {1.5, 20, 0.1, 1}}, 
-Movement = {Speed = 50,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz", 
-Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 20,Amount = 0}, 
-Crucifixion = {Enabled = true,Range = 70,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Z-367 击败了...", "你该多练练准星!", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""} 
-}) 
+local entity = spawner.Create({
+	Entity = {
+		Name = "Z-367",
+		Asset = "100118518576966",
+HeightOffset = -3},Lights = {Flicker = {Enabled = true,Duration = 1.5},Shatter = false,Repair = false},
+Earthquake = {Enabled = false},CameraShake = {Enabled = false,Range = 20,Values = {1.5, 20, 0.1, 1}},
+Movement = {Speed = 50,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",
+Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 20,Amount = 0},
+Crucifixion = {Enabled = true,Range = 70,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Z-367 击败了...", "你该多练练准星!", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}
+})
 
 entity:SetCallback("OnSpawned",function()
     disconnectSelectedPlayerDeathWatcher()
@@ -4095,7 +3951,6 @@ entity:SetCallback("OnSpawned",function()
     lockedDepartureDirection = nil
     Z367MusicStartedAt = nil
 
-    -- Ensure the persistent music is silent before this new encounter.
     if Z367_PRELOADED_MUSIC and Z367_PRELOADED_MUSIC.Parent then
         pcall(function()
             Z367_PRELOADED_MUSIC:Stop()
@@ -4119,9 +3974,6 @@ entity:SetCallback("OnDespawning",function()
     disconnectSelectedPlayerDeathWatcher()
     disableDeparture()
 
-    -- If no player was ever locked, soundSystemActive is false and there
-    -- is nothing pending/waiting for music playback. The preloaded Sound
-    -- simply stays in workspace, stopped, ready for a future Z-367 call.
     stopAmbient()
     setEyes(false)
 end)
@@ -7692,35 +7544,6 @@ end)
 entity:Run()
 end
 
-function GitAud(soundgit, filename)
-    local url = soundgit
-    local fileName = filename or "temp_audio"
-    local fullFileName = fileName .. ".mp3"
-    local success, audioData = pcall(function()
-        return game:HttpGet(url)
-    end)
-    if not success then
-        return nil
-    end
-    local writeSuccess, writeError = pcall(function()
-        writefile(fullFileName, audioData)
-    end)
-    if not writeSuccess then
-        return nil
-    end
-    local assetPath
-    if getsynasset then
-        assetPath = getsynasset(fullFileName)
-    elseif getcustomasset then
-        assetPath = getcustomasset(fullFileName)
-    else
-        return nil
-    end
-    return assetPath
-end
-
-local deerGodMusicUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/NoRunning.mp3?raw=true"
-local cachedAudioAsset = GitAud(deerGodMusicUrl, "DeerGodMusic")
 function entityBehaviors.Deergod()
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
@@ -7977,18 +7800,9 @@ end)
 
     entity:Run()
 
-    if cachedAudioAsset then
-        local musicInstance = Instance.new("Sound")
-        musicInstance.SoundId = cachedAudioAsset
-        musicInstance.Volume = 4
-        musicInstance.Name = "DeerGodMusic_" .. tick()
-        musicInstance.Parent = workspace
-        musicInstance:Play()
-
-        musicInstance.Ended:Connect(function()
-            musicInstance:Destroy()
-        end)
-    end
+    local musicInstance = workspace:WaitForChild("HardCoreSound"):WaitForChild("DeerGodMusic")
+    musicInstance.Volume = 4
+    musicInstance:Play()
 end
 
 function entityBehaviors.LightSpeed()
@@ -8025,93 +7839,242 @@ entity:Run()
 end
 
 function entityBehaviors.A200Jump()
- function GitAud(soundgit, filename)
-    local url = soundgit
-    local FileName = filename
-    writefile(FileName .. ".mp3", game:HttpGet(url))
-    return (getcustomasset or getsynasset)(FileName .. ".mp3")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+
+local player = Players.LocalPlayer
+
+local images = {
+	113886624548165,
+	16907654704,
+	91100683423814
+}
+
+local function PlayA200J()
+	local soundFolder = workspace:WaitForChild("HardCoreSound")
+	local sound = soundFolder:FindFirstChild("A200J")
+
+	if sound and sound:IsA("Sound") then
+		sound.Volume = 3
+		sound.Looped = false
+
+		if not sound.IsLoaded then
+			sound.Loaded:Wait()
+		end
+
+		sound:Play()
+	end
 end
 
-function CustomGitSound(soundlink, vol, filename)
-    local sound = Instance.new("Sound")
-    sound.SoundId = GitAud(soundlink, filename)
-    sound.Parent = workspace
-    sound.Name = filename or "Music"
-    sound.Volume = vol or 1
-    sound:Play()
-    return sound
+local function DamagePlayer()
+	local character = player.Character or player.CharacterAdded:Wait()
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+	if humanoid then
+		humanoid:TakeDamage(100)
+	end
 end
 
-function ExecuteJumpScare()
+local function ScreenShake(power, duration)
+	local start = os.clock()
+	local shakeName = "A200J_Shake_" .. HttpService:GenerateGUID(false)
 
-    local targetAudioUrl = "https://raw.githubusercontent.com/Zero0Star/RipperMPSound/master/A120Jump.mp3"
-    local volume = 4
-    local localFileName = "JumpScareSound"
-    
-    local jumpSound = CustomGitSound(targetAudioUrl, volume, localFileName)
+	RunService:BindToRenderStep(
+		shakeName,
+		Enum.RenderPriority.Camera.Value + 1,
+		function()
+			if os.clock() - start >= duration then
+				RunService:UnbindFromRenderStep(shakeName)
+				return
+			end
 
-    task.wait(0.1)
-    
-    local images = {113886624548165, 16907654704, 91100683423814}
-    local container = Instance.new("Folder", game.Players.LocalPlayer:WaitForChild("PlayerGui"))
-    local redGui = Instance.new("ScreenGui", container)
-    redGui.Name = "RedLayer"
-    redGui.ResetOnSpawn = false
-    redGui.IgnoreGuiInset = true
-    redGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    redGui.DisplayOrder = 0
-    local redOverlay = Instance.new("Frame", redGui)
-    redOverlay.Name = "RedBg"
-    redOverlay.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    redOverlay.BackgroundTransparency = 1
-    redOverlay.Size = UDim2.new(1, 0, 1, 0)
-    redOverlay.Position = UDim2.new(0, 0, 0, 0)
-    redOverlay.BorderSizePixel = 0
+			local camera = workspace.CurrentCamera
 
-    local imageGui = Instance.new("ScreenGui", container)
-    imageGui.Name = "ImageLayer"
-    imageGui.ResetOnSpawn = false
-    imageGui.IgnoreGuiInset = true
-    imageGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    imageGui.DisplayOrder = 1 
-    local img = Instance.new("ImageLabel", imageGui)
-    img.AnchorPoint = Vector2.new(0.5, 0.5)
-    img.Size = UDim2.new(0, 100, 0, 100)
-    img.Position = UDim2.new(0.5, 0, 0.5, 0)
-    img.BackgroundTransparency = 1
-    img.ImageTransparency = 1
-    img.ScaleType = Enum.ScaleType.Fit
-    img.ZIndex = 10
-    local ts = game:GetService("TweenService")
-    replicatesignal(game.Players.LocalPlayer.Kill)
-    ts:Create(redOverlay, TweenInfo.new(0.1), {BackgroundTransparency = 0.2}):Play()
-
-img.Image = "rbxassetid://" .. images[1]
-ts:Create(img, TweenInfo.new(0.2), {ImageTransparency = 0}):Play()
-ts:Create(img, TweenInfo.new(0.3), {Size = UDim2.new(0, 300, 0, 300)}):Play()
-task.wait(0.08)
-
-img.Image = "rbxassetid://" .. images[2]
-ts:Create(img, TweenInfo.new(0.3), {Size = UDim2.new(0, 700, 0, 700)}):Play()
-task.wait(0.08)
-ts:Create(redOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 0.1}):Play()
-img.Image = "rbxassetid://" .. images[3]
-ts:Create(img, TweenInfo.new(0.8), {Size = UDim2.new(0, 1500, 0, 1500)}):Play()
-task.wait(0.5)
-ts:Create(redOverlay, TweenInfo.new(0.3), {BackgroundTransparency = 0.05}):Play()
-task.wait(0.8 + 0.5)
-ts:Create(img, TweenInfo.new(0.5), {ImageTransparency = 1}):Play()
-ts:Create(redOverlay, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()
-task.wait(0.5)
-ts:Create(redOverlay, TweenInfo.new(0.8), {BackgroundTransparency = 1}):Play()
-task.wait(0.8)
-    container:Destroy()
-    if jumpSound and jumpSound.Playing then
-        jumpSound.Ended:Wait()
-        task.wait(1)
-        jumpSound:Destroy()
-    end
+			if camera then
+				camera.CFrame = camera.CFrame * CFrame.new(
+					math.random(-power, power) / 100,
+					math.random(-power, power) / 100,
+					0
+				)
+			end
+		end
+	)
 end
+
+local function ExecuteJumpScare()
+	DamagePlayer()
+
+	local playerGui = player:WaitForChild("PlayerGui")
+
+	local oldContainer = playerGui:FindFirstChild("A200J_Jumpscare")
+
+	if oldContainer then
+		oldContainer:Destroy()
+	end
+
+	local container = Instance.new("Folder")
+	container.Name = "A200J_Jumpscare"
+	container.Parent = playerGui
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "JumpscareGui"
+	gui.Parent = container
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.DisplayOrder = 999
+
+	local red = Instance.new("Frame")
+	red.Parent = gui
+	red.Size = UDim2.fromScale(1, 1)
+	red.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+	red.BackgroundTransparency = 1
+	red.BorderSizePixel = 0
+	red.ZIndex = 1
+
+	local img = Instance.new("ImageLabel")
+	img.Parent = gui
+	img.AnchorPoint = Vector2.new(0.5, 0.5)
+	img.Position = UDim2.fromScale(0.5, 0.5)
+	img.Size = UDim2.fromOffset(120, 120)
+	img.BackgroundTransparency = 1
+	img.ImageTransparency = 1
+	img.ScaleType = Enum.ScaleType.Fit
+	img.ZIndex = 5
+
+	task.spawn(PlayA200J)
+
+	TweenService:Create(
+		red,
+		TweenInfo.new(0.1),
+		{
+			BackgroundTransparency = 0.3
+		}
+	):Play()
+
+	img.Image = "rbxassetid://" .. images[1]
+
+	TweenService:Create(
+		img,
+		TweenInfo.new(
+			0.12,
+			Enum.EasingStyle.Back,
+			Enum.EasingDirection.Out
+		),
+		{
+			ImageTransparency = 0,
+			Size = UDim2.fromOffset(450, 450)
+		}
+	):Play()
+
+	ScreenShake(8, 0.25)
+
+	task.wait(0.15)
+
+	img.Image = "rbxassetid://" .. images[2]
+
+	TweenService:Create(
+		img,
+		TweenInfo.new(
+			0.15,
+			Enum.EasingStyle.Back,
+			Enum.EasingDirection.Out
+		),
+		{
+			Size = UDim2.fromOffset(900, 900)
+		}
+	):Play()
+
+	ScreenShake(12, 0.35)
+
+	task.wait(0.12)
+
+	img.Image = "rbxassetid://" .. images[3]
+
+	local glitch = true
+
+	task.spawn(function()
+		while glitch and img.Parent do
+			img.Position = UDim2.new(
+				0.5,
+				math.random(-35, 35),
+				0.5,
+				math.random(-35, 35)
+			)
+
+			img.Rotation = math.random(-15, 15)
+
+			img.Size = UDim2.fromOffset(
+				math.random(800, 1200),
+				math.random(800, 1200)
+			)
+
+			img.ImageTransparency = math.random(0, 4) / 10
+
+			task.wait(0.035)
+		end
+	end)
+
+	TweenService:Create(
+		img,
+		TweenInfo.new(
+			0.3,
+			Enum.EasingStyle.Exponential,
+			Enum.EasingDirection.Out
+		),
+		{
+			Size = UDim2.fromOffset(2200, 2200)
+		}
+	):Play()
+
+	TweenService:Create(
+		red,
+		TweenInfo.new(0.1),
+		{
+			BackgroundTransparency = 0.05
+		}
+	):Play()
+
+	ScreenShake(25, 0.8)
+
+	for i = 1, 8 do
+		img.ImageTransparency = 0.4
+		task.wait(0.04)
+
+		img.ImageTransparency = 0
+		task.wait(0.04)
+	end
+
+	task.wait(0.8)
+
+	glitch = false
+
+	img.Position = UDim2.fromScale(0.5, 0.5)
+	img.Rotation = 0
+
+	TweenService:Create(
+		img,
+		TweenInfo.new(0.5),
+		{
+			ImageTransparency = 1
+		}
+	):Play()
+
+	TweenService:Create(
+		red,
+		TweenInfo.new(0.6),
+		{
+			BackgroundTransparency = 1
+		}
+	):Play()
+
+	task.wait(0.7)
+
+	container:Destroy()
+end
+
 ExecuteJumpScare()
 end
 
@@ -8232,7 +8195,7 @@ function LoadCustomInstance(source, parent)
     return model
 end
 
-local s = LoadCustomInstance(76157710463326, workspace)  -- 可以直接使用数字ID
+local s = LoadCustomInstance(76157710463326, workspace)
 if not s then
     return
 end
@@ -10135,121 +10098,62 @@ end)
 end
 
 function entityBehaviors.DreadJump()
-local BLACK = Color3.new(0, 0, 0)
-local WHITE = Color3.new(1, 1, 1)
-function GitAud(soundgit, filename)
-    local url = soundgit
-    local fileName = filename or "temp_audio"
-    local fullFileName = fileName .. ".mp3"
-    
-    local success, audioData = pcall(function()
-        return game:HttpGet(url)
-    end)
-    
-    if not success then
-        return nil
-    end
-    
-    local writeSuccess, writeError = pcall(function()
-        writefile(fullFileName, audioData)
-    end)
-    
-    if not writeSuccess then
-        return nil
-    end
-    
-    local assetPath
-    if getsynasset then
-        assetPath = getsynasset(fullFileName)
-    elseif getcustomasset then
-        assetPath = getcustomasset(fullFileName)
-    else
-        return nil
-    end
-    
-    return assetPath
-end
+    local BLACK = Color3.new(0, 0, 0)
+    local WHITE = Color3.new(255, 255, 255)
 
-function CustomGitSound(soundlink, vol, filename)
-    local sound = Instance.new("Sound")
-    local soundId = GitAud(soundlink, filename)
-    
-    if not soundId then
-        return nil
+    local part = Instance.new("Part")
+    part.Name = "Bound_" .. tick()
+    part.Parent = workspace
+    part.Size = Vector3.new(5, 5, 5)
+    part.Position = Vector3.new(0, 5, 0)
+    part.Anchored = true
+    part.Color = Color3.new(1, 0, 0)
+
+    local dreadJumpSound = workspace:FindFirstChild("HardCoreSound") and workspace:FindFirstChild("HardCoreSound"):FindFirstChild("DreadJump")
+    if dreadJumpSound and dreadJumpSound:IsA("Sound") then
+        dreadJumpSound:Play()
     end
-    
-    sound.SoundId = soundId
-    sound.Parent = workspace
-    sound.Name = filename .. "_" .. tick()
-    sound.Volume = vol or 1
-    sound.Loaded:Wait()
-    sound:Play()
-    return sound
-end
-local githubAudioUrl = "https://github.com/Zero0Star/RipperNewSound/blob/master/DreadJumpFace.mp3?raw=true"
-local volume = 2
-local saveName = "DreadNEW"
-local part = Instance.new("Part")
-part.Name = "Bound_" .. tick()
-part.Parent = workspace
-part.Size = Vector3.new(5, 5, 5)
-part.Position = Vector3.new(0, 5, 0)
-part.Anchored = true
-part.Color = Color3.new(1, 0, 0)
-
-local startSound = CustomGitSound(githubAudioUrl, volume, saveName)
-
-if startSound then
-
-    local isPlaying = true
 
     task.wait(3)
+
     local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local SHAKE_INTENSITY = 1
-local SHAKE_DURATION = 15
-local SHAKE_SPEED = 70
+    local RunService = game:GetService("RunService")
+    local SHAKE_INTENSITY = 1
+    local SHAKE_DURATION = 15
+    local SHAKE_SPEED = 70
 
-local player = Players.LocalPlayer
-if not player then return end
+    local player = Players.LocalPlayer
+    if not player then return end
 
-local camera = workspace.CurrentCamera
-local startTime = tick()
-local originalPosition = camera.CFrame.Position
-local connection
+    local camera = workspace.CurrentCamera
+    local startTime = tick()
+    local originalPosition = camera.CFrame.Position
+    local connection
 
-connection = RunService.RenderStepped:Connect(function()
-    local elapsed = tick() - startTime
-    
-    if elapsed < SHAKE_DURATION then
-
-        local decay = 1 - (elapsed / SHAKE_DURATION)
-        local intensity = SHAKE_INTENSITY * decay
-
-        local time = elapsed * SHAKE_SPEED
-        local offset = Vector3.new(
-            math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
-            math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
-            math.sin(time * 1.0) * intensity * 0.3
-        )
-
-        local lookVector = camera.CFrame.LookVector
-        local upVector = camera.CFrame.UpVector
-        local rightVector = camera.CFrame.RightVector
-
-        local currentPos = camera.CFrame.Position
-        local newPos = currentPos + offset
+    connection = RunService.RenderStepped:Connect(function()
+        local elapsed = tick() - startTime
         
-
-        camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
-        
-    else
-
-        if connection then
-            connection:Disconnect()
+        if elapsed < SHAKE_DURATION then
+            local decay = 1 - (elapsed / SHAKE_DURATION)
+            local intensity = SHAKE_INTENSITY * decay
+            local time = elapsed * SHAKE_SPEED
+            local offset = Vector3.new(
+                math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+                math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
+                math.sin(time * 1.0) * intensity * 0.3
+            )
+            local lookVector = camera.CFrame.LookVector
+            local upVector = camera.CFrame.UpVector
+            local rightVector = camera.CFrame.RightVector
+            local currentPos = camera.CFrame.Position
+            local newPos = currentPos + offset
+            camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
+        else
+            if connection then
+                connection:Disconnect()
+            end
         end
-    end
-end)
+    end)
 
     local function getAllParts()
         local parts = {}
@@ -10266,122 +10170,56 @@ end)
     end
 
     local allParts = getAllParts()
-    
-    local colorSwitchCoroutine = coroutine.create(function()
-        local isBlack = true
-        
-        while isPlaying do
+    local isPlaying = true
+    local isBlack = true
+    local lastSwitchTime = tick()
+    local switchInterval = 0.08
+    local heartbeatConnection
 
+    heartbeatConnection = RunService.Heartbeat:Connect(function()
+        if not isPlaying then
+            heartbeatConnection:Disconnect()
+            return
+        end
+        local now = tick()
+        if now - lastSwitchTime >= switchInterval then
+            lastSwitchTime = now
             local targetColor = isBlack and BLACK or WHITE
             isBlack = not isBlack
-
             for _, part in ipairs(allParts) do
                 part.Color = targetColor
             end
-
-            task.wait(0.01)
         end
     end)
 
-    coroutine.resume(colorSwitchCoroutine)
-
-    startSound.Ended:Connect(function()
-        isPlaying = false
-        startSound:Destroy()
-    end)
-
-    startSound.Stopped:Connect(function()
-        isPlaying = false
-        startSound:Destroy()
-    end)
-    
-else
-end
+    if dreadJumpSound then
+        dreadJumpSound.Ended:Connect(function()
+            isPlaying = false
+            dreadJumpSound:Destroy()
+        end)
+        dreadJumpSound.Stopped:Connect(function()
+            isPlaying = false
+            dreadJumpSound:Destroy()
+        end)
+    end
 end
 
-local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
 local MULTI_MONSTER_VOLUME = 2
 
-local MULTI_MONSTER_MUSIC = {
-    {
-        Name = "M1",
-        FileName = "MultiMonster1",
-        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster1.mp3?raw=true"
-    },
-    {
-        Name = "M2",
-        FileName = "MultiMonster2",
-        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster2.mp3?raw=true"
-    },
-    {
-        Name = "M3",
-        FileName = "MultiMonster3",
-        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster3.mp3?raw=true"
-    },
-    {
-        Name = "M4",
-        FileName = "MultiMonster4",
-        URL = "https://github.com/Zero0Star/RipperNewSound/blob/master/MultiMonster4.mp3?raw=true"
-    }
+local HardCoreSound = workspace:WaitForChild("HardCoreSound")
+
+local MULTI_MONSTER_SOUNDS = {
+    M1 = HardCoreSound:WaitForChild("M1"),
+    M2 = HardCoreSound:WaitForChild("M2"),
+    M3 = HardCoreSound:WaitForChild("M3"),
+    M4 = HardCoreSound:WaitForChild("M4")
 }
 
-local function preloadMultiMonsterMusic(info)
-    local sound = workspace:FindFirstChild(info.Name)
-
-    if sound and not sound:IsA("Sound") then
-        sound:Destroy()
-        sound = nil
-    end
-
-    if not sound then
-        sound = Instance.new("Sound")
-        sound.Name = info.Name
-        sound.Parent = workspace
-    end
-
+for _, sound in pairs(MULTI_MONSTER_SOUNDS) do
     sound.Volume = MULTI_MONSTER_VOLUME
-    sound.Looped = false
-
-    pcall(function()
-        sound:Stop()
-        sound.TimePosition = 0
-    end)
-
-    local ok, err = pcall(function()
-        if type(writefile) ~= "function" or type(game.HttpGet) ~= "function" then
-            error("executor file/http functions unavailable")
-        end
-
-        local path = info.FileName .. ".mp3"
-        writefile(path, game:HttpGet(info.URL))
-
-        local getter = getcustomasset or getsynasset
-
-        if not getter then
-            error("getcustomasset/getsynasset unavailable")
-        end
-
-        sound.SoundId = getter(path)
-
-        pcall(function()
-            ContentProvider:PreloadAsync({sound})
-        end)
-    end)
-
-    if not ok then
-        warn("[MultiMonster] Failed to preload " .. info.Name .. ":", err)
-    end
-
-    return sound
-end
-
-local MULTI_MONSTER_SOUNDS = {}
-
-for _, info in ipairs(MULTI_MONSTER_MUSIC) do
-    MULTI_MONSTER_SOUNDS[info.Name] = preloadMultiMonsterMusic(info)
 end
 
 local GLITCH_CHARACTERS = {
@@ -10731,7 +10569,7 @@ function entityBehaviors.MultiMonster()
     local M4 = MULTI_MONSTER_SOUNDS.M4
 
     if not M1 or not M2 or not M3 or not M4 then
-        warn("[MultiMonster] Sounds are missing.")
+
         return
     end
 
@@ -10748,10 +10586,10 @@ function entityBehaviors.MultiMonster()
 
     task.spawn(function()
         local sentences = {
-            "你来了。",
-            "我不记得多少次遇到你。",
-            "这很好玩吗。",
-            "这很好笑吗。",
+            "...",
+            "这个地方真有趣.",
+            "我喜欢这里?",
+            "我会伤害到你吗?",
             "我讨厌这些。",
             "玩笑话总是让你开心。"
         }
@@ -10994,19 +10832,15 @@ end
 
 local entityConfig = {
     ["rbxassetid://140338542312593"] = entityBehaviors.FigureSpawn,
-    ["rbxassetid://140612367685491"] = entityBehaviors.GodOFOne,
-    ["rbxassetid://140537774926087"] = entityBehaviors.GodOfTwo, 
-    ["rbxassetid://140311790133562"] = entityBehaviors.GodOFThree,  
-    ["rbxassetid://140083448239444"] = entityBehaviors.GodOFFour,     
     ["rbxassetid://111351357978027"] = entityBehaviors.Z367Game,     
     ["rbxassetid://8325526433"] = entityBehaviors.A60Ps1,    
     ["rbxassetid://139308622787703"] = entityBehaviors.A60PS2,       
-    ["rbxassetid://140731983342235"] = entityBehaviors.A500RUN,     
     ["rbxassetid://116898205685143"] = entityBehaviors.XBramble,    
     ["rbxassetid://7298463798"] = entityBehaviors.A200,      
     ["rbxassetid://4004052860"] = entityBehaviors.AMIN60,    
     ["rbxassetid://4903742660"] = entityBehaviors.Black60,
     ["rbxassetid://3308152153"] = entityBehaviors.ForstBite,
+    ["rbxassetid://3308152155"] = entityBehaviors.ForstBite2,
     ["rbxassetid://138586264525744"] = entityBehaviors.INGODONE,
     ["rbxassetid://124942412759969"] = entityBehaviors.Subspace,
     ["rbxassetid://118662411300943"] = entityBehaviors.INGODTWO,
@@ -11084,5 +10918,5 @@ for _, entity in pairs(workspace:GetChildren()) do
 end
 -------
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCore V10.6 By Mr.key & HeavenNow :)"
+hint.Text = "Loading... Doors HardCore V10.6.3 By Mr.key & HeavenNow & Number303 :)"
 game.Debris:AddItem(hint, 3)

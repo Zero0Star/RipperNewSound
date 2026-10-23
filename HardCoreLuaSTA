@@ -634,7 +634,6 @@ PB.MouseButton1Click:Connect(function()
     
     local RunService = game:GetService("RunService")
     local items = {
-        "HardCoreSound",
         "HardcoreTwo",
         "HardcoreOne",
         "HardcoreM", 
@@ -660,10 +659,10 @@ PB.MouseButton1Click:Connect(function()
             
             pcall(function()
                 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
-                    .caption("HardCore Loading: " .. count .. "/7", true)
+                    .caption("HardCore Loading: " .. count .. "/6", true)
             end)
             
-            if count == 7 then
+            if count == 6 then
                 isDone = true
                 if connection then
                     connection:Disconnect()

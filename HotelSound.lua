@@ -1,7 +1,7 @@
 local Workspace = game:GetService("Workspace")
 local Debris = game:GetService("Debris")
 
-if Workspace:FindFirstChild("HardCoreSound") then
+if Workspace:FindFirstChild("BoolValue") then
     return
 end
 

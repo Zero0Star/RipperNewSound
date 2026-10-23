@@ -1,10 +1,4 @@
-if workspace:FindFirstChild("HardcoreM") then
-    return
-end
-local marker = Instance.new("BoolValue")
-marker.Name = "HardcoreM"
-marker.Value = true
-marker.Parent = workspace
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -381,7 +375,51 @@ bloom.Parent = Lighting
 
 		end
 	},
+	{
+		Name="耐力",
+		Icon="rbxassetid://483225199",
+		Description="你比他们更加持久(兄弟,不是你想的那样)(需要成就 WelCome Halloween)",
+		Function=function()
 
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 耐力"
+			)
+
+		end
+	},
+	{
+		Name="治愈之光",
+		Icon="rbxassetid://483225199",
+		Description="你将获得一个草药裂缝 (需要成就 WelCome Halloween)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+                        loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/v%E1%BB%89idislightrift"))()
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 治愈之光"
+			)
+
+		end
+	},
+	{
+		Name="故障之光",
+		Icon="rbxassetid://483225199",
+		Description="你将获得一个故障裂缝 (需要成就 WelCome Halloween)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+                        loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/glitchrift"))()
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 故障之光"
+			)
+
+		end
+	},
 	{
 		Name="毁灭",
 		Icon="rbxassetid://107735901192534",

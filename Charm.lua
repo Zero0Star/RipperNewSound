@@ -1,4 +1,10 @@
-
+if workspace:FindFirstChild("HardcoreM") then
+    return
+end
+local marker = Instance.new("BoolValue")
+marker.Name = "HardcoreM"
+marker.Value = true
+marker.Parent = workspace
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -392,7 +398,7 @@ bloom.Parent = Lighting
 	},
 	{
 		Name="治愈之光",
-		Icon="rbxassetid://483225199",
+		Icon="rbxassetid://11330204834",
 		Description="你将获得一个草药裂缝 (需要成就 WelCome Halloween)",
 		Function=function()
 
@@ -407,7 +413,7 @@ bloom.Parent = Lighting
 	},
 	{
 		Name="故障之光",
-		Icon="rbxassetid://483225199",
+		Icon="rbxassetid://3128134647",
 		Description="你将获得一个故障裂缝 (需要成就 WelCome Halloween)",
 		Function=function()
 

@@ -90,7 +90,7 @@ CLText.TextWrapped = true
 CLText.TextXAlignment = Enum.TextXAlignment.Left
 CLText.TextYAlignment = Enum.TextYAlignment.Top
 CLText.Text =
-"1. HeavenNow fixed The Hotel slow service problem. / In version V10.6.5, 'THE BACKROOMS' will be added to the archives"
+"1. Challenge mode is back, earn skins and badge rewards. / In version V10.6.5, 'THE BACKROOMS' will be added to the archives"
 CLText.Parent = CL
 
 local TL = Instance.new("TextLabel")
@@ -145,7 +145,7 @@ ScrollFrame.BorderSizePixel = 0
 ScrollFrame.ScrollBarThickness = 12
 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 222, 189)
 ScrollFrame.ScrollBarImageTransparency = 0.3
-ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.None
 ScrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
 ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollFrame.Parent = MC
@@ -154,18 +154,18 @@ local BC = Instance.new("Frame")
 BC.Name = "ButtonContainer"
 BC.Size = UDim2.new(1, 0, 0, 0)
 BC.BackgroundTransparency = 1
-BC.AutomaticSize = Enum.AutomaticSize.Y
+BC.AutomaticSize = Enum.AutomaticSize.None
 BC.Parent = ScrollFrame
 
 local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0.08, 0)
+UIListLayout.Padding = UDim.new(0, 18)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListLayout.Parent = BC
 
 local UIPadding = Instance.new("UIPadding")
-UIPadding.PaddingTop = UDim.new(0.05, 0)
-UIPadding.PaddingBottom = UDim.new(0.1, 0)
+UIPadding.PaddingTop = UDim.new(0, 12)
+UIPadding.PaddingBottom = UDim.new(0, 24)
 UIPadding.Parent = BC
 
 local MB = Instance.new("TextButton")
@@ -212,12 +212,12 @@ CB2.Parent = BC
 
 local UB = Instance.new("TextButton")
 UB.Name = "UnknownButton"
-UB.Size = UDim2.new(1.5, 0, 0, 110)
+UB.Size = UDim2.new(0.9, 0, 0, 110)
 UB.LayoutOrder = 4
 UB.BackgroundColor3 = Color3.fromRGB(255, 222, 189)
 UB.BackgroundTransparency = 0.1
 UB.AutoButtonColor = true
-UB.Text = "???"
+UB.Text = "Challenge"
 UB.FontFace = CF
 UB.TextColor3 = Color3.fromRGB(80, 60, 40)
 UB.TextScaled = true
@@ -259,6 +259,15 @@ local S4 = Instance.new("UIStroke")
 S4.Color = Color3.fromRGB(220, 190, 160)
 S4.Thickness = 3
 S4.Parent = UB
+
+local function updateScrollCanvas()
+    local contentHeight = UIListLayout.AbsoluteContentSize.Y + UIPadding.PaddingTop.Offset + UIPadding.PaddingBottom.Offset
+    BC.Size = UDim2.new(1, 0, 0, contentHeight)
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
+end
+
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateScrollCanvas)
+updateScrollCanvas()
 
 local function KJ1()
     local containerHeight = ScrollFrame.AbsoluteSize.Y
@@ -320,7 +329,7 @@ end
 UB.MouseButton1Click:Connect(function()
     playAudio()
     pcall(function()
-        require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("This mode is not available", true)
+        loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/HardCore-Mode.lua?raw=true"))()
     end)
 end)
 

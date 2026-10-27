@@ -2201,7 +2201,7 @@ end
 
 local entityConfig = {
     ["rbxassetid://80"] = entityBehaviors.BackroomsDOOR2,
-    ["rbxassetid://82"] = entityBehaviors.level0,
+    ["rbxassetid://88"] = entityBehaviors.level0,
     ["rbxassetid://81"] = entityBehaviors.level1,
     ["rbxassetid://82"] = entityBehaviors.levelrun,
     ["rbxassetid://83"] = entityBehaviors.levelrun2,

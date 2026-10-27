@@ -5,7 +5,6 @@ local marker = Instance.new("BoolValue")
 marker.Name = "HardcoreOne"
 marker.Value = true
 marker.Parent = workspace
-loadstring(game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/Sprint2.lua?raw=true"))()
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entityBehaviors = {}
 function entityBehaviors.ATCHRipper()
@@ -3015,19 +3014,13 @@ local images = {
 }
 
 local function PlayA200J()
-	local soundFolder = workspace:WaitForChild("HardCoreSound")
-	local sound = soundFolder:FindFirstChild("A200J")
-
-	if sound and sound:IsA("Sound") then
-		sound.Volume = 3
-		sound.Looped = false
-
-		if not sound.IsLoaded then
-			sound.Loaded:Wait()
-		end
-
-		sound:Play()
-	end
+	 local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
+    local A2000 = hardCoreSound and hardCoreSound:FindFirstChild("A200J")
+    if A2000 and A2000:IsA("Sound") then
+        A2000:Stop()
+        A2000.TimePosition = 0
+        A2000:Play()
+    end
 end
 
 local function DamagePlayer()
@@ -10662,24 +10655,40 @@ camera.CFrame = camera.CFrame * CFrame.Angles(0, 0, flipAngle)
 end)
 end
 function entityBehaviors.A4()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A4")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
+ local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
+    local A4 = hardCoreSound and hardCoreSound:FindFirstChild("A4")
+    if A4 and A1:IsA("Sound") then
+        A4:Stop()
+        A4.TimePosition = 0
+        A4:Play()
+    end
 end
 function entityBehaviors.A5()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A5")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
+ local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
+    local A5 = hardCoreSound and hardCoreSound:FindFirstChild("A5")
+    if A5 and A1:IsA("Sound") then
+        A5:Stop()
+        A5.TimePosition = 0
+        A5:Play()
+    end
 end
 function entityBehaviors.A6()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A6")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
+ local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
+    local A6 = hardCoreSound and hardCoreSound:FindFirstChild("A6")
+    if A6 and A1:IsA("Sound") then
+        A6:Stop()
+        A6.TimePosition = 0
+        A6:Play()
+    end
 end
 function entityBehaviors.A7()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A7")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
+ local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
+    local A7 = hardCoreSound and hardCoreSound:FindFirstChild("A7")
+    if A7 and A1:IsA("Sound") then
+        A7:Stop()
+        A7.TimePosition = 0
+        A7:Play()
+    end
 end
 local entityConfig = {
     ["rbxassetid://1"] = entityBehaviors.ATCHRipper,
@@ -10767,5 +10776,5 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCore V10.6.3 By HeavenNow :)"
+hint.Text = "Loading... Doors HardCore V10.6.5 By HeavenNow :)"
 game.Debris:AddItem(hint, 3)

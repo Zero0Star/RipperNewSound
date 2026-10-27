@@ -5,6 +5,128 @@ local marker = Instance.new("BoolValue")
 marker.Name = "HardcoreM"
 marker.Value = true
 marker.Parent = workspace
+
+local Players = game:GetService("Players")
+local TextChatService = game:GetService("TextChatService")
+local TweenService = game:GetService("TweenService")
+
+local ChatConfig = TextChatService.ChatWindowConfiguration
+
+local PlayerLevels = {
+    ["QWQ75321"] = 325,
+    ["goat_qiu"] = 333,
+    ["Staryyy011"] = 61,
+    ["sppvve"] = 218,
+    ["SOXIYU24"] = 52,
+    ["SparkleAtom"] = 49,
+    ["Nssys123"] = 101,
+    ["YMXeternalX"] = 59,
+    ["woshiniruier"] = 93,
+    ["Yxi_na"] = 59,
+    ["cgdwml"] = 189,
+    ["A_Yun66"] = 108,
+}
+
+local GradientPlayers = {
+    ["QWQ75321"] = true,
+    ["goat_qiu"] = true,
+}
+
+local OrangePlayers = {
+    ["sppvve"] = true,
+    ["cgdwml"] = true,
+}
+
+local YellowPlayers = {
+    ["Nssys123"] = true,
+    ["A_Yun66"] = true,
+}
+
+local WhitePlayers = {
+    ["woshiniruier"] = true,
+}
+
+local GradientColors = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(128, 147, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(23, 38, 255)),
+})
+
+local GradientTweenInfo = TweenInfo.new(
+    2,
+    Enum.EasingStyle.Linear,
+    Enum.EasingDirection.InOut,
+    -1,
+    true
+)
+
+local function GetTagColor(name)
+    if OrangePlayers[name] then
+        return "rgb(255,176,0)"
+    elseif YellowPlayers[name] then
+        return "rgb(255,255,0)"
+    elseif WhitePlayers[name] then
+        return "rgb(255,255,255)"
+    end
+
+    return "rgb(134,134,134)"
+end
+
+TextChatService.OnChatWindowAdded = function(message)
+    if not message.TextSource then
+        return nil
+    end
+
+    local player = Players:GetPlayerByUserId(message.TextSource.UserId)
+
+    if not player then
+        return nil
+    end
+
+    local level = PlayerLevels[player.Name]
+
+    if not level then
+        return nil
+    end
+
+    local properties = ChatConfig:DeriveNewMessageProperties()
+    local tag = "[Lv." .. level .. "]"
+
+    if GradientPlayers[player.Name] then
+        properties.PrefixText = tag
+        properties.Text = message.PrefixText .. " " .. message.Text
+
+        properties.PrefixTextProperties = ChatConfig:DeriveNewMessageProperties()
+        properties.PrefixTextProperties.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+        local gradient = Instance.new("UIGradient")
+        gradient.Color = GradientColors
+        gradient.Offset = Vector2.new(-0.5, 0)
+        gradient.Parent = properties.PrefixTextProperties
+
+        local tween = TweenService:Create(
+            gradient,
+            GradientTweenInfo,
+            {Offset = Vector2.new(0.5, 0)}
+        )
+
+        gradient.Destroying:Connect(function()
+            tween:Cancel()
+        end)
+
+        tween:Play()
+    else
+        local color = GetTagColor(player.Name)
+
+        properties.PrefixText =
+            "<font color='" .. color .. "'>"
+            .. tag
+            .. "</font> "
+            .. message.PrefixText
+    end
+
+    return properties
+end
+----------
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")

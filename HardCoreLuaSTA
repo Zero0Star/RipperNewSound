@@ -90,12 +90,12 @@ CLText.TextWrapped = true
 CLText.TextXAlignment = Enum.TextXAlignment.Left
 CLText.TextYAlignment = Enum.TextYAlignment.Top
 CLText.Text =
-"1. Challenge mode is back, earn skins and badge rewards. / In version V10.6.5, 'THE BACKROOMS' will be added to the archives"
+"1. 'THE ?????????' "
 CLText.Parent = CL
 
 local TL = Instance.new("TextLabel")
 TL.Name = "Title"
-TL.Text = "HardCore V10.6.3"
+TL.Text = "HardCore V10.6.5"
 TL.FontFace = CF
 TL.TextSize = 32
 TL.TextColor3 = Color3.fromRGB(255, 240, 230)
@@ -343,6 +343,7 @@ CB2.MouseButton1Click:Connect(function()
         "HardcoreOne",
         "HardcoreTwo",
         "HardcoreM",
+        "HardcoreThree",
         "HardcoreITEM",
         "HardcoreMusic"
     }
@@ -432,6 +433,8 @@ CB2.MouseButton1Click:Connect(function()
             "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/master/ArchivesLua.lua",
 
             "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/master/ArchivesLua2.lua",
+
+            "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/master/ArchivesLua3.lua",
 
             "https://raw.githubusercontent.com/Zero0Star/RipperNewSound/master/Charm.lua",
 

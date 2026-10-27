@@ -9,124 +9,181 @@ marker.Parent = workspace
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entityBehaviors = {}
 function entityBehaviors.SA90()
-local MainUI = game:GetObjects("rbxassetid://95819908379371")[1]
-MainUI.Parent = game.Players.LocalPlayer.PlayerGui
-local plr = game.Players.LocalPlayer
-local arg1 = game.Workspace.CurrentCamera
-local Jumpscare_A90 = MainUI.Jumpscare.Jumpscare_A90
-Jumpscare_A90.BackgroundTransparency = 1
-Jumpscare_A90.Face.Visible = true
-Jumpscare_A90.FaceAngry.Visible = false
-Jumpscare_A90.Static.Visible = true
-Jumpscare_A90.Static2.Visible = true
-Jumpscare_A90.Static.ImageTransparency = 1
-Jumpscare_A90.Static2.ImageTransparency = 1
-Jumpscare_A90.Face.Image = "rbxassetid://12635832722"
-Jumpscare_A90.FaceAngry.Image = "rbxassetid://12635955412"
-
-Jumpscare_A90.Face.ImageColor3 = Color3.new(0, 0, 0)
-Jumpscare_A90.Face.Position = UDim2.new(math.random(10, 90) / 100, 0, math.random(10, 90) / 100, 0)
-Jumpscare_A90.Visible = true
-local isMoving = false
-game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game.RemoteListener.Modules.A90.Spawn:Play()
-task.wait(0.03333333333333333)
-Jumpscare_A90.Face.ImageColor3 = Color3.new(1, 1, 1)
-task.wait(0.22)
-Jumpscare_A90.BackgroundTransparency = 0
-Jumpscare_A90.Face.Position = UDim2.new(0.5, 0, 0.49, 0)
-task.wait(0.03333333333333333)
-Jumpscare_A90.StopIcon.Visible = true
-Jumpscare_A90.BackgroundColor3 = Color3.new(0, 0, 0)
-Jumpscare_A90.BackgroundTransparency = 1
-Jumpscare_A90.Static.ImageTransparency = 0.8
-Jumpscare_A90.Static2.ImageTransparency = 0.8
-local isActive = true
-local LookVector = arg1.CFrame.LookVector
-task.delay(0.2, function()
-	Jumpscare_A90.StopIcon.Visible = false
-	while isActive do
-		task.wait(0.03333333333333333)
-		Jumpscare_A90.Static.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
-		Jumpscare_A90.Static.Rotation = math.random(0, 1) * 180
-		Jumpscare_A90.Static2.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
-		Jumpscare_A90.Static2.Rotation = math.random(0, 1) * 180
-		Jumpscare_A90.Face.Position = UDim2.new(0.5, 0, 0.49, math.random(-1, 1))
-		Jumpscare_A90.FaceAngry.Position = UDim2.new(0.5 + math.random(-100, 100) / 50000, 0, 0.49 + math.random(-100, 100) / 30000, math.random(-1, 1))
-		local randint = math.random(0, 1)
-		Jumpscare_A90.FaceAngry.ImageColor3 = Color3.new(1, randint, randint)
-		if not isMoving then
-			if 0.4 < (LookVector - arg1.CFrame.LookVector).Magnitude then
-				isMoving = true
-			end
-			if 0.4 < plr.Character.Humanoid.MoveDirection.Magnitude then
-				isMoving = true
-			end
-		end
-	end
-end)
-
-task.wait(0.2)
-Jumpscare_A90.BackgroundColor3 = Color3.new(0, 0, 0)
-Jumpscare_A90.BackgroundTransparency = 0
-Jumpscare_A90.Static.ImageTransparency = 0
-Jumpscare_A90.Static2.ImageTransparency = 0.5
-task.wait(0.03333333333333333)
-Jumpscare_A90.Face.ImageColor3 = Color3.new(1, 0, 0)
-task.wait(0.03333333333333333)
-Jumpscare_A90.Visible = false
-task.wait(0.08)
-if isMoving then
-	Jumpscare_A90.Visible = true
-	game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game.RemoteListener.Modules.A90.Hit:Play()
-	task.wait(0.03333333333333333)
-	Jumpscare_A90.Face.ImageColor3 = Color3.new(1, 1, 1)
-	task.wait(0.03333333333333333)
-	Jumpscare_A90.BackgroundTransparency = 0
-	Jumpscare_A90.Static.ImageTransparency = 0
-	Jumpscare_A90.Static2.ImageTransparency = 0.5
-	task.wait(0.06666666666666667)
-	Jumpscare_A90.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
-	Jumpscare_A90.FaceAngry.Visible = true
-	task.wait(0.06666666666666667)
-	Jumpscare_A90.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
-	Jumpscare_A90.Face.Visible = false
-	Jumpscare_A90.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
-	task.wait(0.75)
-	plr.Character.Humanoid.Health -= 60
-	local function TriggerDeathHint(DeathMessages, DeathCauseString)
-		spawn(function()
-			for _ = 1, 50 do
-				game:GetService("ReplicatedStorage").GameStats["Player_" .. game.Players.LocalPlayer.Name].Total.DeathCause.Value = DeathCauseString
-				firesignal(game:GetService("ReplicatedStorage").RemotesFolder.DeathHint.OnClientEvent, DeathMessages, "Yellow")
-				wait()
-			end
-		end)
-	end
-
-	TriggerDeathHint({
-		"嗯,又死了,你死于所谓的 Super A-90",
-		"我读取到了他的意念,或许它很喜欢跟你玩木头人类",
-		"总之,你总有一天会适应它的存在的"
-	}, "Super A-90")
-	
-	task.wait(0.1)
-	Jumpscare_A90.FaceAngry.Visible = false
-	Jumpscare_A90.BackgroundColor3 = Color3.new(1, 1, 1)
-	Jumpscare_A90.Static.ImageTransparency = 1
-	Jumpscare_A90.Static2.ImageTransparency = 1
-	task.wait(0.06666666666666667)
-	Jumpscare_A90.BackgroundColor3 = Color3.new(1, 0, 0)
-	task.wait(0.06666666666666667)
-	Jumpscare_A90.BackgroundColor3 = Color3.new(0, 0, 0)
-	task.wait(0.06666666666666667)
-else
-	game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game.RemoteListener.Modules.A90.Spawn:Stop()
-	Jumpscare_A90.BackgroundTransparency = 1
-end
-isActive = false
-Jumpscare_A90.Visible = false
-wait(2)
-MainUI:Destroy()
+    local v557 = require(game.ReplicatedStorage.CameraShaker)
+            local vu558 = workspace.CurrentCamera
+            local v560 = v557.new(Enum.RenderPriority.Camera.Value, function(p559)
+                vu558.CFrame = vu558.CFrame * p559
+            end)
+            v560:Start()
+            local v561 = game:GetService("TweenService")
+            local v562 = game.Players.LocalPlayer
+            local v563 = game.Players.LocalPlayer.PlayerGui.MainUI
+            local vu564 = v563.Jumpscare.Jumpscare_A90
+            local v565 = v563.Initiator.Main_Game.RemoteListener.Modules.A90
+            local vu566 = require(v563.Initiator.Main_Game)
+            local vu567 = true
+            local vu568 = false
+            local vu569 = vu566.cam.CFrame.LookVector
+            local vu570 = 0
+            game.SoundService.Main.Volume = 0
+            vu564.Face.Image = "http://www.roblox.com/asset/?id=12635832722"
+            vu564.FaceAngry.Image = "http://www.roblox.com/asset/?id=12635955412"
+            v565.Spawn.SoundGroup = nil
+            v565.Hit.SoundGroup = nil
+            v565.Spawn:Play()
+            vu564.BackgroundTransparency = 1
+            vu564.Face.Visible = true
+            vu564.FaceAngry.Visible = false
+            vu564.Static.Visible = true
+            vu564.Static2.Visible = true
+            vu564.Static.ImageTransparency = 1
+            vu564.Static2.ImageTransparency = 1
+            vu564.Face.ImageColor3 = Color3.new(0, 0, 0)
+            vu564.Face.Rotation = Random.new():NextNumber(- 5, 5)
+            vu564.Face.Position = UDim2.new(Random.new():NextNumber(10, 90) / 100, 0, Random.new():NextNumber(10, 90) / 100, 0)
+            vu564.Visible = true
+            task.wait(0.03)
+            vu564.Face.ImageColor3 = Color3.new(1, 1, 1)
+            task.wait(0.28)
+            vu564.BackgroundTransparency = 0
+            vu564.Face.Rotation = 0
+            vu564.Face.Position = UDim2.new(0.5, 0, 0.49, 0)
+            task.wait(0.03)
+            vu564.StopIcon.Visible = true
+            vu564.BackgroundColor3 = Color3.new(0, 0, 0)
+            vu564.BackgroundTransparency = 1
+            vu564.Static.ImageTransparency = 0.8
+            vu564.Static2.ImageTransparency = 0.8
+            task.delay(0.2, function()
+                vu564.StopIcon.Visible = false
+                while vu567 do
+                    local v571 = math.random(0, 1)
+                    local v572 = 100 + vu570 * 0.5
+                    vu570 = vu570 + 15
+                    task.wait(0.03)
+                    vu564.Static.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
+                    vu564.Static.Rotation = math.random(0, 1) * 180
+                    vu564.Static2.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
+                    vu564.Static2.Rotation = math.random(0, 1) * 180
+                    vu564.Face.Position = UDim2.new(0.5, 0, 0.49, math.random(- 1, 1))
+                    vu564.FaceAngry.Position = UDim2.new(0.5 + Random.new():NextNumber(- v572, v572) / 50000, 0, 0.49 + Random.new():NextNumber(- v572, v572) / 30000, math.random(- 1, 1))
+                    vu564.FaceAngry.Rotation = Random.new():NextNumber(- 1, 1) * (vu570 * 0.0015)
+                    vu564.FaceAngry.ImageColor3 = Color3.new(1, v571, v571)
+                    if not vu568 then
+                        if (vu569 - vu566.cam.CFrame.LookVector).Magnitude <= 0.4 then
+                            if vu566.hum.MoveDirection.Magnitude > 0.4 then
+                                vu568 = true
+                            end
+                        else
+                            vu568 = true
+                        end
+                    end
+                end
+            end)
+            task.wait(0.3)
+            vu564.BackgroundColor3 = Color3.new(0, 0, 0)
+            vu564.BackgroundTransparency = 0
+            vu564.Static.ImageTransparency = 0
+            vu564.Static2.ImageTransparency = 0.5
+            task.wait(0.03)
+            vu564.Face.ImageColor3 = Color3.new(1, 0, 0)
+            task.wait(0.03)
+            vu564.Visible = false
+            task.wait(0.08)
+            if vu568 then
+                local vu573 = true
+                vu564.Visible = true
+                v565.Hit:Play()
+                task.wait(0.03)
+                vu564.Face.ImageColor3 = Color3.new(1, 1, 1)
+                task.wait(0.03)
+                vu564.BackgroundTransparency = 0
+                vu564.Static.ImageTransparency = 0
+                vu564.Static2.ImageTransparency = 0.5
+                task.wait(0.067)
+                vu564.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
+                vu564.FaceAngry.Rotation = 0
+                vu564.FaceAngry.ImageTransparency = 0
+                vu564.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
+                vu564.FaceAngry.Visible = true
+                task.wait(0.067)
+                vu564.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
+                vu564.Face.Visible = false
+                task.wait(0.75)
+                v562.Character.Humanoid.Health = v562.Character.Humanoid.Health - 70
+                firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
+                    "You died to an entity called A-90...",
+                    "React Fast and Dont Move a Muscle!"
+                }, "Blue")
+                task.wait(0.1)
+                vu564.FaceAngry.Visible = false
+                vu564.BackgroundColor3 = Color3.new(1, 1, 1)
+                vu564.Static.ImageTransparency = 1
+                vu564.Static2.ImageTransparency = 1
+                task.wait(0.067)
+                vu564.BackgroundColor3 = Color3.new(1, 0, 0)
+                task.wait(0.067)
+                vu564.BackgroundColor3 = Color3.new(0, 0, 0)
+                task.wait(0.067)
+                v560:ShakeOnce(25, 8, 0, 4)
+                vu567 = false
+                task.wait(0.03)
+                v565.Spawn:Stop()
+                vu564.BackgroundTransparency = 1
+                vu564.Static.ImageTransparency = 0.5
+                vu564.Static2.ImageTransparency = 0.5
+                v561:Create(vu564.Static, TweenInfo.new(20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    ImageTransparency = 1
+                }):Play()
+                v561:Create(vu564.Static2, TweenInfo.new(5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    ImageTransparency = 1
+                }):Play()
+                local v574 = Random.new():NextNumber(2, 3)
+                vu564.FaceAngry.Rotation = Random.new():NextNumber(- 3, 3)
+                vu564.FaceAngry.Visible = true
+                vu564.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
+                vu564.FaceAngry.Size = UDim2.new(v574, 0, v574, 0)
+                v561:Create(vu564.FaceAngry, TweenInfo.new(5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    ImageTransparency = 1
+                }):Play()
+                game.SoundService.Main.Volume = 0
+                game.SoundService.Main.EqualizerSoundEffect.Enabled = true
+                game.SoundService.Main.EqualizerSoundEffect.HighGain = - 50
+                game.SoundService.Main.EqualizerSoundEffect.LowGain = 10
+                game.SoundService.Main.EqualizerSoundEffect.MidGain = - 50
+                v561:Create(game.SoundService.Main.EqualizerSoundEffect, TweenInfo.new(15, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
+                    LowGain = 0,
+                    HighGain = 0,
+                    MidGain = 0
+                }):Play()
+                v561:Create(game.SoundService.Main, TweenInfo.new(5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                    Volume = 1
+                }):Play()
+                task.spawn(function()
+                    while vu573 do
+                        local v575 = 100 + 0.1
+                        task.wait()
+                        vu564.Static.Position = UDim2.new(Random.new():NextNumber(0, v575) / 100, 0, Random.new():NextNumber(0, v575) / 100, 0)
+                        vu564.Static.Rotation = math.random(0, 1) * 180
+                        vu564.Static2.Position = UDim2.new(Random.new():NextNumber(0, v575) / 100, 0, Random.new():NextNumber(0, v575) / 100, 0)
+                        vu564.Static2.Rotation = math.random(0, 1) * 180
+                    end
+                end)
+                task.delay(20, function()
+                    vu573 = false
+                    vu564.Visible = false
+                    vu564.BackgroundTransparency = 0
+                    vu564.Static.ImageTransparency = 1
+                    vu564.Static2.ImageTransparency = 1
+                end)
+            else
+                v565.Spawn:Stop()
+                vu564.BackgroundTransparency = 1
+                vu564.Visible = false
+                v560:ShakeOnce(5, 10, 0.1, 1)
+                vu567 = false
+                game.SoundService.Main.Volume = 1
+            end
 end
 function entityBehaviors.WH1T3()
 local entity = spawner.Create({Entity = {Name = "WH1T3",
@@ -3487,19 +3544,31 @@ heartbeatConnection = RunService.Heartbeat:Connect(function(dt)
 end)
 end
 function entityBehaviors.A1()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A1")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
+ local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
+    local A1 = hardCoreSound and hardCoreSound:FindFirstChild("A1")
+    if A1 and A1:IsA("Sound") then
+        A1:Stop()
+        A1.TimePosition = 0
+        A1:Play()
+    end
 end
 function entityBehaviors.A2()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A2")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
+ local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
+    local A2 = hardCoreSound and hardCoreSound:FindFirstChild("A2")
+    if A2 and A1:IsA("Sound") then
+        A2:Stop()
+        A2.TimePosition = 0
+        A2:Play()
+    end
 end
 function entityBehaviors.A3()
-local sound = workspace:WaitForChild("HardCoreSound"):WaitForChild("A3")
-if not sound.IsLoaded then sound.Loaded:Wait() end
-sound:Play()
+ local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
+    local A3 = hardCoreSound and hardCoreSound:FindFirstChild("A3")
+    if A3 and A3:IsA("Sound") then
+        A3:Stop()
+        A3.TimePosition = 0
+        A3:Play()
+    end
 end
 
 function entityBehaviors.SEEKS()

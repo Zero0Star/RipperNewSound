@@ -1,10 +1,501 @@
-if workspace:FindFirstChild("HardcoreTwo") then
+if workspace:FindFirstChild("HardcoreThree") then
     return
 end
 local marker = Instance.new("BoolValue")
-marker.Name = "HardcoreTwo"
+marker.Name = "HardcoreThree"
 marker.Value = true
 marker.Parent = workspace
+local entityBehaviors = {}
+function entityBehaviors.levelrun()
+local function GetRoom()
+    local gruh = workspace:WaitForChild("CurrentRooms")
+    local latestRoom = game.ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom")
+
+    return gruh:FindFirstChild(tostring(latestRoom.Value))
+end
+
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+
+function LoadCustomInstance(source, parent)
+    local model
+
+    while task.wait() and not model do
+        if tonumber(source) then
+            local success, result = pcall(function()
+                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+            end)
+
+            if success and result then
+                model = result
+            end
+        elseif typeof(source) == "string"
+            and source:match("^https?://")
+            and source:match("%.rbxm") then
+
+            local success, result = pcall(function()
+                return game:GetObjects(source)[1]
+            end)
+
+            if success and result then
+                model = result
+            end
+        else
+            break
+        end
+
+        if model then
+            model.Parent = parent or workspace
+        end
+    end
+
+    return model
+end
+
+local s = LoadCustomInstance(127433972073500, workspace)
+
+if not s then
+    return
+end
+
+local entity = s:FindFirstChildWhichIsA("BasePart", true)
+
+if not entity then
+    return
+end
+
+local room = GetRoom()
+
+if not room then
+    return
+end
+
+local entrance = room:WaitForChild("RoomEntrance")
+
+entity.CFrame = entrance.CFrame * CFrame.new(0, 5, -15)
+end
+
+function entityBehaviors.levelrun2()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+if not LocalPlayer then
+    return
+end
+
+local function findRecursive(root, name)
+    if not root then
+        return nil
+    end
+    return root:FindFirstChild(name, true)
+end
+
+local hardCoreSound = workspace:WaitForChild("HardCoreSound", 15)
+local levelRUN = workspace:WaitForChild("levelRUN", 15)
+
+if not hardCoreSound then
+    return
+end
+
+if not levelRUN then
+    return
+end
+
+local function waitForChild(parent, name, timeout)
+    local found = parent:FindFirstChild(name, true)
+    if found then
+        return found
+    end
+
+    local start = os.clock()
+    repeat
+        task.wait(0.2)
+        found = parent:FindFirstChild(name, true)
+        if found then
+            return found
+        end
+    until os.clock() - start >= timeout
+
+    return nil
+end
+
+local RUN1 = waitForChild(hardCoreSound, "RUN1", 10)
+local RUN2 = waitForChild(hardCoreSound, "RUN2", 10)
+local RUN3 = waitForChild(hardCoreSound, "RUN3", 10)
+local levelRunSound = waitForChild(levelRUN, "RUN", 10)
+
+local entity = findRecursive(levelRUN, "entity") or findRecursive(workspace, "entity")
+local nodes1 = findRecursive(levelRUN, "nodes1") or findRecursive(workspace, "nodes1")
+local nodes2 = findRecursive(levelRUN, "nodes2") or findRecursive(workspace, "nodes2")
+local door = findRecursive(levelRUN, "BackroomDOOR") or findRecursive(workspace, "BackroomDOOR")
+local neon = door and findRecursive(door, "Neon")
+
+if not RUN1 or not RUN2 or not RUN3 or not levelRunSound then
+    return
+end
+
+if not entity or not (entity:IsA("Model") or entity:IsA("BasePart")) then
+    return
+end
+
+if not nodes1 or not nodes1:IsA("BasePart") then
+    return
+end
+
+if not nodes2 or not nodes2:IsA("BasePart") then
+    return
+end
+
+if not neon then
+    return
+end
+
+local promptPart
+if neon:IsA("BasePart") then
+    promptPart = neon
+elseif neon:IsA("Attachment") then
+    promptPart = neon
+else
+    promptPart = neon:FindFirstChildWhichIsA("BasePart", true)
+end
+
+if not promptPart then
+    return
+end
+
+local ending = false
+local run2Started = false
+local movementStarted = false
+local enSoundsStarted = false
+local damageCooldowns = {}
+local damageConnection
+local fadeGui
+
+local enSounds = {}
+local enSoundNames = {
+    EN1 = true,
+    EN2 = true,
+    EN3 = true,
+    EN4 = true,
+    EN5 = true
+}
+
+for _, descendant in ipairs(entity:GetDescendants()) do
+    if descendant:IsA("Sound") and enSoundNames[descendant.Name] then
+        descendant.Volume = 0.4
+        table.insert(enSounds, descendant)
+    end
+end
+
+if entity:IsA("Sound") and enSoundNames[entity.Name] then
+    table.insert(enSounds, entity)
+end
+
+local function setSoundPlaying(sound, shouldPlay)
+    if not sound or not sound:IsA("Sound") then
+        return
+    end
+
+    if shouldPlay then
+        sound:Play()
+    else
+        sound:Stop()
+    end
+end
+
+local function setENSounds(shouldPlay)
+    for _, sound in ipairs(enSounds) do
+        if sound.Parent then
+            if shouldPlay then
+                sound.TimePosition = 0
+                sound:Play()
+            else
+                sound:Stop()
+            end
+        end
+    end
+    enSoundsStarted = shouldPlay
+end
+
+local function getEntityPivot()
+    if entity:IsA("Model") then
+        return entity:GetPivot()
+    end
+    return entity.CFrame
+end
+
+local function pivotEntity(cframe)
+    if entity:IsA("Model") then
+        entity:PivotTo(cframe)
+    else
+        entity.CFrame = cframe
+    end
+end
+
+local function moveEntityTo(targetPart, speed)
+    if movementStarted or ending then
+        return
+    end
+
+    movementStarted = true
+    local verticalOffset = Vector3.new(0, 5, 0)
+    pivotEntity(nodes1.CFrame + verticalOffset)
+
+    task.spawn(function()
+        local startCFrame = getEntityPivot()
+        local targetCFrame = targetPart.CFrame + verticalOffset
+        local distance = (targetCFrame.Position - startCFrame.Position).Magnitude
+        local duration = distance / math.max(speed, 0.01)
+        local startTime = os.clock()
+
+        if duration <= 0 then
+            pivotEntity(targetCFrame)
+            return
+        end
+
+        while not ending and entity.Parent and os.clock() - startTime < duration do
+            local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+            pivotEntity(startCFrame:Lerp(targetCFrame, alpha))
+            RunService.Heartbeat:Wait()
+        end
+
+        if not ending and entity.Parent then
+            pivotEntity(targetCFrame)
+        end
+    end)
+end
+
+local function startRaycastDetection()
+    if damageConnection then
+        return
+    end
+
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.FilterDescendantsInstances = {entity}
+    raycastParams.IgnoreWater = true
+
+    local lastScan = 0
+
+    damageConnection = RunService.Heartbeat:Connect(function()
+        if ending or not RUN2.Playing or not entity.Parent then
+            return
+        end
+
+        if os.clock() - lastScan < 0.1 then
+            return
+        end
+        lastScan = os.clock()
+
+        local origin = getEntityPivot().Position
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            local character = player.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+
+            if character and humanoid and root and humanoid.Health > 0 then
+                local offset = root.Position - origin
+                local distance = offset.Magnitude
+
+                if distance <= 10 and distance > 0 then
+                    local result = workspace:Raycast(origin, offset, raycastParams)
+
+                    if result and result.Instance:IsDescendantOf(character) then
+                        local now = os.clock()
+                        if not damageCooldowns[player] or now - damageCooldowns[player] >= 1 then
+                            damageCooldowns[player] = now
+                            humanoid:TakeDamage(100)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function createBlackScreen()
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+    if fadeGui then
+        fadeGui:Destroy()
+    end
+
+    fadeGui = Instance.new("ScreenGui")
+    fadeGui.Name = "LevelRunTeleportFade"
+    fadeGui.IgnoreGuiInset = true
+    fadeGui.ResetOnSpawn = false
+    fadeGui.DisplayOrder = 100000
+    fadeGui.Parent = playerGui
+
+    local frame = Instance.new("Frame")
+    frame.Name = "BlackFrame"
+    frame.Size = UDim2.fromScale(1, 1)
+    frame.Position = UDim2.fromScale(0, 0)
+    frame.BackgroundColor3 = Color3.new(0, 0, 0)
+    frame.BackgroundTransparency = 1
+    frame.BorderSizePixel = 0
+    frame.ZIndex = 10000
+    frame.Parent = fadeGui
+
+    local tween = TweenService:Create(
+        frame,
+        TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+        {BackgroundTransparency = 0}
+    )
+    tween:Play()
+    tween.Completed:Wait()
+
+    return frame
+end
+
+local function fadeScreenOut(frame)
+    if not frame or not frame.Parent then
+        return
+    end
+
+    local tween = TweenService:Create(
+        frame,
+        TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+        {BackgroundTransparency = 1}
+    )
+    tween:Play()
+    tween.Completed:Wait()
+
+    if fadeGui then
+        fadeGui:Destroy()
+        fadeGui = nil
+    end
+end
+
+local prompt = promptPart:FindFirstChild("BackroomNeonPrompt")
+if not prompt then
+    prompt = Instance.new("ProximityPrompt")
+    prompt.Name = "BackroomNeonPrompt"
+    prompt.ActionText = "进入"
+    prompt.ObjectText = "Backroom"
+    prompt.Style = Enum.ProximityPromptStyle.Custom
+    prompt.KeyboardKeyCode = Enum.KeyCode.E
+    prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+    prompt.HoldDuration = 0
+    prompt.MaxActivationDistance = 12
+    prompt.RequiresLineOfSight = false
+    prompt.ClickablePrompt = true
+    prompt.Enabled = false
+    prompt.Parent = promptPart
+end
+
+local function startRun2()
+    if run2Started or ending then
+        return
+    end
+    run2Started = true
+
+    RUN2.Looped = true
+    RUN2:Play()
+    setENSounds(true)
+    setSoundPlaying(levelRunSound, true)
+
+    prompt.Enabled = true
+
+    moveEntityTo(nodes2, 20)
+    startRaycastDetection()
+end
+
+local function playRun1ThenStartRun2()
+    RUN1.Looped = false
+    RUN2.Looped = true
+    RUN3.Looped = false
+
+    local endedConnection
+    endedConnection = RUN1.Ended:Connect(function()
+        if endedConnection then
+            endedConnection:Disconnect()
+            endedConnection = nil
+        end
+        startRun2()
+    end)
+
+    levelRunSound.Looped = true
+    levelRunSound:Play()
+
+    RUN1:Play()
+
+    task.spawn(function()
+        local startAt = os.clock()
+        local sawPlaying = false
+
+        while not ending and os.clock() - startAt < 8 do
+            if RUN1.Playing then
+                sawPlaying = true
+                break
+            end
+            task.wait(0.1)
+        end
+
+        if not sawPlaying then
+            startRun2()
+            return
+        end
+
+        local maxWait = math.max(RUN1.TimeLength + 5, 30)
+        local playStart = os.clock()
+
+        while not ending and RUN1.Playing and os.clock() - playStart < maxWait do
+            task.wait(0.1)
+        end
+
+        if not ending and not run2Started then
+            startRun2()
+        end
+    end)
+end
+
+prompt.Triggered:Connect(function(player)
+    if player and player ~= LocalPlayer then
+        return
+    end
+
+    if ending or not run2Started then
+        return
+    end
+
+    ending = true
+    prompt.Enabled = false
+
+    if damageConnection then
+        damageConnection:Disconnect()
+        damageConnection = nil
+    end
+
+    RUN2:Stop()
+
+    local frame = createBlackScreen()
+
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local root = character:WaitForChild("HumanoidRootPart")
+    root.CFrame = CFrame.new(-216.211105, 236.492386, -685.299927)
+
+    RUN3.Looped = false
+    RUN3:Play()
+
+    local run3Start = os.clock()
+    local run3Timeout = math.max(RUN3.TimeLength + 5, 30)
+
+    while RUN3.Playing and os.clock() - run3Start < run3Timeout do
+        task.wait(0.1)
+    end
+
+    setENSounds(false)
+    setSoundPlaying(levelRunSound, false)
+
+    fadeScreenOut(frame)
+end)
+
+playRun1ThenStartRun2()
+end
 
 function entityBehaviors.level4()
 local Players = game:GetService("Players")
@@ -1154,7 +1645,7 @@ local function main()
     hideTreeTransparency(circle)
 end
 main()
-
+end
 function entityBehaviors.level0()
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -1232,7 +1723,7 @@ function LoadCustomInstance(source, parent)
                     delfile(filename)
                     return obj
                 else
-                    warn("Executor khong ho tro file APIs.")
+
                     return nil
                 end
             end)
@@ -1709,10 +2200,11 @@ end
 end
 
 local entityConfig = {
-    ["rbxassetid://78"] = entityBehaviors.BackroomsDOOR,
     ["rbxassetid://80"] = entityBehaviors.BackroomsDOOR2,
     ["rbxassetid://82"] = entityBehaviors.level0,
     ["rbxassetid://81"] = entityBehaviors.level1,
+    ["rbxassetid://82"] = entityBehaviors.levelrun,
+    ["rbxassetid://83"] = entityBehaviors.levelrun2,
     ["rbxassetid://79"] = entityBehaviors.level4
 }
 local checkedEntities = {}
@@ -1759,5 +2251,5 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCoreTwo V10.6 By HeavenNow :)"
+hint.Text = "Loading... Doors HardCoreThree V10.6.5 By HeavenNow :)"
 game.Debris:AddItem(hint, 3)

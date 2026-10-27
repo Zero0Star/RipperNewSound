@@ -109,6 +109,9 @@ local soundsData = {
     {url = rawNew .. "RipperDoorend.mp3", name = "RipperExplosionSound", vol = 1},
     {url = rawNew .. "A-333Music2.mp3", name = "A333Music", vol = 2},
     {url = rawNew .. "Astary.mp3", name = "A1", vol = 6},
+    {url = rawNew .. "LEVELRUN1.mp3", name = "RUN1", vol = 2},
+    {url = rawNew .. "LEVELRUN2.mp3", name = "RUN2", vol = 2},
+    {url = rawNew .. "LEVELRUN3.mp3", name = "RUN3", vol = 2},
     {url = rawMP .. "ReboundSoundV1.mp3", name = "ReboundSweep", vol = 1},
     {url = rawNew .. "MultiMonster1.mp3", name = "M1", vol = 2},
     {url = rawNew .. "MultiMonster2.mp3", name = "M2", vol = 2},
@@ -395,7 +398,7 @@ end
 local finalSound = folder:FindFirstChild("ATCHSTARYT")
 
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCoreMusic V10.6 By HeavenNow :)"
+hint.Text = "Loading... Doors HardCoreMusic V10.6.5 By HeavenNow :)"
 Debris:AddItem(hint, 3)
 
 if finalSound and finalSound:IsA("Sound") then

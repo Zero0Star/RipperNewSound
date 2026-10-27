@@ -39,7 +39,6 @@ model.Parent = Entities
 
 game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("By Heaven",true)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).titlelocation("The HardCord Archives",true)
 require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).remind("⚠This mode is quite challenging and is recommended for 10-15 players.⚠", true)
 
 local LIBRARY_ASSET = 71595026288153
@@ -447,5 +446,5 @@ task.spawn(function()
 end)
 
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingItem... Doors HardCore V10.6 By Mr.key & HeavenNow :)"
+hint.Text = "LoadingItem... Doors HardCore V10.6.5 By Mr.key & HeavenNow :)"
 game.Debris:AddItem(hint, 3)

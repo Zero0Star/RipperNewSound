@@ -1,1 +1,1 @@
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Curious: Let's start over, good luck",true)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Curious: Usually, I think you should stay still.",true)

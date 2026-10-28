@@ -6647,11 +6647,6 @@ spawnShocker()
             end
         end)
 
-        -- ================================================================
-        -- [Cease] Trigger timing retained from the original script.
-        -- Original RushMoving removal counter controls when this fires.
-        -- The entity implementation has been removed.
-        -- ================================================================
         local vu439 = {
             false,
             true,
@@ -6846,7 +6841,6 @@ entity:Run()
         end)
 
         
-
         task.spawn(function()
             while task.wait(500) do
                 if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then

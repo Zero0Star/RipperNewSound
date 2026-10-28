@@ -8079,54 +8079,170 @@ ExecuteJumpScare()
 end
 
 function entityBehaviors.Cease()
-local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
-Event:FireServer(
-    "LightRoom",
-    {
-        ["Light Color"] = Color3.new(0, 0.098297834396362, 1)
-    }
-)
-local entity = spawner.Create({Entity = {Name = "Cease",Asset = "74118615017772",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 100,Delay = 5,Reversed = false},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 100,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"CEASE", "你该学会辨别", "听取周围的声音", "反复进柜子躲避它"},Cause = ""}})
-entity:SetCallback("OnRebounding", function(startOfRebound)
 
-	local entityModel = entity.Model
-	local main = entityModel:WaitForChild("Main")
-	local attachment = main:WaitForChild("Attachment")
-	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
-	local sounds = {
-		footsteps = main:WaitForChild("Footsteps"),
-		playSound = main:WaitForChild("PlaySound"),
-		switch = main:WaitForChild("Switch"),
-		switchBack = main:WaitForChild("SwitchBack")
-	}
+ local entity = spawner.Create({Entity = {Name = "Cease",Asset = "74118615017772",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 200,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 100,Delay = 5,Reversed = false},Rebounding = {Enabled = false,Type = "ambush",Min = 4,Max = 4,Delay = math.random(10, 30) / 10},Damage = {Enabled = false,Range = 100,Amount = 125},Crucifixion = {Enabled = true,Range = 100,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"CEASE", "...", "...", "..."},Cause = "Cease"}}) 
+entity:SetCallback("OnRebounding", function(startOfRebound) 
+	local entityModel = entity.Model 
+	local main = entityModel:WaitForChild("Main") 
+	local attachment = main:WaitForChild("Attachment") 
+	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch") 
+	local sounds = { 
+		footsteps = main:WaitForChild("Footsteps"), 
+		playSound = main:WaitForChild("PlaySound"), 
+		switch = main:WaitForChild("Switch"), 
+		switchBack = main:WaitForChild("SwitchBack") 
+	} 
+ 
+	for _, c in attachment:GetChildren() do 
+		c.Enabled = (not startOfRebound) 
+	end 
+	for _, c in AttachmentSwitch:GetChildren() do 
+		c.Enabled = startOfRebound 
+	end 
+ 
+	if startOfRebound == true then 
+		sounds.footsteps.PlaybackSpeed = 0.35 
+		sounds.playSound.PlaybackSpeed = 0.25 
+		sounds.switch:Play() 
+	else 
+		sounds.footsteps.PlaybackSpeed = 0.25 
+		sounds.playSound.PlaybackSpeed = 0.16 
+		sounds.switchBack:Play() 
+	end 
+	 
+end) 
 
-	for _, c in attachment:GetChildren() do
-		c.Enabled = (not startOfRebound)
-	end
-	for _, c in AttachmentSwitch:GetChildren() do
-		c.Enabled = startOfRebound
-	end
+entity:SetCallback("OnSpawned", function()
+    task.spawn(function()
+        local TweenService = game:GetService("TweenService")
+        local RunService = game:GetService("RunService")
+        local Players = game:GetService("Players")
+        local SoundService = game:GetService("SoundService")
+        local Debris = game:GetService("Debris")
+        local blue = Color3.fromRGB(91, 113, 255)
+        local fadeInfo = TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+        local originals = {}
 
-	if startOfRebound == true then
-		sounds.footsteps.PlaybackSpeed = 0.35
-		sounds.playSound.PlaybackSpeed = 0.25
-		sounds.switch:Play()
-	else
-		sounds.footsteps.PlaybackSpeed = 0.25
-		sounds.playSound.PlaybackSpeed = 0.16
-		sounds.switchBack:Play()
-	end
-	
+        local function fadeSequence(object, originalSequence, restoring)
+            local progress = Instance.new("NumberValue")
+            local connection = progress:GetPropertyChangedSignal("Value"):Connect(function()
+                if not object.Parent then
+                    return
+                end
+                local keypoints = {}
+                for _, keypoint in ipairs(originalSequence.Keypoints) do
+                    local color = restoring
+                        and blue:Lerp(keypoint.Value, progress.Value)
+                        or keypoint.Value:Lerp(blue, progress.Value)
+                    table.insert(keypoints, ColorSequenceKeypoint.new(keypoint.Time, color))
+                end
+                object.Color = ColorSequence.new(keypoints)
+            end)
+            local tween = TweenService:Create(progress, fadeInfo, {Value = 1})
+            tween.Completed:Connect(function()
+                connection:Disconnect()
+                if object.Parent then
+                    object.Color = restoring and originalSequence or ColorSequence.new(blue)
+                end
+                progress:Destroy()
+            end)
+            tween:Play()
+        end
+
+        local function tint(object)
+            if not object or originals[object] ~= nil then
+                return
+            end
+            if object:IsA("BasePart") or object:IsA("Light") then
+                originals[object] = object.Color
+                TweenService:Create(object, fadeInfo, {Color = blue}):Play()
+            elseif object:IsA("ParticleEmitter") or object:IsA("Beam") then
+                originals[object] = object.Color
+                fadeSequence(object, object.Color, false)
+            end
+        end
+
+        local function tintFixture(fixture)
+            if not fixture then
+                return
+            end
+            tint(fixture:FindFirstChild("PointLight", true))
+            tint(fixture:FindFirstChild("SpotLight", true))
+            local neon = fixture:FindFirstChild("Neon", true)
+            tint(neon)
+            if not neon then
+                return
+            end
+            local bright = neon:FindFirstChild("Bright sh idfk")
+            local atachm = neon:FindFirstChild("atachm")
+            local glow = neon:FindFirstChild("Glow")
+            tint(bright and bright:FindFirstChild("ParticleEmitter"))
+            tint(atachm and atachm:FindFirstChild("Ok you cannot tell me this isnt good"))
+            tint(glow and glow:FindFirstChild("Beam"))
+        end
+
+        local rooms = workspace:FindFirstChild("CurrentRooms")
+        if rooms then
+            for _, room in ipairs(rooms:GetChildren()) do
+                if room:IsA("Model") then
+                    local assets = room:FindFirstChild("Assets")
+                    if assets then
+                        for _, item in ipairs(assets:GetChildren()) do
+                            if item:IsA("Model") and item.Name == "Chandelier" then
+                                tintFixture(item:FindFirstChild("LightFixture", true))
+                            end
+                        end
+                        local lightFixtures = assets:FindFirstChild("Light_Fixtures")
+                        if lightFixtures then
+                            for _, item in ipairs(lightFixtures:GetChildren()) do
+                                if item:IsA("Model") and item.Name == "LightStand" then
+                                    tintFixture(item:FindFirstChild("LightFixture", true))
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        task.wait(5)
+
+        for object, originalColor in pairs(originals) do
+            if object.Parent then
+                if typeof(originalColor) == "Color3" then
+                    TweenService:Create(object, fadeInfo, {Color = originalColor}):Play()
+                else
+                    fadeSequence(object, originalColor, true)
+                end
+            end
+        end
+
+        local deadline = os.clock() + 9
+        local damaged = false
+        while os.clock() < deadline and not damaged do
+            RunService.Heartbeat:Wait()
+            local player = Players.LocalPlayer
+            local character = player and player.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 and humanoid.MoveDirection.Magnitude > 0.05 then
+                damaged = true
+                local sound = Instance.new("Sound")
+                sound.SoundId = "rbxassetid://115478216144558"
+                sound.Volume = 2
+                sound.Looped = false
+                sound.Parent = SoundService
+                sound.Ended:Connect(function()
+                    sound:Destroy()
+                end)
+                Debris:AddItem(sound, 20)
+                sound:Play()
+                humanoid:TakeDamage(100)
+            end
+        end
+    end)
 end)
+
 entity:Run()
-wait(7)
-local Event = game:GetService("ReplicatedStorage").RemotesFolder.AdminPanelRunCommand
-Event:FireServer(
-    "LightRoom",
-    {
-        ["Light Color"] = Color3.new(0, 0, 0)
-    }
-)
 end
 
 function entityBehaviors.SHADOWSW()
@@ -10006,202 +10122,435 @@ end
 end
 
 function entityBehaviors.SuperDread()
-function GetRoom()
-    local gruh = workspace.CurrentRooms
-    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local function GetRoom()
+    local gruh = workspace:WaitForChild("CurrentRooms")
+    return gruh:FindFirstChild(tostring(ReplicatedStorage.GameData.LatestRoom.Value))
 end
 
-local plr = game.Players.LocalPlayer
-local chr = plr.Character or plr.CharacterAdded:Wait()
-local tweenservice = game:GetService("TweenService")
-
-function LoadCustomInstance(source, parent)
+local function LoadCustomInstance(source, parent)
     local model
 
-    local function NormalizeGitHubURL(url)
-        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
-            return url .. "?raw=true"
-        end
-        return url
-    end
-
-    while task.wait() and not model do
-        if tonumber(source) then
-            local success, result = pcall(function()
-                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
-            end)
-            if success and result then
-                model = result
-            end
-        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
-            local url = NormalizeGitHubURL(source)
-            local success, result = pcall(function()
-                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
-                local content = game:HttpGet(url)
-                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
-                    writefile(filename, content)
-                    local assetFunc = getcustomasset or getsynasset
-                    local obj = game:GetObjects(assetFunc(filename))[1]
-                    delfile(filename)
-                    return obj
-                else
-                    return nil
-                end
-            end)
-            if success and result then
-                model = result
-            end
-        else
+    for attempt = 1, 3 do
+        local success, result = pcall(function()
+            return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+        end)
+        if success and result then
+            model = result
             break
         end
+        task.wait(0.2)
+    end
 
-        if model then
-            model.Parent = parent or workspace
-            for _, obj in ipairs(model:GetDescendants()) do
-                if obj:IsA("Script") or obj:IsA("LocalScript") then
-                    obj:Destroy()
-                end
-            end
-            pcall(function()
-                model:SetAttribute("LoadedByExecutor", true)
-            end)
+    if not model then
+        warn("Dread model failed to load: " .. tostring(source))
+        return nil
+    end
+
+    for _, obj in ipairs(model:GetDescendants()) do
+        if obj:IsA("Script") or obj:IsA("LocalScript") then
+            obj:Destroy()
         end
     end
 
+    pcall(function()
+        model:SetAttribute("LoadedByExecutor", true)
+    end)
+    model.Parent = parent or workspace
     return model
 end
 
-local s = LoadCustomInstance(140017686556165, workspace) 
-if not s then
+if not Lighting:FindFirstChild("Ambience_Dread") then
+    Instance.new("ColorCorrectionEffect", Lighting).Name = "Ambience_Dread"
+end
+
+local dreadLighting = Lighting
+local dreadMainCorrection = dreadLighting:FindFirstChild("MainColorCorrection")
+local dreadOriginalCorrection = dreadMainCorrection and {
+    Brightness = dreadMainCorrection.Brightness,
+    Contrast = dreadMainCorrection.Contrast,
+    Saturation = dreadMainCorrection.Saturation,
+    TintColor = dreadMainCorrection.TintColor,
+    Enabled = dreadMainCorrection.Enabled
+}
+local dreadOriginalCameraType = workspace.CurrentCamera and workspace.CurrentCamera.CameraType
+local dreadShake = nil
+local dreadDeadConnection = nil
+local dreadCharacterConnection = nil
+local dreadVisualsRestored = false
+local dreadHeadFollowName = "DreadHeadFollow_" .. tostring(LocalPlayer.UserId)
+    .. "_" .. tostring(math.random(100000, 999999))
+local dreadHeadFollowActive = false
+local dreadLockedRoot = nil
+local dreadRootWasAnchored = nil
+local dreadAnimationTrack = nil
+local dreadAnimationObject = nil
+
+local function stopDreadHeadFollow()
+    if dreadHeadFollowActive then
+        dreadHeadFollowActive = false
+        RunService:UnbindFromRenderStep(dreadHeadFollowName)
+    end
+
+    if dreadLockedRoot and dreadLockedRoot.Parent and dreadRootWasAnchored ~= nil then
+        dreadLockedRoot.Anchored = dreadRootWasAnchored
+    end
+    dreadLockedRoot = nil
+    dreadRootWasAnchored = nil
+
+    if dreadAnimationTrack then
+        pcall(function()
+            dreadAnimationTrack:Stop(0)
+        end)
+        dreadAnimationTrack = nil
+    end
+    if dreadAnimationObject then
+        dreadAnimationObject:Destroy()
+        dreadAnimationObject = nil
+    end
+end
+
+local function restoreDreadVisuals()
+    if dreadVisualsRestored then
+        return
+    end
+    dreadVisualsRestored = true
+    stopDreadHeadFollow()
+
+    if dreadMainCorrection and dreadMainCorrection.Parent and dreadOriginalCorrection then
+        for property, value in pairs(dreadOriginalCorrection) do
+            dreadMainCorrection[property] = value
+        end
+    end
+
+    local dreadAmbience = dreadLighting:FindFirstChild("Ambience_Dread")
+    if dreadAmbience then
+        dreadAmbience.Enabled = false
+    end
+
+    if dreadShake then
+        pcall(function()
+            dreadShake:Stop()
+        end)
+    end
+
+    local dreadCamera = workspace.CurrentCamera
+    if dreadCamera then
+        dreadCamera.CameraType = dreadOriginalCameraType or Enum.CameraType.Custom
+        local aliveCharacter = LocalPlayer.Character
+        local aliveHumanoid = aliveCharacter and aliveCharacter:FindFirstChildOfClass("Humanoid")
+        if aliveHumanoid then
+            dreadCamera.CameraSubject = aliveHumanoid
+        end
+    end
+
+    pcall(function()
+        local mainGame = require(LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
+        mainGame.stopcam = false
+        mainGame.freemouse = false
+    end)
+
+    if dreadDeadConnection then
+        dreadDeadConnection:Disconnect()
+        dreadDeadConnection = nil
+    end
+    if dreadCharacterConnection then
+        dreadCharacterConnection:Disconnect()
+        dreadCharacterConnection = nil
+    end
+end
+
+local dreadCharacter = LocalPlayer.Character
+local dreadHumanoid = dreadCharacter and dreadCharacter:FindFirstChildOfClass("Humanoid")
+if dreadHumanoid then
+    dreadDeadConnection = dreadHumanoid.Died:Connect(restoreDreadVisuals)
+end
+dreadCharacterConnection = LocalPlayer.CharacterAdded:Connect(restoreDreadVisuals)
+
+local function vu535(p530)
+    local v531, v532 = workspace.CurrentCamera:WorldToViewportPoint(p530.Position)
+    if v532 then
+        v532 = v531.Z > 0
+    end
+
+    local v533 = RaycastParams.new()
+    v533.FilterType = Enum.RaycastFilterType.Blacklist
+    v533.FilterDescendantsInstances = {p530}
+
+    local v534 = workspace:Raycast(
+        p530.Position,
+        LocalPlayer.Character.UpperTorso.Position - p530.Position,
+        v533
+    )
+
+    if v532 then
+        if v534 then
+            v534 = v534.Instance
+        end
+
+        v532 = v534 ~= nil and v534.Parent == LocalPlayer.Character
+    end
+    return v532
+end
+
+local v536 = require(ReplicatedStorage.CameraShaker)
+local vu537 = workspace.CurrentCamera
+local vu539 = v536.new(Enum.RenderPriority.Camera.Value, function(p538)
+    vu537.CFrame = vu537.CFrame * p538
+end)
+vu539:Start()
+dreadShake = vu539
+vu539:ShakeOnce(2, 10, 1, 1)
+
+local vu540 = LoadCustomInstance(140017686556165, workspace)
+if not vu540 then
+    restoreDreadVisuals()
     return
 end
 
-local entity = s:FindFirstChildWhichIsA("BasePart")
-entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 1, -15)
-entity.Part.CFrame = entity.CFrame
+local v541 = GetRoom()
+local roomEntrance = v541 and v541:FindFirstChild("RoomEntrance")
+local vu542 = vu540:IsA("BasePart") and vu540
+    or vu540:FindFirstChildWhichIsA("BasePart", true)
 
-pcall(function()
-local room = workspace.CurrentRooms:FindFirstChild(
-    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
-)
-if room then
-    for _, obj in ipairs(room:GetDescendants()) do
-        if obj.Name == "PlaySound" and obj:IsA("Sound") then
-            obj:Stop()
-            obj.Playing = false
-            obj.TimePosition = 0
-            obj.Looped = false
-        end
+if not roomEntrance or not roomEntrance:IsA("BasePart") or not vu542 then
+    warn("Dread spawn failed: current room, RoomEntrance or entity BasePart is missing")
+    vu540:Destroy()
+    restoreDreadVisuals()
+    return
+end
+
+local spawnCFrame = roomEntrance.CFrame * CFrame.new(0, 1, -15)
+
+if vu540:IsA("Model") then
+
+    local offset = spawnCFrame * vu542.CFrame:Inverse()
+    vu540:PivotTo(offset * vu540:GetPivot())
+else
+    vu542.CFrame = spawnCFrame
+end
+
+local entityPart = vu542:FindFirstChild("Part")
+if entityPart and entityPart:IsA("BasePart") then
+    entityPart.CFrame = vu542.CFrame
+end
+
+Lighting.Ambience_Dread.Enabled = true
+Lighting.Ambience_Dread.Brightness = 0
+Lighting.Ambience_Dread.Contrast = 0
+Lighting.Ambience_Dread.Saturation = 0
+TweenService:Create(Lighting.Ambience_Dread, TweenInfo.new(2), {
+    Brightness = 0.1,
+    Contrast = 0.2,
+    Saturation = -0.7
+}):Play()
+
+coroutine.wrap(function()
+    while not dreadVisualsRestored and vu540.Parent and not vu535(vu542) do
+        task.wait(0.5)
     end
-end
-end)
-end
+    if dreadVisualsRestored or not vu540.Parent then
+        return
+    end
+    task.wait(1.5)
+    if dreadVisualsRestored or not vu540.Parent then
+        return
+    end
 
-function entityBehaviors.DreadJump()
-    local BLACK = Color3.new(0, 0, 0)
-    local WHITE = Color3.new(255, 255, 255)
+    Lighting.Ambience_Dread.Enabled = false
+    require(LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).stopcam = true
 
-    local part = Instance.new("Part")
-    part.Name = "Bound_" .. tick()
-    part.Parent = workspace
-    part.Size = Vector3.new(5, 5, 5)
-    part.Position = Vector3.new(0, 5, 0)
-    part.Anchored = true
-    part.Color = Color3.new(1, 0, 0)
+    local v544 = workspace.CurrentCamera
+    local v545 = v544.CFrame
+    v544.CameraType = Enum.CameraType.Scriptable
 
-    local dreadJumpSound = workspace:FindFirstChild("HardCoreSound") and workspace:FindFirstChild("HardCoreSound"):FindFirstChild("DreadJump")
-    if dreadJumpSound and dreadJumpSound:IsA("Sound") then
+    local v546 = TweenService:Create(
+        v544,
+        TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+        {CFrame = CFrame.lookAt(v545.p, vu542.Position)}
+    )
+    v546:Play()
+    wait(0.15)
+
+    local dreadSoundsFolder = workspace:FindFirstChild("HardCoreSound")
+    local dreadJumpSource = dreadSoundsFolder and dreadSoundsFolder:FindFirstChild("DreadJump")
+    if dreadJumpSource and dreadJumpSource:IsA("Sound") then
+        local dreadJumpSound = dreadJumpSource:Clone()
+        dreadJumpSound.Looped = false
+        dreadJumpSound.TimePosition = 0
+        dreadJumpSound.Parent = SoundService
+        dreadJumpSound.Ended:Once(function()
+            dreadJumpSound:Destroy()
+        end)
         dreadJumpSound:Play()
+        Debris:AddItem(dreadJumpSound, 30)
+    else
+
     end
 
-    task.wait(3)
+    v546:Pause()
 
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local SHAKE_INTENSITY = 1
-    local SHAKE_DURATION = 15
-    local SHAKE_SPEED = 70
-
-    local player = Players.LocalPlayer
-    if not player then return end
-
-    local camera = workspace.CurrentCamera
-    local startTime = tick()
-    local originalPosition = camera.CFrame.Position
-    local connection
-
-    connection = RunService.RenderStepped:Connect(function()
-        local elapsed = tick() - startTime
-        
-        if elapsed < SHAKE_DURATION then
-            local decay = 1 - (elapsed / SHAKE_DURATION)
-            local intensity = SHAKE_INTENSITY * decay
-            local time = elapsed * SHAKE_SPEED
-            local offset = Vector3.new(
-                math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
-                math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
-                math.sin(time * 1.0) * intensity * 0.3
-            )
-            local lookVector = camera.CFrame.LookVector
-            local upVector = camera.CFrame.UpVector
-            local rightVector = camera.CFrame.RightVector
-            local currentPos = camera.CFrame.Position
-            local newPos = currentPos + offset
-            camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
-        else
-            if connection then
-                connection:Disconnect()
-            end
+    local v547, v548, v549 = pairs(workspace:GetDescendants())
+    while true do
+        local v550
+        v549, v550 = v547(v548, v549)
+        if v549 == nil then
+            break
         end
-    end)
+        if v550.ClassName == "ParticleEmitter" then
+            v550.TimeScale = 0
+        end
+    end
 
-    local function getAllParts()
-        local parts = {}
-        local function collectParts(object)
-            for _, child in ipairs(object:GetChildren()) do
-                if child:IsA("BasePart") then
-                    table.insert(parts, child)
+    task.wait(2)
+    if dreadVisualsRestored then return end
+    if dreadMainCorrection and dreadMainCorrection.Parent then
+        dreadMainCorrection.Brightness = -1
+        dreadMainCorrection.Contrast = -4
+        dreadMainCorrection.Saturation = -1
+    end
+
+    local v551 = vu542
+    local v552, v553, v554 = pairs(v551:GetDescendants())
+    while true do
+        local v555
+        v554, v555 = v552(v553, v554)
+        if v554 == nil then
+            break
+        end
+        if v555.Name == "PointLight" then
+            v555:Destroy()
+        end
+    end
+
+    vu539:ShakeOnce(10, 100, 0.1, 2)
+    task.wait(1)
+    if dreadVisualsRestored then return end
+
+    local v556 = require(LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
+    v556.stopcam = false
+    v556.freemouse = false
+    task.wait(0.4)
+    if dreadVisualsRestored then return end
+
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local humrootpart = character and character:FindFirstChild("HumanoidRootPart")
+    local head = character and character:FindFirstChild("Head")
+    if not (humanoid and humrootpart and head) or humanoid.Health <= 0 then
+        warn("Dread death animation skipped: character parts are missing")
+        return
+    end
+
+    local HotSex = Instance.new("Animation")
+    HotSex.AnimationId = "rbxassetid://10096088747"
+    dreadAnimationObject = HotSex
+
+    local ok, animationError = pcall(function()
+        local animator = humanoid:FindFirstChildOfClass("Animator")
+        if not animator then
+            animator = Instance.new("Animator")
+            animator.Parent = humanoid
+        end
+        local HotSexOnHumanoid = animator:LoadAnimation(HotSex)
+        dreadAnimationTrack = HotSexOnHumanoid
+        HotSexOnHumanoid:Play()
+
+        dreadLockedRoot = humrootpart
+        dreadRootWasAnchored = humrootpart.Anchored
+        humrootpart.Anchored = true
+
+        v556.stopcam = true
+        local camera = workspace.CurrentCamera
+        camera.CameraType = Enum.CameraType.Scriptable
+
+        dreadHeadFollowActive = true
+        RunService:BindToRenderStep(
+            dreadHeadFollowName,
+            Enum.RenderPriority.Camera.Value - 1,
+            function()
+                if not dreadHeadFollowActive or dreadVisualsRestored or not head.Parent then
+                    return
                 end
-                collectParts(child)
+                local currentCamera = workspace.CurrentCamera
+                if currentCamera then
+                    currentCamera.CFrame = currentCamera.CFrame:Lerp(head.CFrame, 0.3)
+                end
             end
-        end
-        collectParts(workspace)
-        return parts
-    end
+        )
 
-    local allParts = getAllParts()
-    local isPlaying = true
-    local isBlack = true
-    local lastSwitchTime = tick()
-    local switchInterval = 0.08
-    local heartbeatConnection
+        vu539:ShakeOnce(10, 100, 0.1, 2)
 
-    heartbeatConnection = RunService.Heartbeat:Connect(function()
-        if not isPlaying then
-            heartbeatConnection:Disconnect()
-            return
+        vu539:ShakeOnce(2, 12, 0.2, 10)
+
+        humrootpart.CFrame = humrootpart.CFrame + Vector3.new(0, 1, 0)
+
+        local function nextAnimationStep(seconds)
+            task.wait(seconds)
+            return not dreadVisualsRestored and humanoid.Health > 0
+                and character == LocalPlayer.Character
         end
-        local now = tick()
-        if now - lastSwitchTime >= switchInterval then
-            lastSwitchTime = now
-            local targetColor = isBlack and BLACK or WHITE
-            isBlack = not isBlack
-            for _, part in ipairs(allParts) do
-                part.Color = targetColor
-            end
-        end
+
+        HotSexOnHumanoid:AdjustSpeed(0.8)
+        if not nextAnimationStep(0.5) then return end
+        HotSexOnHumanoid:AdjustSpeed(0.25)
+        if not nextAnimationStep(3.5) then return end
+        HotSexOnHumanoid:AdjustSpeed(-0.2)
+        if not nextAnimationStep(0.1) then return end
+        HotSexOnHumanoid:AdjustSpeed(-0.4)
+        if not nextAnimationStep(0.2) then return end
+        HotSexOnHumanoid:AdjustSpeed(0.1)
+        if not nextAnimationStep(0.2) then return end
+        HotSexOnHumanoid:AdjustSpeed(-0.25)
+        if not nextAnimationStep(1.5) then return end
+        HotSexOnHumanoid:AdjustSpeed(-0.15)
+        if not nextAnimationStep(2) then return end
+        HotSexOnHumanoid:AdjustSpeed(0)
+        nextAnimationStep(2)
     end)
 
-    if dreadJumpSound then
-        dreadJumpSound.Ended:Connect(function()
-            isPlaying = false
-            dreadJumpSound:Destroy()
-        end)
-        dreadJumpSound.Stopped:Connect(function()
-            isPlaying = false
-            dreadJumpSound:Destroy()
-        end)
+    if not ok then
+        warn("Dread death animation failed: " .. tostring(animationError))
     end
+
+    stopDreadHeadFollow()
+    if dreadVisualsRestored then return end
+
+    v556.stopcam = false
+    v556.freemouse = false
+    humanoid:TakeDamage(999)
+
+    pcall(function()
+        firesignal(ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
+            "You died to Dread...",
+            "Its presence is summoned when the clock hits 12...",
+            "Do not observe it! You may lose your sanity!"
+        }, "Blue")
+    end)
+end)()
+
+coroutine.wrap(function()
+    ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+    task.wait()
+    ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+    task.wait()
+    ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+    vu540:Destroy()
+    Lighting.Ambience_Dread.Enabled = false
+    if not dreadVisualsRestored then
+        restoreDreadVisuals()
+    end
+end)()
 end
 
 local Players = game:GetService("Players")
@@ -10586,12 +10935,12 @@ function entityBehaviors.MultiMonster()
 
     task.spawn(function()
         local sentences = {
-            "...",
-            "这个地方真有趣.",
-            "我喜欢这里?",
+            "你好？",
+            "你玩的开心吗.",
+            "这是第几次遇见你了?",
             "我会伤害到你吗?",
-            "我讨厌这些。",
-            "玩笑话总是让你开心。"
+            "玩的开心,拜托了.",
+            "开玩笑的啦,请注意哦。"
         }
 
         local timeout = 0
@@ -10864,7 +11213,6 @@ local entityConfig = {
     ["rbxassetid://109690961059477"] = entityBehaviors.LightOSs,
     ["rbxassetid://85554051164113"] = entityBehaviors.FigureXF,
     ["rbxassetid://80450670780109"] = entityBehaviors.SuperDread,
-    ["rbxassetid://140701104317815"] = entityBehaviors.DreadJump,
     ["rbxassetid://50"] = entityBehaviors.LOOKSW,
     ["rbxassetid://9999"] = entityBehaviors.SEEKEYES,
     ["rbxassetid://8888"] = entityBehaviors.HATREDJN,

@@ -16,7 +16,7 @@ local function setupDeathSound(char)
     hum.Died:Connect(function()
         local sound = Instance.new("Sound", workspace)
         sound.SoundId = "rbxassetid://" .. soundId
-        sound.Volume = 1
+        sound.Volume = 0.1
         sound:Play()
         sound.Ended:Wait()
         sound:Destroy()

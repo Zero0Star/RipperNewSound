@@ -394,7 +394,6 @@ mainGame.caption("In short, I wish you good luck.", true)
 wait(4)
 mainGame.caption("Task: Survive...", true)
 end
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local NEAR_SOUND_DISTANCE = 115
@@ -742,8 +741,215 @@ end
 local jumpscareActive = false
 local jumpscareFinished = false
 
+local ceaseFreezeActive = false
+local ceaseSpeedScale = 1
+local ceaseEventRunning = false
+local ceaseSilenceModel = nil
+local ceaseFreezeCycle = 0
+local ceaseSavedEffects = {}
+local ceaseEffectConnection = nil
+local ceaseClockConnection = nil
+local ceaseVirtualClock = 0
+local ceaseHandledModels = setmetatable({}, {__mode = "k"})
+local ceaseRefreshWatcher = nil
+
+local function CeaseTime1()
+    return ceaseVirtualClock
+end
+
+local function CeaseEasing1(alpha)
+    alpha = math.clamp(alpha, 0, 1)
+    return alpha * alpha * (3 - 2 * alpha)
+end
+
+local function CeaseApply1(scale)
+    ceaseSpeedScale = math.clamp(scale, 0, 1)
+
+    for object, saved in pairs(ceaseSavedEffects) do
+        if object.Parent then
+            if saved.Type == "Particle" then
+                pcall(function()
+                    object.TimeScale = saved.TimeScale * ceaseSpeedScale
+                end)
+            else
+                pcall(function()
+                    object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                end)
+                pcall(function()
+                    object.Volume = saved.Volume * ceaseSpeedScale
+                end)
+            end
+        end
+    end
+end
+
+local function CeaseTrack1(object)
+    if ceaseSavedEffects[object] then
+        return
+    end
+
+    if object:IsA("ParticleEmitter") then
+        ceaseSavedEffects[object] = {
+            Type = "Particle",
+            TimeScale = object.TimeScale
+        }
+    elseif object:IsA("Sound") then
+        ceaseSavedEffects[object] = {
+            Type = "Sound",
+            PlaybackSpeed = object.PlaybackSpeed,
+            Volume = object.Volume
+        }
+    else
+        return
+    end
+
+    local saved = ceaseSavedEffects[object]
+    if saved.Type == "Particle" then
+        pcall(function()
+            object.TimeScale = saved.TimeScale * ceaseSpeedScale
+        end)
+    else
+        pcall(function()
+            object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+        end)
+        pcall(function()
+            object.Volume = saved.Volume * ceaseSpeedScale
+        end)
+    end
+end
+
+local function CeaseRestore1()
+    ceaseFreezeCycle += 1
+
+    if ceaseEffectConnection then
+        ceaseEffectConnection:Disconnect()
+        ceaseEffectConnection = nil
+    end
+
+    for object, saved in pairs(ceaseSavedEffects) do
+        if object.Parent then
+            if saved.Type == "Particle" then
+                pcall(function()
+                    object.TimeScale = saved.TimeScale
+                end)
+            else
+                pcall(function()
+                    object.PlaybackSpeed = saved.PlaybackSpeed
+                    object.Volume = saved.Volume
+                end)
+            end
+        end
+    end
+
+    table.clear(ceaseSavedEffects)
+    ceaseSpeedScale = 1
+    ceaseFreezeActive = false
+
+    if ceaseEventRunning and ceaseRefreshWatcher then
+        ceaseRefreshWatcher()
+    end
+end
+
+local function CeaseStart1(ceaseModel)
+    if not ceaseEventRunning or ceaseFreezeActive
+        or not ceaseSilenceModel or not ceaseSilenceModel.Parent
+        or jumpscareActive or jumpscareFinished
+        or ceaseHandledModels[ceaseModel]
+    then
+        return
+    end
+
+    ceaseHandledModels[ceaseModel] = true
+    ceaseFreezeActive = true
+    ceaseFreezeCycle += 1
+    local cycle = ceaseFreezeCycle
+
+    for _, object in ipairs(ceaseSilenceModel:GetDescendants()) do
+        CeaseTrack1(object)
+    end
+
+    CeaseTrack1(SilenceSound)
+    CeaseTrack1(SilenceFarSound)
+
+    ceaseEffectConnection = ceaseSilenceModel.DescendantAdded:Connect(function(object)
+        if ceaseEventRunning and ceaseFreezeCycle == cycle then
+            CeaseTrack1(object)
+        end
+    end)
+
+    task.spawn(function()
+        local function valid()
+            return ceaseEventRunning
+                and ceaseFreezeCycle == cycle
+                and ceaseSilenceModel ~= nil
+                and ceaseSilenceModel.Parent ~= nil
+                and not jumpscareFinished
+        end
+
+        local function transition(fromScale, toScale, duration)
+            local started = os.clock()
+
+            while valid() do
+                local alpha = math.clamp((os.clock() - started) / duration, 0, 1)
+                local eased = CeaseEasing1(alpha)
+                CeaseApply1(fromScale + (toScale - fromScale) * eased)
+
+                if alpha >= 1 then
+                    return true
+                end
+
+                RunService.Heartbeat:Wait()
+            end
+
+            return false
+        end
+
+        if not transition(1, 0, 2.25) then
+            if ceaseFreezeCycle == cycle then
+                CeaseRestore1()
+            end
+            return
+        end
+
+        local started = os.clock()
+        while os.clock() - started < 13 do
+            if not valid() then
+                if ceaseFreezeCycle == cycle then
+                    CeaseRestore1()
+                end
+                return
+            end
+            task.wait(0.05)
+        end
+
+        if not transition(0, 1, 2) then
+            if ceaseFreezeCycle == cycle then
+                CeaseRestore1()
+            end
+            return
+        end
+
+        if ceaseFreezeCycle == cycle then
+            CeaseRestore1()
+        end
+    end)
+end
+
+local function CeaseStop1()
+    ceaseEventRunning = false
+    CeaseRestore1()
+
+    if ceaseClockConnection then
+        ceaseClockConnection:Disconnect()
+        ceaseClockConnection = nil
+    end
+
+    ceaseSilenceModel = nil
+end
+
+
 local function TriggerJumpscare1()
-    if jumpscareActive or jumpscareFinished then
+    if jumpscareActive or jumpscareFinished or ceaseFreezeActive then
         return
     end
 
@@ -975,7 +1181,7 @@ local function TriggerJumpscare1()
         RunService.RenderStepped:Wait()
     end
 
-    if humanoid and humanoid.Parent then
+    if humanoid and humanoid.Parent and not ceaseFreezeActive then
         humanoid:TakeDamage(100)
     end
 
@@ -1089,7 +1295,7 @@ local function ConfirmPlayingSound1(sound)
         return
     end
 
-    if jumpscareActive or jumpscareFinished then
+    if jumpscareActive or jumpscareFinished or ceaseFreezeActive then
         return
     end
 
@@ -1110,7 +1316,7 @@ local function ConfirmPlayingSound1(sound)
                 return
             end
 
-            if jumpscareActive or jumpscareFinished then
+            if jumpscareActive or jumpscareFinished or ceaseFreezeActive then
                 return
             end
 
@@ -1261,6 +1467,12 @@ local function StartSoundWatcher1()
         )
 end
 
+ceaseRefreshWatcher = function()
+    if nearSilence and not jumpscareActive and not jumpscareFinished then
+        StartSoundWatcher1()
+    end
+end
+
 local audioToken = 0
 
 local function StartRoomAudio1(
@@ -1282,7 +1494,7 @@ local function StartRoomAudio1(
 
     task.spawn(function()
         local started =
-            os.clock()
+            CeaseTime1()
 
         local currentMode =
             nil
@@ -1290,68 +1502,72 @@ local function StartRoomAudio1(
         while
             audioToken == token
             and not jumpscareFinished
-            and os.clock() - started < totalDuration
+            and CeaseTime1() - started < totalDuration
         do
-            local distance =
-                GetDistance1(
-                    entityPosition
-                )
-
-            if distance <= NEAR_SOUND_DISTANCE then
-                if currentMode ~= "near" then
-                    ResetSound1(
-                        SilenceFarSound
-                    )
-
-                    ResetSound1(
-                        SilenceSound
-                    )
-
-                    SilenceSound.Volume =
-                        5
-
-                    SilenceSound:Play()
-
-                    currentMode =
-                        "near"
-                end
-
-                if not nearSilence then
-                    StartSoundWatcher1()
-                end
+            if ceaseFreezeActive then
+                RunService.Heartbeat:Wait()
             else
-                if nearSilence then
-                    StopSoundWatcher1()
-                end
-
-                local farVolume =
-                    GetFarVolume1(
-                        distance
+                local distance =
+                    GetDistance1(
+                        entityPosition
                     )
 
-                if currentMode ~= "far" then
-                    ResetSound1(
-                        SilenceSound
-                    )
+                if distance <= NEAR_SOUND_DISTANCE then
+                    if currentMode ~= "near" then
+                        ResetSound1(
+                            SilenceFarSound
+                        )
 
-                    ResetSound1(
-                        SilenceFarSound
-                    )
+                        ResetSound1(
+                            SilenceSound
+                        )
 
-                    SilenceFarSound.Volume =
-                        farVolume
+                        SilenceSound.Volume =
+                            5
 
-                    SilenceFarSound:Play()
+                        SilenceSound:Play()
 
-                    currentMode =
-                        "far"
+                        currentMode =
+                            "near"
+                    end
+
+                    if not nearSilence then
+                        StartSoundWatcher1()
+                    end
                 else
-                    SilenceFarSound.Volume =
-                        farVolume
-                end
-            end
+                    if nearSilence then
+                        StopSoundWatcher1()
+                    end
 
-            RunService.Heartbeat:Wait()
+                    local farVolume =
+                        GetFarVolume1(
+                            distance
+                        )
+
+                    if currentMode ~= "far" then
+                        ResetSound1(
+                            SilenceSound
+                        )
+
+                        ResetSound1(
+                            SilenceFarSound
+                        )
+
+                        SilenceFarSound.Volume =
+                            farVolume
+
+                        SilenceFarSound:Play()
+
+                        currentMode =
+                            "far"
+                    else
+                        SilenceFarSound.Volume =
+                            farVolume
+                    end
+                end
+
+                RunService.Heartbeat:Wait()
+            end
         end
 
         if nearSilence then
@@ -1438,6 +1654,26 @@ function entityBehaviors.Silence22()
 
     Silence.Parent =
         workspace
+
+    CeaseStop1()
+    ceaseVirtualClock = 0
+    ceaseSilenceModel = Silence
+    ceaseEventRunning = true
+    ceaseClockConnection = RunService.Heartbeat:Connect(function(dt)
+        if ceaseEventRunning then
+            ceaseVirtualClock += dt * ceaseSpeedScale
+        end
+    end)
+
+    task.spawn(function()
+        while ceaseEventRunning and ceaseSilenceModel == Silence and Silence.Parent do
+            local ceaseModel = workspace:FindFirstChild("Cease", true)
+            if ceaseModel and ceaseModel:IsA("Model") and not ceaseHandledModels[ceaseModel] then
+                CeaseStart1(ceaseModel)
+            end
+            task.wait(0.1)
+        end
+    end)
 
     for _, object in ipairs(
         Silence:GetDescendants()
@@ -1650,7 +1886,7 @@ function entityBehaviors.Silence22()
         descending
     )
         local started =
-            os.clock()
+            CeaseTime1()
 
         while true do
             if jumpscareFinished then
@@ -1659,7 +1895,7 @@ function entityBehaviors.Silence22()
 
             local alpha =
                 math.clamp(
-                    (os.clock() - started)
+                    (CeaseTime1() - started)
                     / duration,
                     0,
                     1
@@ -1708,6 +1944,14 @@ function entityBehaviors.Silence22()
     for roomIndex = startRoomIndex, #rooms do
 
         local data = rooms[roomIndex]
+        if jumpscareFinished then
+            break
+        end
+
+        while ceaseFreezeActive and not jumpscareFinished do
+            RunService.Heartbeat:Wait()
+        end
+
         if jumpscareFinished then
             break
         end
@@ -1763,10 +2007,10 @@ function entityBehaviors.Silence22()
         end
 
         local holdStarted =
-            os.clock()
+            CeaseTime1()
 
         while
-            os.clock()
+            CeaseTime1()
             - holdStarted
             < 4
         do
@@ -1794,9 +2038,14 @@ function entityBehaviors.Silence22()
         end
     end
 
+    while ceaseFreezeActive and not jumpscareFinished do
+        RunService.Heartbeat:Wait()
+    end
+
     audioToken += 1
 
     StopSoundWatcher1()
+    CeaseStop1()
 
     ResetSound1(
         SilenceFarSound
@@ -1806,7 +2055,6 @@ function entityBehaviors.Silence22()
         Silence:Destroy()
     end
 end
-
 function entityBehaviors.MONTNS()
 local concrete = workspace.MonumentEntity.Top.Concrete
 local decal = Instance.new("Decal")
@@ -3707,17 +3955,191 @@ function entityBehaviors.RipperSw()
     end
     task.spawn(modifyObjectsWithTween)
 
-    local activeRipperTween = nil
     local isJumpScaring = false
     local ripper = nil
     local ripperAsset = nil
     local isRipperDespawning = false
+    local ripperIsMoving = false
+    local ripperMoveCancelled = false
+    local ceaseFreezeActive = false
+    local ceaseSpeedScale = 1
+    local ceaseFreezeSerial = 0
+    local ceaseSavedEffects = {}
+    local ceaseDescendantConnection = nil
+    local ceaseHandledModels = setmetatable({}, { __mode = "k" })
+
+    local function easeCease(alpha)
+        alpha = math.clamp(alpha, 0, 1)
+        return alpha * alpha * (3 - 2 * alpha)
+    end
+
+    local function applyCeaseSpeed(scale)
+        ceaseSpeedScale = math.clamp(scale, 0, 1)
+
+        for object, saved in pairs(ceaseSavedEffects) do
+            if object.Parent then
+                if saved.Type == "Particle" then
+                    pcall(function()
+                        object.TimeScale = saved.TimeScale * ceaseSpeedScale
+                    end)
+                else
+                    pcall(function()
+                        object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                        object.Volume = saved.Volume * ceaseSpeedScale
+                    end)
+                end
+            end
+        end
+    end
+
+    local function trackCeaseEffect(object)
+        if ceaseSavedEffects[object] then
+            return
+        end
+
+        if object:IsA("ParticleEmitter") then
+            ceaseSavedEffects[object] = {
+                Type = "Particle",
+                TimeScale = object.TimeScale
+            }
+        elseif object:IsA("Sound") then
+            ceaseSavedEffects[object] = {
+                Type = "Sound",
+                PlaybackSpeed = object.PlaybackSpeed,
+                Volume = object.Volume
+            }
+        else
+            return
+        end
+
+        if ceaseFreezeActive then
+            local saved = ceaseSavedEffects[object]
+            if saved.Type == "Particle" then
+                pcall(function()
+                    object.TimeScale = saved.TimeScale * ceaseSpeedScale
+                end)
+            else
+                pcall(function()
+                    object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                    object.Volume = saved.Volume * ceaseSpeedScale
+                end)
+            end
+        end
+    end
+
+    local function cancelCeaseFreeze()
+        ceaseFreezeSerial = ceaseFreezeSerial + 1
+
+        if ceaseDescendantConnection then
+            ceaseDescendantConnection:Disconnect()
+            ceaseDescendantConnection = nil
+        end
+
+        for object, saved in pairs(ceaseSavedEffects) do
+            if object.Parent then
+                if saved.Type == "Particle" then
+                    pcall(function()
+                        object.TimeScale = saved.TimeScale
+                    end)
+                else
+                    pcall(function()
+                        object.PlaybackSpeed = saved.PlaybackSpeed
+                        object.Volume = saved.Volume
+                    end)
+                end
+            end
+        end
+
+        ceaseSavedEffects = {}
+        ceaseSpeedScale = 1
+        ceaseFreezeActive = false
+    end
+
+    local function startCeaseFreeze(ceaseModel)
+        if ceaseFreezeActive or not ripperIsMoving or isJumpScaring
+            or isRipperDespawning or not ripper or not ripper.Parent
+            or ceaseHandledModels[ceaseModel] then
+            return
+        end
+
+        ceaseHandledModels[ceaseModel] = true
+        ceaseFreezeActive = true
+        ceaseFreezeSerial = ceaseFreezeSerial + 1
+        local freezeSerial = ceaseFreezeSerial
+
+        for _, descendant in ipairs(ripper:GetDescendants()) do
+            trackCeaseEffect(descendant)
+        end
+
+        if backgroundSound and backgroundSound.Parent then
+            trackCeaseEffect(backgroundSound)
+        end
+
+        ceaseDescendantConnection = ripper.DescendantAdded:Connect(function(descendant)
+            if ceaseFreezeSerial == freezeSerial and ceaseFreezeActive then
+                trackCeaseEffect(descendant)
+            end
+        end)
+
+        task.spawn(function()
+            local function stillValid()
+                return ceaseFreezeSerial == freezeSerial
+                    and not isJumpScaring
+                    and not isRipperDespawning
+                    and ripper and ripper.Parent ~= nil
+            end
+
+            local function transition(fromScale, toScale, duration)
+                local startedAt = os.clock()
+                while true do
+                    if not stillValid() then
+                        if ceaseFreezeSerial == freezeSerial then
+                            cancelCeaseFreeze()
+                        end
+                        return false
+                    end
+
+                    local alpha = math.clamp((os.clock() - startedAt) / duration, 0, 1)
+                    local eased = easeCease(alpha)
+                    applyCeaseSpeed(fromScale + (toScale - fromScale) * eased)
+
+                    if alpha >= 1 then
+                        return true
+                    end
+
+                    RunService.Heartbeat:Wait()
+                end
+            end
+
+            if not transition(1, 0, 2.25) then
+                return
+            end
+
+            local holdStartedAt = os.clock()
+            while os.clock() - holdStartedAt < 13 do
+                if not stillValid() then
+                    if ceaseFreezeSerial == freezeSerial then
+                        cancelCeaseFreeze()
+                    end
+                    return
+                end
+                task.wait(0.05)
+            end
+
+            if not transition(0, 1, 2) then
+                return
+            end
+
+            if ceaseFreezeSerial == freezeSerial then
+                cancelCeaseFreeze()
+            end
+        end)
+    end
 
     local function StopRipperMovement()
-        if activeRipperTween then
-            activeRipperTween:Cancel()
-            activeRipperTween = nil
-        end
+        ripperMoveCancelled = true
+        ripperIsMoving = false
+        cancelCeaseFreeze()
     end
 
     local function TriggerRipperJumpScare(
@@ -4136,51 +4558,41 @@ function entityBehaviors.RipperSw()
         return orderedNodes
     end
 
-    local function moveRipperTo(
-        targetCFrame,
-        speedFactor
-    )
-        if isJumpScaring
-            or not ripper
-            or not ripper.Parent
-        then
+    local function moveRipperTo(targetCFrame, speedFactor)
+        if isJumpScaring or not ripper or not ripper.Parent then
             return false
         end
 
-        local distance = (
-            ripper.Position - targetCFrame.Position
-        ).Magnitude
+        ripperMoveCancelled = false
+        ripperIsMoving = true
 
-        local duration =
-            math.max(distance / speedFactor, 0.01)
+        local startCFrame = ripper.CFrame
+        local totalDistance = (startCFrame.Position - targetCFrame.Position).Magnitude
+        local travelled = 0
 
-        local tween = TweenService:Create(
-            ripper,
-            TweenInfo.new(
-                duration,
-                Enum.EasingStyle.Linear,
-                Enum.EasingDirection.InOut
-            ),
-            {
-                CFrame = targetCFrame
-            }
-        )
+        while not ripperMoveCancelled and not isJumpScaring
+            and ripper and ripper.Parent do
+            local deltaTime = RunService.Heartbeat:Wait()
 
-        activeRipperTween = tween
-        tween:Play()
+            if totalDistance > 0.001 and travelled < totalDistance then
+                travelled = math.min(
+                    travelled + math.max(speedFactor, 0) * ceaseSpeedScale * math.min(deltaTime, 0.1),
+                    totalDistance
+                )
+                ripper.CFrame = startCFrame:Lerp(targetCFrame, travelled / totalDistance)
+            else
+                ripper.CFrame = targetCFrame
+                travelled = totalDistance
+            end
 
-        local playbackState =
-            tween.Completed:Wait()
-
-        if activeRipperTween == tween then
-            activeRipperTween = nil
+            if travelled >= totalDistance and not ceaseFreezeActive then
+                ripperIsMoving = false
+                return true
+            end
         end
 
-        return playbackState
-                == Enum.PlaybackState.Completed
-            and not isJumpScaring
-            and ripper
-            and ripper.Parent ~= nil
+        ripperIsMoving = false
+        return false
     end
 
     local function ExecuteRipperPathfinding()
@@ -4291,6 +4703,24 @@ function entityBehaviors.RipperSw()
                 cameraShaker:Start()
             end
         end
+
+        task.spawn(function()
+            while ripper and ripper.Parent and not isJumpScaring
+                and not isRipperDespawning do
+                if ripperIsMoving and not ceaseFreezeActive then
+                    local ceaseModel = workspace:FindFirstChild("Cease", true)
+                    if ceaseModel and ceaseModel:IsA("Model")
+                        and not ceaseHandledModels[ceaseModel] then
+                        startCeaseFreeze(ceaseModel)
+                    end
+                end
+                task.wait(0.1)
+            end
+
+            if ceaseFreezeActive then
+                cancelCeaseFreeze()
+            end
+        end)
 
         local lastProximityShake = 0
 
@@ -4499,7 +4929,6 @@ function entityBehaviors.RipperSw()
             end
         end
 
-        activeRipperTween = nil
 
         if isJumpScaring
             or not ripper
@@ -8517,7 +8946,22 @@ sound1:Destroy()
 sound2:Destroy()
 end
 function entityBehaviors.REBOUNDSW()
+    local RunService = game:GetService("RunService")
+    local ceaseHandledModels = setmetatable({}, { __mode = "k" })
+
     local testModelId = 129306212463084
+    local reboundTemplate = nil
+    local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+    local reboundCameraShake = CameraShaker.new(
+        Enum.RenderPriority.Camera.Value + 30,
+        function(shakeCFrame)
+            local activeCamera = workspace.CurrentCamera
+            if activeCamera then
+                activeCamera.CFrame = activeCamera.CFrame * shakeCFrame
+            end
+        end
+    )
+    reboundCameraShake:Start()
 
     local function PlayPreloadedSound(soundName, volume)
         volume = volume or 1
@@ -8549,34 +8993,55 @@ function entityBehaviors.REBOUNDSW()
     end
 
     function SpawnReboundEntity(startRoomType)
-        for _, obj in pairs(workspace:GetChildren()) do
-            if obj.Name == "Rebound" then
-                pcall(function() obj:Destroy() end)
+        if not reboundTemplate then
+            for attempt = 1, 6 do
+                local success, loaded = pcall(function()
+                    return game:GetObjects("rbxassetid://" .. testModelId)[1]
+                end)
+                if success and loaded then
+                    reboundTemplate = loaded
+                    break
+                end
+                if attempt < 6 then
+                    task.wait(0.4)
+                end
             end
         end
 
-        local success, modelResult = pcall(function()
-            return game:GetObjects("rbxassetid://" .. testModelId)[1]
-        end)
-
-        if not success or not modelResult then
-            return
+        if not reboundTemplate then
+            warn("Rebound model load failed")
+            return false
         end
 
-        local testEntity = modelResult:Clone()
-        testEntity.Parent = workspace
+        local testEntity = reboundTemplate:Clone()
+        if not testEntity then
+            return false
+        end
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if obj.Name == "Rebound" then
+                pcall(function()
+                    obj:Destroy()
+                end)
+            end
+        end
         testEntity.Name = "Rebound"
+        testEntity.Parent = workspace
 
-        local primaryPart = testEntity.PrimaryPart or testEntity:FindFirstChildWhichIsA("BasePart")
+        local primaryPart
+        if testEntity:IsA("Model") then
+            primaryPart = testEntity.PrimaryPart or testEntity:FindFirstChildWhichIsA("BasePart", true)
+        elseif testEntity:IsA("BasePart") then
+            primaryPart = testEntity
+        end
         if not primaryPart then
             testEntity:Destroy()
-            return
+            return false
         end
 
         primaryPart.Anchored = true
         primaryPart.CanCollide = false
 
-        spawn(function()
+        task.spawn(function()
             local targetRoom
             if startRoomType == "start" then
                 targetRoom = workspace.CurrentRooms:FindFirstChild("0")
@@ -8584,39 +9049,33 @@ function entityBehaviors.REBOUNDSW()
                 local maxRoom = GetMaxExistingRoom()
                 targetRoom = workspace.CurrentRooms:FindFirstChild(tostring(maxRoom))
             end
-            
+
             if targetRoom then
-                local targetCFrame
+                local targetPart
                 if targetRoom:FindFirstChild("Nodes") then
-                    targetCFrame = (targetRoom:FindFirstChild("RoomEntrance") or targetRoom:FindFirstChild("RoomExit")).CFrame
+                    targetPart = targetRoom:FindFirstChild("RoomEntrance")
+                        or targetRoom:FindFirstChild("RoomExit")
                 else
-                    targetCFrame = targetRoom.RoomExit.CFrame
+                    targetPart = targetRoom:FindFirstChild("RoomExit")
+                        or targetRoom:FindFirstChild("RoomEntrance")
                 end
-                primaryPart.CFrame = targetCFrame + Vector3.new(0, 1, 0)
+                if targetPart and targetPart:IsA("BasePart") then
+                    primaryPart.CFrame = targetPart.CFrame + Vector3.new(0, 1, 0)
+                end
             end
-            
-            wait(2)
-            StartEntityLogic(primaryPart, startRoomType)
+
+            task.wait(2)
+            if primaryPart.Parent then
+                StartEntityLogic(primaryPart, startRoomType)
+            end
         end)
+        return true
     end
 
     function StartEntityLogic(primaryPart, startRoomType)
-        local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
-        local camera = workspace.CurrentCamera
-        local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(cf)
-            camera.CFrame = camera.CFrame * cf
-        end)
-        camShake:Start()
-        local proximityCamShake = CameraShaker.new(
-            Enum.RenderPriority.Camera.Value + 1,
-            function(shakeCf)
-                local currentCamera = workspace.CurrentCamera
-                if currentCamera then
-                    currentCamera.CFrame = currentCamera.CFrame * shakeCf
-                end
-            end
-        )
-        proximityCamShake:Start()
+        if not primaryPart or not primaryPart.Parent then
+            return
+        end
 
         local lastProximityShake = 0
         task.spawn(function()
@@ -8640,7 +9099,7 @@ function entityBehaviors.REBOUNDSW()
                         local positionInfluence = 0.35 + 0.4 * alpha
                         local rotationInfluence = 0.3 + 0.4 * alpha
 
-                        proximityCamShake:ShakeOnce(
+                        reboundCameraShake:ShakeOnce(
                             amplitude,
                             roughness,
                             0.01,
@@ -8654,17 +9113,368 @@ function entityBehaviors.REBOUNDSW()
                 end
             end
 
-            proximityCamShake:Stop()
         end)
 
-        local v305 = 2
-        local v306 = 1.2
+        local v305 = 1.4
+        local v306 = 0.4
         local v307 = Vector3.new(0, 1, 0)
         local v310 = workspace.CurrentRooms
 
         local detectedPlayer = false
-        local shakeCooldown = 0
-        
+        local ceaseSpeedScale = 1
+        local ceaseFreezeActive = false
+        local ceaseFreezeToken = 0
+        local ceaseStoredEffects = {}
+        local ceaseDescendantConnection = nil
+        local ceaseSoundConnection = nil
+        local reboundMoving = false
+        local activeMovementTween = nil
+        local activeMovementTarget = nil
+        local activeMovementOrigin = nil
+        local ceaseStopMotionTween = nil
+        local ceaseResumeMotionTween = nil
+        local reboundMovementEnded = false
+        local reboundModel = primaryPart:FindFirstAncestor("Rebound")
+        if not reboundModel and primaryPart.Name == "Rebound" then
+            reboundModel = primaryPart
+        end
+
+        local function easeCease(alpha)
+            alpha = math.clamp(alpha, 0, 1)
+            return alpha * alpha * (3 - 2 * alpha)
+        end
+
+        local function applyCeaseScale(scale)
+            ceaseSpeedScale = math.clamp(scale, 0, 1)
+            for obj, state in pairs(ceaseStoredEffects) do
+                if obj.Parent then
+                    if state.IsParticle then
+                        pcall(function()
+                            obj.TimeScale = state.TimeScale * ceaseSpeedScale
+                        end)
+                    else
+                        pcall(function()
+                            obj.PlaybackSpeed = state.PlaybackSpeed * ceaseSpeedScale
+                        end)
+                        pcall(function()
+                            obj.Volume = state.Volume * ceaseSpeedScale
+                        end)
+                        if ceaseSpeedScale <= 0 then
+                            if not state.PausedByCease and obj.IsPlaying then
+                                pcall(function()
+                                    obj:Pause()
+                                    state.PausedByCease = true
+                                end)
+                            end
+                        elseif state.PausedByCease then
+                            pcall(function()
+                                obj:Resume()
+                                state.PausedByCease = false
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+
+        local function trackCeaseEffect(obj)
+            if ceaseStoredEffects[obj] then
+                return
+            end
+            if obj:IsA("ParticleEmitter") then
+                ceaseStoredEffects[obj] = {
+                    IsParticle = true,
+                    TimeScale = obj.TimeScale
+                }
+            elseif obj:IsA("Sound") then
+                ceaseStoredEffects[obj] = {
+                    IsParticle = false,
+                    PlaybackSpeed = obj.PlaybackSpeed,
+                    Volume = obj.Volume,
+                    PausedByCease = false
+                }
+            else
+                return
+            end
+
+            if ceaseFreezeActive then
+                local state = ceaseStoredEffects[obj]
+                if state.IsParticle then
+                    pcall(function()
+                        obj.TimeScale = state.TimeScale * ceaseSpeedScale
+                    end)
+                else
+                    pcall(function()
+                        obj.PlaybackSpeed = state.PlaybackSpeed * ceaseSpeedScale
+                    end)
+                    pcall(function()
+                        obj.Volume = state.Volume * ceaseSpeedScale
+                    end)
+                end
+            end
+        end
+
+        local function restoreCeaseEffects(resumeMovement)
+            ceaseFreezeToken = ceaseFreezeToken + 1
+            if ceaseStopMotionTween then
+                ceaseStopMotionTween:Cancel()
+                ceaseStopMotionTween = nil
+            end
+            if ceaseResumeMotionTween then
+                ceaseResumeMotionTween:Cancel()
+                ceaseResumeMotionTween = nil
+            end
+            if ceaseDescendantConnection then
+                ceaseDescendantConnection:Disconnect()
+                ceaseDescendantConnection = nil
+            end
+            if ceaseSoundConnection then
+                ceaseSoundConnection:Disconnect()
+                ceaseSoundConnection = nil
+            end
+            for obj, state in pairs(ceaseStoredEffects) do
+                if obj.Parent then
+                    if state.IsParticle then
+                        pcall(function()
+                            obj.TimeScale = state.TimeScale
+                        end)
+                    else
+                        pcall(function()
+                            obj.PlaybackSpeed = state.PlaybackSpeed
+                        end)
+                        pcall(function()
+                            obj.Volume = state.Volume
+                        end)
+                        if state.PausedByCease then
+                            pcall(function()
+                                obj:Resume()
+                            end)
+                        end
+                    end
+                end
+            end
+            ceaseStoredEffects = {}
+            ceaseSpeedScale = 1
+            ceaseFreezeActive = false
+            if resumeMovement and not detectedPlayer and primaryPart.Parent and activeMovementTarget then
+                local remainingDistance = (activeMovementTarget.Position - primaryPart.Position).Magnitude
+                local originalDistance = activeMovementOrigin
+                    and (activeMovementTarget.Position - activeMovementOrigin.Position).Magnitude or 0
+                local originalSpeed = originalDistance > 0 and originalDistance / v305 or 0
+                if remainingDistance > 0.01 then
+                    local remainingDuration = originalSpeed > 0
+                        and math.max(remainingDistance / originalSpeed, 0.01) or v305
+                    activeMovementTween = game.TweenService:Create(
+                        primaryPart,
+                        TweenInfo.new(remainingDuration, Enum.EasingStyle.Linear),
+                        { CFrame = activeMovementTarget }
+                    )
+                    activeMovementTween:Play()
+                end
+            end
+        end
+
+        local function triggerCeaseFreeze(ceaseModel)
+            if ceaseFreezeActive or not reboundMoving or reboundMovementEnded
+                or not primaryPart.Parent or ceaseHandledModels[ceaseModel]
+                or not activeMovementTween
+                or activeMovementTween.PlaybackState ~= Enum.PlaybackState.Playing then
+                return
+            end
+
+            ceaseHandledModels[ceaseModel] = true
+            ceaseFreezeActive = true
+            ceaseFreezeToken = ceaseFreezeToken + 1
+            local token = ceaseFreezeToken
+
+            activeMovementTween:Cancel()
+            activeMovementTween = nil
+            local startCFrame = primaryPart.CFrame
+            local destination = activeMovementTarget
+            local remainingDistance = (destination.Position - startCFrame.Position).Magnitude
+            local originalDistance = activeMovementOrigin
+                and (destination.Position - activeMovementOrigin.Position).Magnitude or remainingDistance
+            local initialSpeed = originalDistance / v305
+            local stopDistance = math.min(remainingDistance, initialSpeed * 2.25 / 5)
+            local stopFraction = remainingDistance > 0.001 and stopDistance / remainingDistance or 0
+            local stoppingCFrame = startCFrame:Lerp(destination, math.clamp(stopFraction, 0, 1))
+            ceaseStopMotionTween = game.TweenService:Create(
+                primaryPart,
+                TweenInfo.new(2.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                { CFrame = stoppingCFrame }
+            )
+            ceaseStopMotionTween:Play()
+
+            if reboundModel then
+                trackCeaseEffect(reboundModel)
+                for _, obj in ipairs(reboundModel:GetDescendants()) do
+                    trackCeaseEffect(obj)
+                end
+                ceaseDescendantConnection = reboundModel.DescendantAdded:Connect(function(obj)
+                    if ceaseFreezeToken == token and ceaseFreezeActive then
+                        trackCeaseEffect(obj)
+                    end
+                end)
+            end
+
+            local soundFolder = workspace:FindFirstChild("HardCoreSound")
+            if soundFolder then
+                for _, obj in ipairs(soundFolder:GetDescendants()) do
+                    if obj:IsA("Sound") and obj.Name:lower():find("rebound", 1, true) then
+                        trackCeaseEffect(obj)
+                    end
+                end
+                ceaseSoundConnection = soundFolder.DescendantAdded:Connect(function(obj)
+                    if ceaseFreezeToken == token and ceaseFreezeActive
+                        and obj:IsA("Sound") and obj.Name:lower():find("rebound", 1, true) then
+                        trackCeaseEffect(obj)
+                    end
+                end)
+            end
+
+            task.spawn(function()
+                local function isValid()
+                    return ceaseFreezeToken == token
+                        and primaryPart.Parent ~= nil
+                        and not reboundMovementEnded
+                end
+
+                local function transition(fromScale, toScale, duration)
+                    local startedAt = os.clock()
+                    while true do
+                        if not isValid() then
+                            if ceaseFreezeToken == token then
+                                restoreCeaseEffects()
+                            end
+                            return false
+                        end
+                        local alpha = math.clamp((os.clock() - startedAt) / duration, 0, 1)
+                        applyCeaseScale(fromScale + (toScale - fromScale) * easeCease(alpha))
+                        if alpha >= 1 then
+                            return true
+                        end
+                        RunService.Heartbeat:Wait()
+                    end
+                end
+
+                if not transition(1, 0, 2.25) then
+                    return
+                end
+                if ceaseStopMotionTween then
+                    ceaseStopMotionTween:Cancel()
+                    ceaseStopMotionTween = nil
+                end
+                local holdStartedAt = os.clock()
+                while os.clock() - holdStartedAt < 13 do
+                    if not isValid() then
+                        if ceaseFreezeToken == token then
+                            restoreCeaseEffects()
+                        end
+                        return
+                    end
+                    task.wait(0.05)
+                end
+                local remainingDistance = (destination.Position - primaryPart.Position).Magnitude
+                local recoverDistance = math.min(remainingDistance, initialSpeed * 2 / 5)
+                local recoverFraction = remainingDistance > 0.001
+                    and recoverDistance / remainingDistance or 0
+                local recoveringCFrame = primaryPart.CFrame:Lerp(
+                    destination, math.clamp(recoverFraction, 0, 1)
+                )
+                ceaseResumeMotionTween = game.TweenService:Create(
+                    primaryPart,
+                    TweenInfo.new(2, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+                    { CFrame = recoveringCFrame }
+                )
+                ceaseResumeMotionTween:Play()
+                if not transition(0, 1, 2) then
+                    return
+                end
+                if ceaseFreezeToken == token then
+                    restoreCeaseEffects(true)
+                end
+            end)
+        end
+
+        task.spawn(function()
+            while primaryPart.Parent and not reboundMovementEnded do
+                if reboundMoving and not ceaseFreezeActive then
+                    local ceaseModel = workspace:FindFirstChild("Cease", true)
+                    if ceaseModel and ceaseModel:IsA("Model")
+                        and not ceaseHandledModels[ceaseModel] then
+                        triggerCeaseFreeze(ceaseModel)
+                    end
+                end
+                task.wait(0.1)
+            end
+            if ceaseFreezeActive then
+                restoreCeaseEffects()
+            end
+        end)
+
+        local function startReboundTween(targetCFrame)
+            if not primaryPart.Parent then
+                return false
+            end
+            activeMovementOrigin = primaryPart.CFrame
+            activeMovementTarget = targetCFrame
+            activeMovementTween = game.TweenService:Create(
+                primaryPart,
+                TweenInfo.new(v305),
+                { CFrame = targetCFrame }
+            )
+            reboundMoving = true
+            activeMovementTween:Play()
+            return true
+        end
+
+        local function waitReboundStep(duration)
+            local elapsed = 0
+            while elapsed < duration and primaryPart.Parent do
+                local dt = RunService.Heartbeat:Wait()
+                if not ceaseFreezeActive then
+                    elapsed = elapsed + dt
+                end
+            end
+            while ceaseFreezeActive and primaryPart.Parent do
+                RunService.Heartbeat:Wait()
+            end
+            return primaryPart.Parent ~= nil
+        end
+
+        local function waitForReboundArrival()
+            local destination = activeMovementTarget
+            if not destination then
+                return false
+            end
+            while primaryPart.Parent do
+                if not ceaseFreezeActive then
+                    local remaining = (destination.Position - primaryPart.Position).Magnitude
+                    if remaining <= 0.05 then
+                        return true
+                    end
+                    local state = activeMovementTween and activeMovementTween.PlaybackState
+                    if not activeMovementTween
+                        or state == Enum.PlaybackState.Cancelled
+                        or state == Enum.PlaybackState.Completed then
+                        local fullDistance = activeMovementOrigin
+                            and (destination.Position - activeMovementOrigin.Position).Magnitude or remaining
+                        local segmentSpeed = fullDistance > 0 and fullDistance / v305 or 0
+                        local duration = segmentSpeed > 0
+                            and math.max(remaining / segmentSpeed, 0.01) or v305
+                        activeMovementTween = game.TweenService:Create(
+                            primaryPart,
+                            TweenInfo.new(duration, Enum.EasingStyle.Linear),
+                            { CFrame = destination }
+                        )
+                        activeMovementTween:Play()
+                    end
+                end
+                RunService.Heartbeat:Wait()
+            end
+            return false
+        end
+
         local function CheckLineOfSight(entityPart, player, maxDistance)
             if not entityPart or not player or not player.Character then
                 return false
@@ -8695,6 +9505,9 @@ function entityBehaviors.REBOUNDSW()
         local function ExecutePlayer()
             if detectedPlayer then return end
             detectedPlayer = true
+            if ceaseFreezeActive then
+                restoreCeaseEffects()
+            end
 
             local vu321 = Instance.new("ScreenGui")
             local vu322 = Instance.new("ImageLabel")
@@ -8830,7 +9643,7 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
                     break
                 end
 
-                local targetRoom = v310:FindFirstChild(currentRoom)
+                local targetRoom = v310:FindFirstChild(tostring(currentRoom))
                 if targetRoom then
                     local targetCFrame
                     if targetRoom:FindFirstChild("Nodes") then
@@ -8839,11 +9652,16 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
                         targetCFrame = targetRoom.RoomExit.CFrame
                     end
 
-                    game.TweenService:Create(primaryPart, TweenInfo.new(v305), {
-                        CFrame = targetCFrame + v307
-                    }):Play()
-                    
-                    wait(v306)
+                    if not startReboundTween(targetCFrame + v307) then
+                        break
+                    end
+
+                    if not waitReboundStep(v306) then
+                        break
+                    end
+                    if not waitForReboundArrival() then
+                        break
+                    end
                 end
 
                 maxRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
@@ -8858,7 +9676,7 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
                     break
                 end
 
-                local targetRoom = v310:FindFirstChild(currentRoom)
+                local targetRoom = v310:FindFirstChild(tostring(currentRoom))
                 if targetRoom then
                     local targetCFrame
                     if targetRoom:FindFirstChild("Nodes") then
@@ -8867,19 +9685,33 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
                         targetCFrame = targetRoom.RoomExit.CFrame
                     end
 
-                    game.TweenService:Create(primaryPart, TweenInfo.new(v305), {
-                        CFrame = targetCFrame + v307
-                    }):Play()
-                    
-                    wait(v306)
+                    if not startReboundTween(targetCFrame + v307) then
+                        break
+                    end
+
+                    if not waitReboundStep(v306) then
+                        break
+                    end
+                    if not waitForReboundArrival() then
+                        break
+                    end
                 end
 
                 currentRoom = currentRoom - 1
             end
         end
 
-        primaryPart.Anchored = false
-        primaryPart.CanCollide = false
+        while ceaseFreezeActive and primaryPart.Parent do
+            RunService.Heartbeat:Wait()
+        end
+        reboundMovementEnded = true
+        if ceaseFreezeActive then
+            restoreCeaseEffects()
+        end
+        if primaryPart.Parent then
+            primaryPart.Anchored = false
+            primaryPart.CanCollide = false
+        end
     end
 
     for _, obj in pairs(workspace:GetChildren()) do
@@ -8905,77 +9737,64 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
     local TW = tween:Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {TintColor = Color3.fromRGB(255, 255, 255)})
     TW:Play()
 
-    local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
-    local camara = game.Workspace.CurrentCamera
-    local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-        camara.CFrame = camara.CFrame * shakeCf
+    reboundCameraShake:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+
+    task.wait(3)
+
+    local latestRoom = game.ReplicatedStorage.GameData.LatestRoom
+    local doorGateOpen = false
+    local acceptedDoorCount = 0
+    local doorSignal = Instance.new("BindableEvent")
+    local doorConnection = latestRoom:GetPropertyChangedSignal("Value"):Connect(function()
+        if doorGateOpen then
+            acceptedDoorCount = acceptedDoorCount + 1
+            doorSignal:Fire()
+        end
     end)
-    camShake:Start()
-    camShake:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
 
-    wait(3)
-
-    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/DOORS-Entity-Spawner-V2/main/init.luau"))()
-
-    SpawnReboundEntity("latest")
-
-    local sound1 = PlayPreloadedSound("ReboundMovings", 3)
-    if sound1 then
-        repeat
-            wait()
-        until sound1.IsPlaying == false
+    local function waitForSoundToFinish(sound)
+        if not sound or not sound.Parent then
+            return
+        end
+        local finished = false
+        local connection = sound.Ended:Connect(function()
+            finished = true
+        end)
+        local startedAt = os.clock()
+        while sound.Parent and not finished do
+            if os.clock() - startedAt >= 120 then
+                break
+            end
+            if not sound.IsLoaded and os.clock() - startedAt >= 15 then
+                break
+            end
+            task.wait(0.05)
+        end
+        connection:Disconnect()
     end
-    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 
-    SpawnReboundEntity("start")
-
-    local CameraShaker2 = require(game.ReplicatedStorage.CameraShaker)
-    local camara2 = game.Workspace.CurrentCamera
-    local camShake2 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-        camara2.CFrame = camara2.CFrame * shakeCf
-    end)
-    camShake2:Start()
-    camShake2:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
-    local sound2 = PlayPreloadedSound("ReboundMovings", 3)
-    if sound2 then
-        repeat
-            wait()
-        until sound2.IsPlaying == false
+    local function waitForNextQualifiedDoor()
+        local previousAcceptedCount = acceptedDoorCount
+        doorGateOpen = true
+        while acceptedDoorCount == previousAcceptedCount do
+            doorSignal.Event:Wait()
+        end
+        doorGateOpen = false
     end
-    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 
-    SpawnReboundEntity("latest")
-
-    local CameraShaker3 = require(game.ReplicatedStorage.CameraShaker)
-    local camara3 = game.Workspace.CurrentCamera
-    local camShake3 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-        camara3.CFrame = camara3.CFrame * shakeCf
-    end)
-    camShake3:Start()
-    camShake3:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
-    local sound3 = PlayPreloadedSound("ReboundMovings", 3)
-    if sound3 then
-        repeat
-            wait()
-        until sound3.IsPlaying == false
+    local directions = { "latest", "start", "latest", "start" }
+    for waveIndex, startRoomType in ipairs(directions) do
+        SpawnReboundEntity(startRoomType)
+        local movingSound = PlayPreloadedSound("ReboundMovings", 3)
+        waitForSoundToFinish(movingSound)
+        if waveIndex < #directions then
+            waitForNextQualifiedDoor()
+        end
     end
-    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+    doorGateOpen = false
+    doorConnection:Disconnect()
+    doorSignal:Destroy()
 
-    SpawnReboundEntity("start")
-
-    local CameraShaker4 = require(game.ReplicatedStorage.CameraShaker)
-    local camara4 = game.Workspace.CurrentCamera
-    local camShake4 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-        camara4.CFrame = camara4.CFrame * shakeCf
-    end)
-    camShake4:Start()
-    camShake4:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
-    local sound4 = PlayPreloadedSound("ReboundMovings", 3)
-    if sound4 then
-        repeat
-            wait()
-        until sound4.IsPlaying == false
-    end
 end
 
 function entityBehaviors.REBOUNDrebound()

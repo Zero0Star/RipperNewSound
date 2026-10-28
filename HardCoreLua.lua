@@ -5206,256 +5206,508 @@ entity:Run()
 end
 
 function entityBehaviors.ForstBite()
-function GetRoom()
-    local gruh = workspace.CurrentRooms
-    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
-end
-
-local plr = game.Players.LocalPlayer
-local chr = plr.Character or plr.CharacterAdded:Wait()
-local tweenservice = game:GetService("TweenService")
-
-function LoadCustomInstance(source, parent)
-    local model
-
-    local function NormalizeGitHubURL(url)
-        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
-            return url .. "?raw=true"
-        end
-        return url
-    end
-
-    while task.wait() and not model do
-        if tonumber(source) then
-            local success, result = pcall(function()
-                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
-            end)
-            if success and result then
-                model = result
-            end
-        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
-            local url = NormalizeGitHubURL(source)
-            local success, result = pcall(function()
-                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
-                local content = game:HttpGet(url)
-                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
-                    writefile(filename, content)
-                    local assetFunc = getcustomasset or getsynasset
-                    local obj = game:GetObjects(assetFunc(filename))[1]
-                    delfile(filename)
-                    return obj
-                else
-                    return nil
-                end
-            end)
-            if success and result then
-                model = result
-            end
-        else
-            break
-        end
-
-        if model then
-            model.Parent = parent or workspace
-            for _, obj in ipairs(model:GetDescendants()) do
-                if obj:IsA("Script") or obj:IsA("LocalScript") then
-                    obj:Destroy()
-                end
-            end
-            pcall(function()
-                model:SetAttribute("LoadedByExecutor", true)
-            end)
-        end
-    end
-
-    return model
-end
-
-local s = LoadCustomInstance("83840759413024", workspace)
-if not s then
-    return
-end
-
-local entity = s:FindFirstChildWhichIsA("BasePart")
-entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 5, -15)
-entity.Part.CFrame = entity.CFrame
-
-pcall(function()
-local room = workspace.CurrentRooms:FindFirstChild(
-    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
-)
-if room then
-    for _, obj in ipairs(room:GetDescendants()) do
-        if obj.Name == "PlaySound" and obj:IsA("Sound") then
-            obj:Stop()
-            obj.Playing = false
-            obj.TimePosition = 0
-            obj.Looped = false
-        end
-    end
-end
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.ToolEventPrompt.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SparkParticles.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.SmokeParticles.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireParticles.Enabled = false
-workspace.CurrentRooms[game.ReplicatedStorage.GameData.LatestRoom.Value].Assets.Fireplace.Fireplace_Logs.Log.FireLight.Enabled = false
-end)
-
-
-local pointLight = Instance.new("PointLight")
-pointLight.Color = Color3.new(255, 255, 255)
-pointLight.Range = 60
-pointLight.Brightness = 99999
-pointLight.Parent = entity
-
-tweenservice:Create(pointLight, TweenInfo.new(3), {
-    Brightness = 0
-}):Play()
-
-local sound = Instance.new("Sound")
-sound.SoundId = "rbxassetid://137044859218769"
-sound.Looped = false
-sound.Volume = 5
-sound.Parent = s
-sound:Play()
-
-local frost = Instance.new("ColorCorrectionEffect")
-frost.Parent = game.Lighting
-tweenservice:Create(frost, TweenInfo.new(10), {
-    TintColor = Color3.fromRGB(217, 250, 255),
-    Saturation = -0.7,
-    Contrast = 0.2
-}):Play()
-
-for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
-    if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
-        entity.Attachment[v].Enabled = false
-    end
-end
-wait(8)
-local roomChanged = false
-local roomChangedConnection
-roomChangedConnection = game.ReplicatedStorage.GameData.LatestRoom.Changed:Connect(function()
-    roomChanged = true
-    if roomChangedConnection then
-        roomChangedConnection:Disconnect()
-    end
-end)
-for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
-    if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
-        entity.Attachment[v].Enabled = true
-    end
-end
-wait(2)
-
-if roomChanged then
-    for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
-        if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
-            entity.Attachment[v].Enabled = false
-        end
-    end
-    
-    pcall(function() entity.Ambience:Stop() end)
-    pcall(function() entity.AmbienceFar:Stop() end)
-    
-    local des = Instance.new("Sound")
-    des.SoundId = "rbxassetid://109891187801924"
-    des.Looped = false
-    des.Volume = 2.5
-    des.Parent = s
-    des:Play()
-    
-    wait(5)
-    s:Destroy()
-    
-    tweenservice:Create(frost, TweenInfo.new(5), {
-        TintColor = Color3.fromRGB(255, 255, 255),
-        Saturation = 0,
-        Contrast = 0
-    }):Play()
-    wait(5)
-    frost:Destroy()
-    return
-end
-pcall(function() entity.Ambience:Play() end)
-pcall(function() entity.AmbienceFar:Play() end)
-
-local dmg = true
-task.spawn(function()
-    while dmg and not roomChanged do
-        wait(1)
-        local lighter = chr:FindFirstChild("Lighter")
-        local safe = false
-        if lighter then
-            local handle = lighter:FindFirstChild("Handle")
-            if handle then
-                local holder = handle:FindFirstChild("EffectsHolder")
-                if holder then
-                    local attach = holder:FindFirstChild("AttachOn")
-                    if attach then
-                        local main = attach:FindFirstChild("MainLight")
-                        if main and main:IsA("PointLight") then
-                            safe = main.Enabled
+local vu5 = game:GetObjects("rbxassetid://85104600103168")[1]
+        spawn(function()
+            getgenv().death = false
+            local function vu529()
+                while true do
+                    function DEATHMESSAGE(pu506, pu507)
+                        spawn(function()
+                            for _ = 1, 50 do
+                                wait()
+                                game:GetService("ReplicatedStorage").GameStats["Player_" .. game.Players.LocalPlayer.Name].Total.DeathCause.Value = pu507
+                                firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, pu506, "Blue")
+                            end
+                        end)
+                    end
+                    if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
+                        break
+                    end
+                    wait(0.01)
+                    local v508 = game.Players.LocalPlayer
+                    local vu509 = workspace.CurrentCamera
+                    local vu510 = v508.Character
+                    game:GetService("ReplicatedStorage")
+                    local frostbiteFreezeActive = false
+                    local v512 = require(game.ReplicatedStorage:WaitForChild("CameraShaker")).new(Enum.RenderPriority.Camera.Value, function(p511)
+                        if not frostbiteFreezeActive then
+                            vu509.CFrame = vu509.CFrame * p511
+                        end
+                    end)
+                    v512:Start()
+                    local v513 = Instance.new("Model", game:GetService("Lighting"))
+                    local v514 = vu5:Clone()
+                    local v515 = v514.FrostyNew
+                    local v516 = v515.Attachment
+                    v514.Parent = workspace
+                    v513:Destroy()
+                    local v517 = workspace.CurrentRooms[game:GetService("ReplicatedStorage").GameData.LatestRoom.Value]
+                    local nodeFolder = v517:FindFirstChild("Nodes") or v517:FindFirstChild("PathfindNodes")
+                    local spawnPart
+                    if nodeFolder then
+                        local nodes = {}
+                        for _, node in ipairs(nodeFolder:GetChildren()) do
+                            if node:IsA("BasePart") then
+                                table.insert(nodes, node)
+                            end
+                        end
+                        table.sort(nodes, function(a, b)
+                            local na, nb = tonumber(a.Name), tonumber(b.Name)
+                            if na and nb then
+                                return na < nb
+                            elseif na then
+                                return true
+                            elseif nb then
+                                return false
+                            end
+                            return a.Name < b.Name
+                        end)
+                        local v518 = math.max(1, math.floor(#nodes / 2))
+                        spawnPart = nodes[v518]
+                    end
+                    if not spawnPart then
+                        for _, candidateName in ipairs({v517.Name, "RoomEntrance", "RoomExit"}) do
+                            local candidate = v517:FindFirstChild(candidateName)
+                            if candidate and candidate:IsA("BasePart") then
+                                spawnPart = candidate
+                                break
+                            end
+                        end
+                        if not spawnPart then
+                            spawnPart = v517.PrimaryPart
                         end
                     end
+                    if not spawnPart then
+                        warn("Frostbite: 当前房间缺少可用的生成位置: " .. v517.Name)
+                        v514:Destroy()
+                        return
+                    end
+                    v515.CFrame = spawnPart.CFrame + Vector3.new(0, 11, 0)
+                    local v519 = Instance.new("ColorCorrectionEffect")
+                    v519.Parent = game:GetService("Lighting")
+                    v519.TintColor = Color3.new(1, 1, 1)
+                    v519.Enabled = false
+                    local v520 = v512:StartShake(3.6, 55, 5)
+                    local frostbiteLighterStates = setmetatable({}, {__mode = "k"})
+                    local frostbiteLighterConnections = {}
+                    local frostbiteLighterDebug = false
+                    local frostbiteEventActive = true
+                    local frostbiteFreezeBusy = false
+                    local frostbiteFreezeFactor = 1
+                    local frostbiteEffects = {}
+                    local frostbiteSeenCease = setmetatable({}, {__mode = "k"})
+                    local frostbiteStaticTween = nil
+                    local frostbiteShakerStopped = false
+
+                    local function registerFrostbiteEffect(object)
+                        if frostbiteEffects[object] then
+                            return
+                        end
+                        if object:IsA("ParticleEmitter") then
+                            frostbiteEffects[object] = {"particle", object.TimeScale}
+                        elseif object:IsA("Sound") then
+                            frostbiteEffects[object] = {"sound", object.PlaybackSpeed, object.Volume}
+                        else
+                            return
+                        end
+                        local state = frostbiteEffects[object]
+                        if frostbiteFreezeBusy then
+                            pcall(function()
+                                if state[1] == "particle" then
+                                    object.TimeScale = state[2] * frostbiteFreezeFactor
+                                else
+                                    object.PlaybackSpeed = state[2] * frostbiteFreezeFactor
+                                    object.Volume = state[3] * frostbiteFreezeFactor
+                                end
+                            end)
+                        end
+                    end
+
+                    local function applyFrostbiteFreeze(factor)
+                        frostbiteFreezeFactor = factor
+                        for object, state in pairs(frostbiteEffects) do
+                            if object.Parent then
+                                pcall(function()
+                                    if state[1] == "particle" then
+                                        object.TimeScale = state[2] * factor
+                                    else
+                                        object.PlaybackSpeed = state[2] * factor
+                                        object.Volume = state[3] * factor
+                                    end
+                                end)
+                            else
+                                frostbiteEffects[object] = nil
+                            end
+                        end
+                    end
+
+                    local function restoreFrostbiteEffects()
+                        for object, state in pairs(frostbiteEffects) do
+                            if object.Parent then
+                                pcall(function()
+                                    if state[1] == "particle" then
+                                        object.TimeScale = state[2]
+                                    else
+                                        object.PlaybackSpeed = state[2]
+                                        object.Volume = state[3]
+                                    end
+                                end)
+                            end
+                            frostbiteEffects[object] = nil
+                        end
+                        frostbiteFreezeFactor = 1
+                    end
+
+                    local function restoreFrostbiteShake()
+                        if frostbiteShakerStopped then
+                            frostbiteShakerStopped = false
+                            pcall(function()
+                                v512:Start()
+                            end)
+                        end
+                    end
+
+                    local function applyFrostbiteFreezeTween(startFactor, endFactor, duration)
+                        local started = os.clock()
+                        while frostbiteEventActive do
+                            local alpha = math.clamp((os.clock() - started) / duration, 0, 1)
+                            local eased = alpha * alpha * (3 - 2 * alpha)
+                            applyFrostbiteFreeze(startFactor + (endFactor - startFactor) * eased)
+                            if alpha >= 1 then
+                                return true
+                            end
+                            game:GetService("RunService").Heartbeat:Wait()
+                        end
+                        return false
+                    end
+
+                    local function startFrostbiteCease(cease)
+                        if not frostbiteEventActive or frostbiteFreezeBusy or frostbiteSeenCease[cease] then
+                            return
+                        end
+                        frostbiteSeenCease[cease] = true
+                        frostbiteFreezeBusy = true
+                        frostbiteFreezeActive = true
+                        frostbiteShakerStopped = true
+                        pcall(function()
+                            v512:Stop()
+                        end)
+                        if frostbiteStaticTween and frostbiteStaticTween.PlaybackState == Enum.PlaybackState.Playing then
+                            frostbiteStaticTween:Pause()
+                        end
+                        for _, object in ipairs(v514:GetDescendants()) do
+                            registerFrostbiteEffect(object)
+                        end
+                        task.spawn(function()
+                            if not applyFrostbiteFreezeTween(frostbiteFreezeFactor, 0, 2.25) then
+                                return
+                            end
+                            local holdStarted = os.clock()
+                            while frostbiteEventActive and os.clock() - holdStarted < 13 do
+                                applyFrostbiteFreeze(0)
+                                game:GetService("RunService").Heartbeat:Wait()
+                            end
+                            if not frostbiteEventActive then
+                                return
+                            end
+                            if not applyFrostbiteFreezeTween(0, 1, 2) then
+                                return
+                            end
+                            restoreFrostbiteEffects()
+                            if frostbiteStaticTween and frostbiteStaticTween.PlaybackState == Enum.PlaybackState.Paused then
+                                frostbiteStaticTween:Play()
+                            end
+                            frostbiteFreezeBusy = false
+                            frostbiteFreezeActive = false
+                            restoreFrostbiteShake()
+                        end)
+                    end
+
+                    local frostbiteDescendantConnection = v514.DescendantAdded:Connect(function(object)
+                        if frostbiteFreezeBusy then
+                            registerFrostbiteEffect(object)
+                        end
+                    end)
+
+                    task.spawn(function()
+                        while frostbiteEventActive and v514.Parent do
+                            local cease = workspace:FindFirstChild("Cease")
+                            if cease and cease:IsA("Model") then
+                                startFrostbiteCease(cease)
+                            end
+                            task.wait(0.1)
+                        end
+                    end)
+
+                    local function endFrostbiteCease()
+                        for _, connection in ipairs(frostbiteLighterConnections) do
+                            connection:Disconnect()
+                        end
+                        table.clear(frostbiteLighterConnections)
+                        frostbiteEventActive = false
+                        frostbiteFreezeActive = false
+                        frostbiteFreezeBusy = false
+                        if frostbiteDescendantConnection then
+                            frostbiteDescendantConnection:Disconnect()
+                        end
+                        restoreFrostbiteEffects()
+                        if frostbiteStaticTween and frostbiteStaticTween.PlaybackState == Enum.PlaybackState.Paused then
+                            frostbiteStaticTween:Play()
+                        end
+                        restoreFrostbiteShake()
+                    end
+                    v516.face.Enabled = false
+                    v516.BlackTrail.Enabled = false
+                    v516.Heylois.Enabled = false
+                    v516.smoke.Enabled = true
+                    v516.BlackTrai3l.Enabled = true
+                    v516.BlackTrai2l.Enabled = true
+                    v515.Part.ParticleEmitter.Enabled = false
+                    v515["Static Effect"]:Play()
+                    wait(5)
+                    v515["Static Effect"]:Play()
+                    frostbiteStaticTween = game.TweenService:Create(v515["Static Effect"], TweenInfo.new(2), {
+                        Pitch = 0
+                    })
+                    frostbiteStaticTween:Play()
+                    if frostbiteFreezeActive then
+                        frostbiteStaticTween:Pause()
+                    end
+                    v520:StartFadeOut(2.5)
+                    wait(2)
+                    local v521 = v512:StartShake(2, 55, 25, nil, Vector3.new(5, 5, 5))
+                    local frostbiteBlueTween = game.TweenService:Create(v519, TweenInfo.new(7), {
+                        TintColor = Color3.new(0.00784314, 0.188235, 1)
+                    })
+                    frostbiteBlueTween:Play()
+                    local vu522 = true
+
+                    local function findFrostbiteLighter(character)
+                        if not character then
+                            return nil
+                        end
+                        local exact = character:FindFirstChild("Lighter")
+                        if exact then
+                            return exact
+                        end
+                        for _, child in ipairs(character:GetChildren()) do
+                            local name = string.lower(child.Name)
+                            if string.find(name, "lighter", 1, true) then
+                                return child
+                            end
+                        end
+                        return nil
+                    end
+
+                    local function getFrostbiteEnabledEffect(instance)
+                        if instance:IsA("ParticleEmitter") or instance:IsA("Fire")
+                            or instance:IsA("PointLight") or instance:IsA("SpotLight")
+                            or instance:IsA("SurfaceLight") or instance:IsA("Beam")
+                            or instance:IsA("Trail") or instance:IsA("Smoke")
+                            or instance:IsA("Sparkles") then
+                            return instance.Enabled
+                        end
+                        return nil
+                    end
+
+                    local function getFrostbiteVisualState(attachOn)
+                        if not attachOn then
+                            return nil
+                        end
+                        local hasEffect = false
+                        local anyEnabled = false
+                        local function checkEffect(object)
+                            local enabled = getFrostbiteEnabledEffect(object)
+                            if enabled ~= nil then
+                                hasEffect = true
+                                if enabled then
+                                    anyEnabled = true
+                                end
+                            end
+                        end
+                        checkEffect(attachOn)
+                        for _, object in ipairs(attachOn:GetDescendants()) do
+                            checkEffect(object)
+                        end
+                        if hasEffect then
+                            return anyEnabled
+                        end
+                        return nil
+                    end
+
+                    local function getFrostbiteBooleanState(lighter, effectsHolder, attachOn)
+                        local stateNames = {
+                            "IsLit", "Lit", "IsOn", "On", "Ignited",
+                            "IsIgnited", "LightOn", "IsActivated", "Using", "IsUsing"
+                        }
+                        for _, container in ipairs({lighter, effectsHolder or lighter, attachOn or lighter}) do
+                            for _, name in ipairs(stateNames) do
+                                local attribute = container:GetAttribute(name)
+                                if typeof(attribute) == "boolean" then
+                                    return attribute
+                                end
+                                local value = container:FindFirstChild(name)
+                                if value and value:IsA("BoolValue") then
+                                    return value.Value
+                                end
+                            end
+                        end
+                        return nil
+                    end
+
+                    local function watchFrostbiteLighter(lighter)
+                        if not lighter:IsA("Tool") or frostbiteLighterStates[lighter] then
+                            return
+                        end
+                        local state = {active = false, activated = false}
+                        frostbiteLighterStates[lighter] = state
+                        table.insert(frostbiteLighterConnections, lighter.Activated:Connect(function()
+                            state.active = not state.active
+                            state.activated = true
+                        end))
+                        table.insert(frostbiteLighterConnections, lighter.Unequipped:Connect(function()
+                            state.active = false
+                            state.activated = false
+                        end))
+                    end
+
+                    local function isFrostbiteLighterLit(character)
+                        local lighter = findFrostbiteLighter(character)
+                        if not lighter then
+                            return false
+                        end
+                        watchFrostbiteLighter(lighter)
+                        local effectsHolder = lighter:FindFirstChild("EffectsHolder", true)
+                        local attachOn = effectsHolder and effectsHolder:FindFirstChild("AttachOn", true)
+                        if not attachOn then
+                            attachOn = lighter:FindFirstChild("AttachOn", true)
+                        end
+                        if not attachOn then
+                            local characterHolder = character:FindFirstChild("EffectsHolder", true)
+                            if characterHolder then
+                                effectsHolder = characterHolder
+                                attachOn = characterHolder:FindFirstChild("AttachOn", true)
+                            end
+                        end
+                        local visualState = getFrostbiteVisualState(attachOn)
+                        if visualState == true then
+                            return true
+                        end
+                        local booleanState = getFrostbiteBooleanState(lighter, effectsHolder, attachOn)
+                        if booleanState == true then
+                            return true
+                        end
+                        local state = frostbiteLighterStates[lighter]
+                        if state and state.activated then
+                            return state.active
+                        end
+                        if booleanState ~= nil then
+                            return booleanState
+                        end
+                        if visualState ~= nil then
+                            return visualState
+                        end
+                        if frostbiteLighterDebug then
+                            warn("Frostbite lighter: no usable on/off effect", lighter:GetFullName(),
+                                "holder:", effectsHolder and effectsHolder:GetFullName() or "none",
+                                "AttachOn:", attachOn and attachOn:GetFullName() or "none")
+                        end
+                        return state ~= nil and state.activated and state.active or false
+                    end
+
+                    spawn(function()
+                        while wait(1) and vu522 do
+                            if not frostbiteFreezeActive then
+                                local activeCharacter = v508.Character
+                                local v523 = activeCharacter and activeCharacter:FindFirstChildOfClass("Humanoid")
+                                if v523 and v523.Health > 0 then
+                                    local lighterLit = isFrostbiteLighterLit(activeCharacter)
+                                    if not lighterLit then
+                                        if frostbiteLighterDebug then
+                                            warn("Frostbite damage: Lighter not detected as active")
+                                        end
+                                        v523:TakeDamage(5)
+                                    elseif frostbiteLighterDebug then
+                                        print("Frostbite damage blocked: Lighter active")
+                                    end
+                                    if v523.Health < 10 then
+                                        DEATHMESSAGE({
+                                            "You died to who you call Frostbite...",
+                                            "He will spawn in the middle and start freezing the room.",
+                                            "Find something that has heat to keep you warm!"
+                                        }, "FrostBite")
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    v519.Enabled = true
+                    v516.face.Enabled = true
+                    v516.BlackTrail.Enabled = true
+                    v516.Heylois.Enabled = true
+                    v516.smoke.Enabled = true
+                    v516.BlackTrai3l.Enabled = true
+                    v516.BlackTrai2l.Enabled = true
+                    v515.Part.ParticleEmitter.Enabled = true
+                    v515.Ambience:Play()
+                    v515.AmbienceFar:Play()
+                    game:GetService("ReplicatedStorage").GameData.LatestRoom:GetPropertyChangedSignal("Value"):Wait()
+                    frostbiteBlueTween:Cancel()
+                    local frostbiteReturnTween = game.TweenService:Create(v519, TweenInfo.new(7), {
+                        TintColor = Color3.new(1, 1, 1)
+                    })
+                    frostbiteReturnTween.Completed:Once(function(playbackState)
+                        if playbackState == Enum.PlaybackState.Completed and v519.Parent then
+                            v519:Destroy()
+                        end
+                    end)
+                    frostbiteReturnTween:Play()
+                    endFrostbiteCease()
+                    vu522 = false
+                    v521:StartFadeOut(15)
+                    v520:StartFadeOut(1)
+                    v515["Static Effect"]:Stop()
+                    v515.Ambience:Stop()
+                    v515.AmbienceFar:Stop()
+                    local v526 = Instance.new("Sound", v515)
+                    local v527 = Instance.new("FlangeSoundEffect")
+                    local v528 = Instance.new("DistortionSoundEffect")
+                    FlangeSoundEffect3 = Instance.new("FlangeSoundEffect")
+                    v526.Name = "ahhhhhh"
+                    v526.MaxDistance = 500
+                    v526.Pitch = 0.23999999463558197
+                    v526.PlaybackSpeed = 0.23999999463558197
+                    v526.RollOffMode = Enum.RollOffMode.InverseTapered
+                    v526.SoundId = "rbxassetid://6305809364"
+                    v527.Parent = v526
+                    v527.Rate = 0.75
+                    v527.Depth = 1
+                    v527.Mix = 0.7300000190734863
+                    v528.Parent = v526
+                    v528.Level = 0.9800000190734863
+                    FlangeSoundEffect3.Parent = v526
+                    FlangeSoundEffect3.Rate = 0.25
+                    FlangeSoundEffect3.Depth = 1
+                    FlangeSoundEffect3.Mix = 1
+                    v526:Play()
+                    v516.face.Enabled = false
+                    v516.BlackTrail.Enabled = false
+                    v516.Heylois.Enabled = false
+                    v516.smoke.Enabled = true
+                    v516.BlackTrai3l.Enabled = true
+                    v516.BlackTrai2l.Enabled = true
+                    v515.Part.ParticleEmitter.Enabled = false
+                    v526.Ended:Wait()
+                    v516.BlackTrai3l.Enabled = false
+                    v516.BlackTrai2l.Enabled = false
+                    v516.smoke.Enabled = false
+                    wait(2)
+                    v514:Destroy()
+                    break
                 end
             end
-        end
-        if not safe and not roomChanged then
-            pcall(function()
-                chr.Humanoid.Health -= 5
-                game.ReplicatedStorage.GameStats["Player_" .. plr.Name].Total.DeathCause.Value = "Frostbite"
-                
-                firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
-                        "It's a bit cold here, isn't it?",
-                        "You froze to death by something.",
-                        "Maybe you need some cold prevention measures. I heard that humans are very sensitive to the cold..",
-                        "Try using your lighter to keep warm.",
-                        "This may be a bit tricky and noisy.",
-                        "You should try again.",
-                        "By the way, the name of the thing that killed you is Frostbite."
-                    }, "Yellow")
-            end)
-        end
-    end
-    dmg = false
-end)
-
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-
-dmg = false
-roomChanged = true
-
-if roomChangedConnection then
-    roomChangedConnection:Disconnect()
-end
-
-for _, v in ipairs({"face", "Heylois", "BlackTrai2l", "BlackTrai3l"}) do
-    if entity:FindFirstChild("Attachment") and entity.Attachment:FindFirstChild(v) then
-        entity.Attachment[v].Enabled = false
-    end
-end
-
-pcall(function() entity.Ambience:Stop() end)
-pcall(function() entity.AmbienceFar:Stop() end)
-
-local des = Instance.new("Sound")
-des.SoundId = "rbxassetid://111715441853991"
-des.Looped = false
-des.Volume = 2.5
-des.Parent = s
-des:Play()
-
-wait(5)
-s:Destroy()
-
-tweenservice:Create(frost, TweenInfo.new(5), {
-    TintColor = Color3.fromRGB(255, 255, 255),
-    Saturation = 0,
-    Contrast = 0
-}):Play()
-wait(5)
-frost:Destroy()
+            vu529()
+        end)
 end
 function entityBehaviors.INGODONE()
 local Players = game:GetService("Players")

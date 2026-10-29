@@ -90,7 +90,7 @@ CLText.TextWrapped = true
 CLText.TextXAlignment = Enum.TextXAlignment.Left
 CLText.TextYAlignment = Enum.TextYAlignment.Top
 CLText.Text =
-"1. 'THE ?????????' "
+"1. Ripper and Rebound can already be nailed to the Crucifix/They have a new sealing animation "
 CLText.Parent = CL
 
 local TL = Instance.new("TextLabel")

@@ -549,6 +549,21 @@ bloom.Parent = Lighting
 		end
 	},
 	{
+		Name="恢复",
+		Icon="rbxassetid://129698026",
+		Description="在游戏开始时，你将会有500点的生命上限，但同时你只有50生命值开始游戏 (需要成就 Stop Back Rebound)",
+		Function=function()
+
+			local TextChatService =
+			game:GetService("TextChatService")
+
+			TextChatService.TextChannels.RBXGeneral:SendAsync(
+				"选择 恢复"
+			)
+
+		end
+	},
+	{
 		Name="毁灭",
 		Icon="rbxassetid://107735901192534",
 		Description="你将会有一个能量条,当他积攒满时可以释放高导射线磁场,摧毁以你为中心的硬核怪物。(需要成就 The Story Not Over) <给予那些勇于挑战,勇于尝试的冒险家们最终的奖励,当所有人们都认为那是一个不可能的传说,它就会为你让步,献上这最终的礼物。>",

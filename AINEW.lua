@@ -2,9 +2,9 @@ local DoorsNotify = loadstring(game:HttpGet("https://raw.githubusercontent.com/G
 
 DoorsNotify({
     Style = "Achievement Unlocked",
-    Title = "Stop Red Light",
-    Description = "Using a Crucifix to deal with the Ripper",
-    Reason = "He’s too Hot-tempered!",
-    Image = "rbxassetid://12231244908",
+    Title = "Stop Back Rebound",
+    Description = "Using a Crucifix to deal with the Rebound",
+    Reason = "Don't come back again!",
+    Image = "rbxassetid://114446863623001",
     Time = 5
 })

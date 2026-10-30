@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"请前往取重要文件交给Honcho",
 	"胆量挑战 区域情况:大量实体",
 	"教室 区域情况:少量实体",
 	"胆量挑战 区域情况:大量实体",
 	"愤怒 区域情况:实体横行",
 	"无效楼层 区域情况:暂无信息",
 	"无效楼层 区域情况:暂无信息",
-	"餐厅 区域情况:暂无信息"
+	"餐厅 区域情况:暂无信息",
+	"随机楼层 区域情况:暂无信息"
 }
 
 local stopped = false

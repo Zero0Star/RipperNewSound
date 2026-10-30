@@ -3555,7 +3555,7 @@ end
 function entityBehaviors.A2()
  local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
     local A2 = hardCoreSound and hardCoreSound:FindFirstChild("A2")
-    if A2 and A1:IsA("Sound") then
+    if A2 and A2:IsA("Sound") then
         A2:Stop()
         A2.TimePosition = 0
         A2:Play()

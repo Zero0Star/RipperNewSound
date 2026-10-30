@@ -10657,7 +10657,7 @@ end
 function entityBehaviors.A4()
  local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
     local A4 = hardCoreSound and hardCoreSound:FindFirstChild("A4")
-    if A4 and A1:IsA("Sound") then
+    if A4 and A4:IsA("Sound") then
         A4:Stop()
         A4.TimePosition = 0
         A4:Play()
@@ -10666,7 +10666,7 @@ end
 function entityBehaviors.A5()
  local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
     local A5 = hardCoreSound and hardCoreSound:FindFirstChild("A5")
-    if A5 and A1:IsA("Sound") then
+    if A5 and A5:IsA("Sound") then
         A5:Stop()
         A5.TimePosition = 0
         A5:Play()
@@ -10675,7 +10675,7 @@ end
 function entityBehaviors.A6()
  local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
     local A6 = hardCoreSound and hardCoreSound:FindFirstChild("A6")
-    if A6 and A1:IsA("Sound") then
+    if A6 and A6:IsA("Sound") then
         A6:Stop()
         A6.TimePosition = 0
         A6:Play()
@@ -10684,7 +10684,7 @@ end
 function entityBehaviors.A7()
  local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
     local A7 = hardCoreSound and hardCoreSound:FindFirstChild("A7")
-    if A7 and A1:IsA("Sound") then
+    if A7 and A7:IsA("Sound") then
         A7:Stop()
         A7.TimePosition = 0
         A7:Play()

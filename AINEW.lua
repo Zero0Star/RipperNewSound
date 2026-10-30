@@ -2,9 +2,9 @@ local DoorsNotify = loadstring(game:HttpGet("https://raw.githubusercontent.com/G
 
 DoorsNotify({
     Style = "Achievement Unlocked",
-    Title = "Stop Back Rebound",
-    Description = "Using a Crucifix to deal with the Rebound",
-    Reason = "Don't come back again!",
-    Image = "rbxassetid://114446863623001",
-    Time = 5
+    Title = "Running away",
+    Description = "Finished the Beta Backroom",
+    Reason = "On 10.7, 20 levels and 10 entities are coming! This is an early leak!",
+    Image = "rbxassetid://9427745037",
+    Time = 7
 })

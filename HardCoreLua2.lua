@@ -3863,6 +3863,45 @@ function entityBehaviors.RipperSw()
 
         return nil
     end
+    local function createBeamFadeTween(beam)
+    if not beam or not beam:IsA("Beam") then
+        return
+    end
+
+    local colorValue = Instance.new("Color3Value")
+    colorValue.Value = beam.Color.Keypoints[1].Value
+
+    local connection
+    connection = colorValue.Changed:Connect(function(value)
+        if beam and beam.Parent then
+            beam.Color = ColorSequence.new(value)
+        elseif connection then
+            connection:Disconnect()
+        end
+    end)
+
+    local tween = TweenService:Create(
+        colorValue,
+        fadeInfo,
+        {
+            Value = targetColor
+        }
+    )
+
+    tween.Completed:Connect(function()
+        if connection then
+            connection:Disconnect()
+        end
+
+        if beam and beam.Parent then
+            beam.Color = ColorSequence.new(targetColor)
+        end
+
+        colorValue:Destroy()
+    end)
+
+    tween:Play()
+end
 
     local function modifyObjectsWithTween()
         local currentRooms = workspace:FindFirstChild("CurrentRooms")
@@ -3911,6 +3950,57 @@ function entityBehaviors.RipperSw()
                             end
                         end
                     end
+                    local lightFixturesNew = assets:FindFirstChild("Light_Fixtures")
+
+if lightFixturesNew then
+    for _, lightStand in ipairs(lightFixturesNew:GetChildren()) do
+        if lightStand:IsA("Model") and lightStand.Name == "LightStand" then
+            for _, lightFixture in ipairs(lightStand:GetChildren()) do
+                if lightFixture.Name == "LightFixture" then
+                    for _, loadedLight in ipairs(lightFixture:GetChildren()) do
+                        if loadedLight.Name == "LoadedLight_New" then
+                            for _, atachm in ipairs(loadedLight:GetDescendants()) do
+                                if atachm.Name == "atachm" then
+                                    for _, newLight in ipairs(atachm:GetChildren()) do
+                                        if newLight.Name == "Ok you cannot tell me this isnt good" then
+                                            if newLight:IsA("BasePart") or newLight:IsA("Light") then
+                                                createFadeTween(newLight)
+                                            elseif newLight:IsA("Beam") then
+                                                createBeamFadeTween(newLight)
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+for _, loadedChandelier in ipairs(assets:GetChildren()) do
+    if loadedChandelier.Name == "LoadedChandelier_New" then
+        for _, lightFixture in ipairs(loadedChandelier:GetChildren()) do
+            if lightFixture.Name == "LightFixture" then
+                for _, neon in ipairs(lightFixture:GetChildren()) do
+                    if neon.Name == "Neon" then
+                        for _, attachment in ipairs(neon:GetChildren()) do
+                            if attachment.Name == "Attachment" then
+                                for _, beam in ipairs(attachment:GetChildren()) do
+                                    if beam.Name == "Beam" and beam:IsA("Beam") then
+                                        createBeamFadeTween(beam)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
 
                     local lightFixtures =
                         assets:FindFirstChild("Light_Fixtures")
@@ -4210,35 +4300,6 @@ function entityBehaviors.RipperSw()
 
         return entry
     end
-
-    local crucifixRayLogTimes = {}
-    local function logCrucifixRay(playerName, reason, details, interval)
-        local key = tostring(playerName) .. "|" .. tostring(reason)
-        local now = os.clock()
-        if not crucifixRayLogTimes[key] or now - crucifixRayLogTimes[key] >= (interval or 2) then
-            crucifixRayLogTimes[key] = now
-
-        end
-    end
-
-    local function describeCharacterCrucifix(character)
-        local tool = character and getCrucifixTool(character)
-        if tool then
-            return "Crucifix=Tool, 路径=" .. tool:GetFullName()
-        end
-        local sameName = character and character:FindFirstChild("Crucifix", true)
-        if sameName then
-            return "存在同名对象但不是Tool: " .. sameName.ClassName
-        end
-        local owner = character and Players:GetPlayerFromCharacter(character)
-        local backpack = owner and owner:FindFirstChild("Backpack")
-        local backpackTool = backpack and backpack:FindFirstChild("Crucifix")
-        if backpackTool and backpackTool:IsA("Tool") then
-            return "Crucifix只在Backpack，不在workspace角色Model，当前规则不会封印"
-        end
-        return "角色Model内没有Crucifix Tool"
-    end
-
 
 
     local function getCrucifixVisualStates(root, shouldInclude, onlyRoot)
@@ -5004,7 +5065,6 @@ function entityBehaviors.RipperSw()
             end
 
             local character = candidatePlayer.Character
-            local playerName = candidatePlayer.Name
             if not character then
 
             elseif not character:IsDescendantOf(workspace) then
@@ -5019,12 +5079,6 @@ function entityBehaviors.RipperSw()
                 elseif not rootPart or not rootPart:IsA("BasePart") then
 
                 else
-                    local nearestDistance = (rootPart.Position - currentRipper.Position).Magnitude
-                    local targetTool = getCrucifixTool(character)
-                    local count = 0
-                    local hitPlayers = 0
-                    local lastHit = "Raycast=nil（可能CanQuery=false）"
-                    local lastHitCharacter = "无"
                     for _, targetPart in ipairs(getCharacterRayTargets(character)) do
                         if crucifixActivated or not currentRipper.Parent then
                             return crucifixActivated
@@ -5033,16 +5087,9 @@ function entityBehaviors.RipperSw()
                         local direction = targetPart.Position - currentRipper.Position
                         local distance = direction.Magnitude
                         if distance > 0.001 and distance <= 50 then
-                            count = count + 1
                             local result = workspace:Raycast(currentRipper.Position, direction, raycastParams)
                             local hitPart = result and result.Instance
                             local hitCharacter = hitPart and getCharacterFromRaycastHit(hitPart) or nil
-                            local hitMethod = "正常Raycast"
-
-                            if hitPart then
-                                lastHit = hitPart:GetFullName() .. " (CanQuery=" .. tostring(hitPart.CanQuery)
-                                    .. ", Transparency=" .. tostring(hitPart.Transparency) .. ")"
-                            end
 
                             if not hitCharacter then
                                 local partEntry = rayEntryDistanceToPart(
@@ -5050,19 +5097,11 @@ function entityBehaviors.RipperSw()
                                 if partEntry and partEntry <= distance + 0.01 then
                                     if not result or result.Distance > partEntry + 0.02 then
                                         hitCharacter = character
-                                        hitMethod = "几何补偿命中（CanQuery=false可识别）"
-                                        lastHit = "几何补偿命中 " .. targetPart:GetFullName()
-                                            .. "，Part.CanQuery=" .. tostring(targetPart.CanQuery)
-                                            .. "，普通Raycast=" .. (hitPart and hitPart:GetFullName() or "nil")
-                                    else
-                                        lastHit = "遮挡：" .. lastHit
                                     end
                                 end
                             end
 
                             if hitCharacter then
-                                hitPlayers = hitPlayers + 1
-                                lastHitCharacter = hitCharacter.Name
                                 if not hitCharacter:GetAttribute("Hiding") then
                                     local hitHumanoid = hitCharacter:FindFirstChildWhichIsA("Humanoid")
                                     if hitHumanoid and hitHumanoid.Health > 0 then
@@ -5070,7 +5109,7 @@ function entityBehaviors.RipperSw()
                                         if tool then
 
                                             if tryUseCrucifix(hitCharacter,
-                                                "移动中射线命中持有Crucifix的存活玩家模型（" .. hitMethod .. "）") then
+                                                "移动中射线命中持有Crucifix的存活玩家模型") then
                                                 return true
                                             end
 
@@ -5080,16 +5119,6 @@ function entityBehaviors.RipperSw()
                             end
                         end
                     end
-
-                    local status = (count == 0 and "超出射线范围")
-                        or (hitPlayers == 0 and "未命中玩家Model")
-                        or (not targetTool and "命中玩家但没有Tool")
-                        or "射线命中其他玩家或命中判定未通过"
-                    local diagnostic = "距离=" .. string.format("%.1f", nearestDistance)
-                        .. ", 射线数=" .. count .. ", 命中玩家次数=" .. hitPlayers
-                        .. ", 最后命中=" .. lastHit .. ", 命中角色=" .. lastHitCharacter
-                        .. ", Root.CanQuery=" .. tostring(rootPart.CanQuery)
-                        .. ", " .. describeCharacterCrucifix(character)
 
                 end
             end
@@ -5238,12 +5267,13 @@ function entityBehaviors.RipperSw()
         screamSound.Parent = workspace
 
         local cameraShakerModule = game.ReplicatedStorage:FindFirstChild("CameraShaker")
+        local jumpScareCamShake = nil
 
         if cameraShakerModule then
             local success, CameraShaker = pcall(require, cameraShakerModule)
 
             if success and CameraShaker then
-                local jumpScareCamShake = CameraShaker.new(
+                jumpScareCamShake = CameraShaker.new(
                     Enum.RenderPriority.Camera.Value,
                     function(shakeCf)
                         if camera then
@@ -5349,7 +5379,29 @@ function entityBehaviors.RipperSw()
         end
 
         if humanoid and humanoid.Parent then
-            humanoid:TakeDamage(125)
+            local damage = 125
+
+            if humanoid.Health <= damage then
+                local gameStats = game.ReplicatedStorage:FindFirstChild("GameStats")
+
+                if gameStats then
+                    local playerStat = gameStats:FindFirstChild("Player_" .. player.Name)
+
+                    if playerStat then
+                        local total = playerStat:FindFirstChild("Total")
+
+                        if total then
+                            local deathCause = total:FindFirstChild("DeathCause")
+
+                            if deathCause then
+                                deathCause.Value = "Ripper"
+                            end
+                        end
+                    end
+                end
+            end
+
+            humanoid:TakeDamage(damage)
         end
 
         TweenService:Create(
@@ -5374,6 +5426,12 @@ function entityBehaviors.RipperSw()
 
         if noiseConnection then
             noiseConnection:Disconnect()
+        end
+
+        if jumpScareCamShake then
+            pcall(function()
+                jumpScareCamShake:Stop()
+            end)
         end
 
         if camera then
@@ -5412,41 +5470,6 @@ function entityBehaviors.RipperSw()
         ripperAsset = nil
         isRipperDespawning = true
 
-        local remotesFolder = game.ReplicatedStorage:FindFirstChild("RemotesFolder")
-
-        if remotesFolder then
-            local deathHint = remotesFolder:FindFirstChild("DeathHint")
-
-            if deathHint then
-                firesignal(
-                    deathHint.OnClientEvent,
-                    {
-                        "你死于所谓的开膛手...",
-                        "伴随极大的吼叫声后他就会出现.",
-                        "它这么做时躲起来,他会检查所有的躲藏点!"
-                    },
-                    "Blue"
-                )
-            end
-        end
-
-        local gameStats = game.ReplicatedStorage:FindFirstChild("GameStats")
-
-        if gameStats then
-            local playerStat = gameStats:FindFirstChild("Player_" .. player.Name)
-
-            if playerStat then
-                local total = playerStat:FindFirstChild("Total")
-
-                if total then
-                    local deathCause = total:FindFirstChild("DeathCause")
-
-                    if deathCause then
-                        deathCause.Value = "Ripper"
-                    end
-                end
-            end
-        end
     end
 
     local function getOrderedRooms()
@@ -5669,6 +5692,19 @@ function entityBehaviors.RipperSw()
                 )
 
                 cameraShaker:Start()
+
+                local shakerRipper = ripper
+                task.spawn(function()
+                    while shakerRipper and shakerRipper.Parent do
+                        task.wait(0.25)
+                    end
+
+                    if cameraShaker then
+                        pcall(function()
+                            cameraShaker:Stop()
+                        end)
+                    end
+                end)
             end
         end
 
@@ -6142,6 +6178,12 @@ function entityBehaviors.RipperSw()
                 0.25,
                 0.35
             )
+
+            task.delay(1, function()
+                pcall(function()
+                    endExplosionCamShake:Stop()
+                end)
+            end)
         end
 
         task.wait(1)
@@ -6257,6 +6299,12 @@ function entityBehaviors.RipperSw()
             2,
             0.5
         )
+
+        task.delay(7, function()
+            pcall(function()
+                camShake:Stop()
+            end)
+        end)
     end
     runFinalCameraShake()
 end
@@ -9961,12 +10009,20 @@ sound1:Destroy()
 sound2:Destroy()
 end
 function entityBehaviors.REBOUNDSW()
-    local RunService = game:GetService("RunService")
+   local RunService = game:GetService("RunService")
     local ceaseHandledModels = setmetatable({}, { __mode = "k" })
 
     local testModelId = 129306212463084
     local reboundTemplate = nil
     local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+
+    if _G.__ReboundMainCameraShake then
+        pcall(function()
+            _G.__ReboundMainCameraShake:Stop()
+        end)
+        _G.__ReboundMainCameraShake = nil
+    end
+
     local reboundCameraShake = CameraShaker.new(
         Enum.RenderPriority.Camera.Value + 30,
         function(shakeCFrame)
@@ -9977,6 +10033,21 @@ function entityBehaviors.REBOUNDSW()
         end
     )
     reboundCameraShake:Start()
+    _G.__ReboundMainCameraShake = reboundCameraShake
+
+    local reboundCameraShakeStopped = false
+    local function stopReboundCameraShake()
+        if reboundCameraShakeStopped then
+            return
+        end
+        reboundCameraShakeStopped = true
+        pcall(function()
+            reboundCameraShake:Stop()
+        end)
+        if _G.__ReboundMainCameraShake == reboundCameraShake then
+            _G.__ReboundMainCameraShake = nil
+        end
+    end
 
     local function PlayPreloadedSound(soundName, volume)
         volume = volume or 1
@@ -10084,36 +10155,6 @@ function entityBehaviors.REBOUNDSW()
 
         return entry
     end
-
-    local crucifixRayLogTimes = {}
-    local function logCrucifixRay(playerName, reason, details, interval)
-        local key = tostring(playerName) .. "|" .. tostring(reason)
-        local now = os.clock()
-        if not crucifixRayLogTimes[key] or now - crucifixRayLogTimes[key] >= (interval or 2) then
-            crucifixRayLogTimes[key] = now
-
-        end
-    end
-
-    local function describeCharacterCrucifix(character)
-        local tool = character and getCrucifixTool(character)
-        if tool then
-            return "Crucifix=Tool, 路径=" .. tool:GetFullName()
-        end
-        local sameName = character and character:FindFirstChild("Crucifix", true)
-        if sameName then
-            return "存在同名对象但不是Tool: " .. sameName.ClassName
-        end
-        local owner = character and Players:GetPlayerFromCharacter(character)
-        local backpack = owner and owner:FindFirstChild("Backpack")
-        local backpackTool = backpack and backpack:FindFirstChild("Crucifix")
-        if backpackTool and backpackTool:IsA("Tool") then
-            return "Crucifix只在Backpack，不在workspace角色Model，当前规则不会封印"
-        end
-        return "角色Model内没有Crucifix Tool"
-    end
-
-
 
     local function getCrucifixVisualStates(root, shouldInclude, onlyRoot)
         local states = {}
@@ -10758,7 +10799,7 @@ function entityBehaviors.REBOUNDSW()
                 end
 
                 if not moveCrucifixAttachment(attachment, upPosition, 1.8) then
-                    error("Attachment 上升中被删除")
+                    return
                 end
 
                 while not beamsRevealFinished and replacement.Parent and attachment.Parent do
@@ -10766,7 +10807,7 @@ function entityBehaviors.REBOUNDSW()
                 end
 
                 if not moveCrucifixAttachment(attachment, downPosition, 1.2) then
-                    error("Attachment 下降中被删除")
+                    return
                 end
                 task.wait(2)
                 fadeCrucifixBeamsOut(beams, 0.5)
@@ -11126,6 +11167,7 @@ function entityBehaviors.REBOUNDSW()
             detectedPlayer = true
             reboundMovementEnded = true
             reboundMoving = false
+            stopReboundCameraShake()
 
             if activeMovementTween then
                 activeMovementTween:Cancel()
@@ -11387,7 +11429,6 @@ function entityBehaviors.REBOUNDSW()
             if reboundSealed or not entityPart or not entityPart.Parent or not player then
                 return nil
             end
-            local playerName = player.Name
             local character = player.Character
             if not character then
 
@@ -11425,10 +11466,6 @@ function entityBehaviors.REBOUNDSW()
                 end
             end
 
-            local rayCount = 0
-            local hitPlayers = 0
-            local lastHit = "Raycast=nil（可能CanQuery=false）"
-            local lastCharacter = "无"
             for _, part in ipairs(targets) do
                 if reboundSealed or not entityPart.Parent then
                     return nil
@@ -11436,17 +11473,9 @@ function entityBehaviors.REBOUNDSW()
                 local direction = part.Position - entityPart.Position
                 local distance = direction.Magnitude
                 if distance > 0.001 and distance <= maxDistance then
-                    rayCount = rayCount + 1
                     local result = workspace:Raycast(entityPart.Position, direction, raycastParams)
                     local hitPart = result and result.Instance
                     local hitCharacter = hitPart and getCharacterFromRaycastHit(hitPart) or nil
-                    local hitMethod = "正常Raycast"
-
-                    if hitPart then
-                        lastHit = hitPart:GetFullName() .. " (CanQuery="
-                            .. tostring(hitPart.CanQuery) .. ", Transparency="
-                            .. tostring(hitPart.Transparency) .. ")"
-                    end
 
                     if not hitCharacter then
                         local partEntry = rayEntryDistanceToPart(
@@ -11454,38 +11483,21 @@ function entityBehaviors.REBOUNDSW()
                         if partEntry and partEntry <= distance + 0.01 then
                             if not result or result.Distance > partEntry + 0.02 then
                                 hitCharacter = character
-                                hitMethod = "几何补偿命中（CanQuery=false可识别）"
-                                lastHit = "几何补偿命中 " .. part:GetFullName()
-                                    .. "，Part.CanQuery=" .. tostring(part.CanQuery)
-                                    .. "，普通Raycast=" .. (hitPart and hitPart:GetFullName() or "nil")
-                            else
-                                lastHit = "遮挡：" .. lastHit
                             end
                         end
                     end
 
-                    if hitCharacter then
-                        hitPlayers = hitPlayers + 1
-                        lastCharacter = hitCharacter.Name
-                        if not hitCharacter:GetAttribute("Hiding") then
-                            local hitHumanoid = hitCharacter:FindFirstChildWhichIsA("Humanoid")
-                            if hitHumanoid and hitHumanoid.Health > 0 then
-                                local tool = getCrucifixTool(hitCharacter)
-                                if tool then
-
-                                    return hitCharacter
-                                end
+                    if hitCharacter and not hitCharacter:GetAttribute("Hiding") then
+                        local hitHumanoid = hitCharacter:FindFirstChildWhichIsA("Humanoid")
+                        if hitHumanoid and hitHumanoid.Health > 0 then
+                            local tool = getCrucifixTool(hitCharacter)
+                            if tool then
+                                return hitCharacter
                             end
                         end
                     end
                 end
             end
-
-            local nearestDistance = (rootPart.Position - entityPart.Position).Magnitude
-            local status = (rayCount == 0 and "超出射线范围")
-                or (hitPlayers == 0 and "未命中玩家Model")
-                or (not getCrucifixTool(character) and "命中玩家但没有Tool")
-                or "命中判定未满足"
 
             return nil
         end
@@ -11534,17 +11546,17 @@ function entityBehaviors.REBOUNDSW()
                 local v325 = Instance.new("LocalScript", vu322)
                 while v325.Parent and v325.Parent.Parent do
                     v325.Parent.Image = "rbxassetid://236543215"
-                    wait(0.002)
+                    task.wait(0.015)
                     v325.Parent.Rotation = 0
-                    wait(0.002)
+                    task.wait(0.015)
                     v325.Parent.Rotation = 180
-                    wait(0.002)
+                    task.wait(0.015)
                     v325.Parent.Image = "rbxassetid://236777652"
-                    wait(0.002)
+                    task.wait(0.015)
                     v325.Parent.Rotation = 0
-                    wait(0.002)
+                    task.wait(0.015)
                     v325.Parent.Rotation = 180
-                    wait(0.002)
+                    task.wait(0.015)
                 end
             end
             coroutine.wrap(v326)()
@@ -11582,17 +11594,18 @@ function entityBehaviors.REBOUNDSW()
                     local char = vu329.Character
                     if char then
                         local hum = char:FindFirstChildWhichIsA("Humanoid")
-                        if hum then
-                            hum:TakeDamage(100)
-                            if vu328.GameStats["Player_" .. vu329.Name] then
-                                vu328.GameStats["Player_" .. vu329.Name].Total.DeathCause.Value = "Rebound"
+                        if hum and hum.Health > 0 then
+                            local damage = 100
+                            local willDie = hum.Health <= damage
+                            if willDie then
+                                local playerStats = vu328.GameStats:FindFirstChild("Player_" .. vu329.Name)
+                                local total = playerStats and playerStats:FindFirstChild("Total")
+                                local deathCause = total and total:FindFirstChild("DeathCause")
+                                if deathCause then
+                                    deathCause.Value = "Rebound"
+                                end
                             end
-
-firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
-    "你死于Rebound...",
-    "巨大的噪音震耳欲聋...",
-    "每当开启一次门时注意雷声..."
-}, "Blue")
+                            hum:TakeDamage(damage)
                         end
                     end
                 end)
@@ -11619,7 +11632,7 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
                 if reboundSealed or not primaryPart or not primaryPart.Parent then
                     break
                 end
-                if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
+                if workspace:FindFirstChild("SeekMov") or workspace.CurrentRooms:FindFirstChild("50") then
                     break
                 end
 
@@ -11816,7 +11829,11 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
     end
     doorGateOpen = false
     doorConnection:Disconnect()
-    doorSignal:Destroy()
+    if doorSignal then
+        doorSignal:Destroy()
+        doorSignal = nil
+    end
+    stopReboundCameraShake()
     doorSignal = nil
 end
 

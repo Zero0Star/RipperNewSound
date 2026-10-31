@@ -4133,13 +4133,22 @@ end
 
 function entityBehaviors.A60PS2()
 function DEATHMESSAGE(messages, deathCause)
-    spawn(function()
-        for _ = 1, 50 do
-            wait()
-            game:GetService("ReplicatedStorage").GameStats["Player_" .. game.Players.LocalPlayer.Name].Total.DeathCause.Value = deathCause
-            firesignal(game:GetService("ReplicatedStorage").RemotesFolder.DeathHint.OnClientEvent, messages, "Blue")
-        end
-    end)
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
+
+    if not humanoid or humanoid.Health > 100 then
+        return
+    end
+
+    local gameStats = game:GetService("ReplicatedStorage"):FindFirstChild("GameStats")
+    local playerStats = gameStats and gameStats:FindFirstChild("Player_" .. player.Name)
+    local total = playerStats and playerStats:FindFirstChild("Total")
+    local deathCauseValue = total and total:FindFirstChild("DeathCause")
+
+    if deathCauseValue then
+        deathCauseValue.Value = deathCause
+    end
 end
 
 local originalDEATHMESSAGE = DEATHMESSAGE
@@ -4314,6 +4323,11 @@ DEATHMESSAGE = function(messages, deathCause)
                 colorEffect:Destroy()
                 task.wait(1)
                 JumpscareGUI:Destroy()
+                if CameraShaker then
+                    pcall(function()
+                        CameraShaker:Stop()
+                    end)
+                end
                 jumpscareActive = false
             end)
         end
@@ -4480,20 +4494,20 @@ local function setupAttackDetection()
                     local playerPosition = humanoidRootPart.Position
                     local distance = (playerPosition - entityPosition).Magnitude
                     
-                    if distance <= attackRange then
+                    if distance > 0.001 and distance <= attackRange then
                         local rayDirection = (playerPosition - entityPosition).Unit
                         local ray = Ray.new(entityPosition, rayDirection * attackRange)
                         
                         local ignoreList = {figureModel}
                         local hitPart, hitPosition = workspace:FindPartOnRayWithIgnoreList(ray, ignoreList)
                         
-                        if hitPart and hitPart:IsDescendantOf(character) then
+                        if hitPart and hitPart:IsDescendantOf(character) and not character:GetAttribute("Hiding") then
                             if not isAttacking then
                                 isAttacking = true
                                 
-                                humanoid:TakeDamage(100)
-                                
                                 DEATHMESSAGE(deathMessages, "A-60")
+                                
+                                humanoid:TakeDamage(100)
                                 
                                 wait(1)
                                 isAttacking = false
@@ -4609,7 +4623,7 @@ spawn(function()
     wait(0.5)
     local face = workspace:WaitForChild("A-60"):WaitForChild("RushNew"):WaitForChild("Main"):WaitForChild("Face")
     if face and face:IsA("ParticleEmitter") then
-        while true do
+        while face and face.Parent and figureModel and figureModel.Parent do
             face.Texture = "rbxassetid://12145534911"
             wait(0.1)
             face.Texture = "rbxassetid://12145554242"
@@ -4629,6 +4643,7 @@ spawn(function()
         end
     end
 end)
+
 end
 
 function entityBehaviors.XBramble()

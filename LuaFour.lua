@@ -1140,182 +1140,436 @@ end
 
 
 function entityBehaviors.SA90()
- local v557 = require(game.ReplicatedStorage.CameraShaker)
-            local vu558 = workspace.CurrentCamera
-            local v560 = v557.new(Enum.RenderPriority.Camera.Value, function(p559)
-                vu558.CFrame = vu558.CFrame * p559
-            end)
-            v560:Start()
-            local v561 = game:GetService("TweenService")
-            local v562 = game.Players.LocalPlayer
-            local v563 = game.Players.LocalPlayer.PlayerGui.MainUI
-            local vu564 = v563.Jumpscare.Jumpscare_A90
-            local v565 = v563.Initiator.Main_Game.RemoteListener.Modules.A90
-            local vu566 = require(v563.Initiator.Main_Game)
-            local vu567 = true
-            local vu568 = false
-            local vu569 = vu566.cam.CFrame.LookVector
-            local vu570 = 0
-            game.SoundService.Main.Volume = 0
-            vu564.Face.Image = "http://www.roblox.com/asset/?id=12635832722"
-            vu564.FaceAngry.Image = "http://www.roblox.com/asset/?id=12635955412"
-            v565.Spawn.SoundGroup = nil
-            v565.Hit.SoundGroup = nil
-            v565.Spawn:Play()
-            vu564.BackgroundTransparency = 1
-            vu564.Face.Visible = true
-            vu564.FaceAngry.Visible = false
-            vu564.Static.Visible = true
-            vu564.Static2.Visible = true
-            vu564.Static.ImageTransparency = 1
-            vu564.Static2.ImageTransparency = 1
-            vu564.Face.ImageColor3 = Color3.new(0, 0, 0)
-            vu564.Face.Rotation = Random.new():NextNumber(- 5, 5)
-            vu564.Face.Position = UDim2.new(Random.new():NextNumber(10, 90) / 100, 0, Random.new():NextNumber(10, 90) / 100, 0)
-            vu564.Visible = true
-            task.wait(0.03)
-            vu564.Face.ImageColor3 = Color3.new(1, 1, 1)
-            task.wait(0.28)
-            vu564.BackgroundTransparency = 0
-            vu564.Face.Rotation = 0
-            vu564.Face.Position = UDim2.new(0.5, 0, 0.49, 0)
-            task.wait(0.03)
-            vu564.StopIcon.Visible = true
-            vu564.BackgroundColor3 = Color3.new(0, 0, 0)
-            vu564.BackgroundTransparency = 1
-            vu564.Static.ImageTransparency = 0.8
-            vu564.Static2.ImageTransparency = 0.8
-            task.delay(0.2, function()
-                vu564.StopIcon.Visible = false
-                while vu567 do
-                    local v571 = math.random(0, 1)
-                    local v572 = 100 + vu570 * 0.5
-                    vu570 = vu570 + 15
-                    task.wait(0.03)
-                    vu564.Static.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
-                    vu564.Static.Rotation = math.random(0, 1) * 180
-                    vu564.Static2.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
-                    vu564.Static2.Rotation = math.random(0, 1) * 180
-                    vu564.Face.Position = UDim2.new(0.5, 0, 0.49, math.random(- 1, 1))
-                    vu564.FaceAngry.Position = UDim2.new(0.5 + Random.new():NextNumber(- v572, v572) / 50000, 0, 0.49 + Random.new():NextNumber(- v572, v572) / 30000, math.random(- 1, 1))
-                    vu564.FaceAngry.Rotation = Random.new():NextNumber(- 1, 1) * (vu570 * 0.0015)
-                    vu564.FaceAngry.ImageColor3 = Color3.new(1, v571, v571)
-                    if not vu568 then
-                        if (vu569 - vu566.cam.CFrame.LookVector).Magnitude <= 0.4 then
-                            if vu566.hum.MoveDirection.Magnitude > 0.4 then
-                                vu568 = true
-                            end
-                        else
-                            vu568 = true
-                        end
-                    end
-                end
-            end)
-            task.wait(0.3)
-            vu564.BackgroundColor3 = Color3.new(0, 0, 0)
-            vu564.BackgroundTransparency = 0
-            vu564.Static.ImageTransparency = 0
-            vu564.Static2.ImageTransparency = 0.5
-            task.wait(0.03)
-            vu564.Face.ImageColor3 = Color3.new(1, 0, 0)
-            task.wait(0.03)
-            vu564.Visible = false
-            task.wait(0.08)
-            if vu568 then
-                local vu573 = true
-                vu564.Visible = true
-                v565.Hit:Play()
-                task.wait(0.03)
-                vu564.Face.ImageColor3 = Color3.new(1, 1, 1)
-                task.wait(0.03)
-                vu564.BackgroundTransparency = 0
-                vu564.Static.ImageTransparency = 0
-                vu564.Static2.ImageTransparency = 0.5
-                task.wait(0.067)
-                vu564.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
-                vu564.FaceAngry.Rotation = 0
-                vu564.FaceAngry.ImageTransparency = 0
-                vu564.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
-                vu564.FaceAngry.Visible = true
-                task.wait(0.067)
-                vu564.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
-                vu564.Face.Visible = false
-                task.wait(0.75)
-                v562.Character.Humanoid.Health = v562.Character.Humanoid.Health - 70
-                firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
-                    "You died to an entity called A-90...",
-                    "React Fast and Dont Move a Muscle!"
-                }, "Blue")
-                task.wait(0.1)
-                vu564.FaceAngry.Visible = false
-                vu564.BackgroundColor3 = Color3.new(1, 1, 1)
-                vu564.Static.ImageTransparency = 1
-                vu564.Static2.ImageTransparency = 1
-                task.wait(0.067)
-                vu564.BackgroundColor3 = Color3.new(1, 0, 0)
-                task.wait(0.067)
-                vu564.BackgroundColor3 = Color3.new(0, 0, 0)
-                task.wait(0.067)
-                v560:ShakeOnce(25, 8, 0, 4)
-                vu567 = false
-                task.wait(0.03)
-                v565.Spawn:Stop()
-                vu564.BackgroundTransparency = 1
-                vu564.Static.ImageTransparency = 0.5
-                vu564.Static2.ImageTransparency = 0.5
-                v561:Create(vu564.Static, TweenInfo.new(20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    ImageTransparency = 1
-                }):Play()
-                v561:Create(vu564.Static2, TweenInfo.new(5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    ImageTransparency = 1
-                }):Play()
-                local v574 = Random.new():NextNumber(2, 3)
-                vu564.FaceAngry.Rotation = Random.new():NextNumber(- 3, 3)
-                vu564.FaceAngry.Visible = true
-                vu564.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
-                vu564.FaceAngry.Size = UDim2.new(v574, 0, v574, 0)
-                v561:Create(vu564.FaceAngry, TweenInfo.new(5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    ImageTransparency = 1
-                }):Play()
-                game.SoundService.Main.Volume = 0
-                game.SoundService.Main.EqualizerSoundEffect.Enabled = true
-                game.SoundService.Main.EqualizerSoundEffect.HighGain = - 50
-                game.SoundService.Main.EqualizerSoundEffect.LowGain = 10
-                game.SoundService.Main.EqualizerSoundEffect.MidGain = - 50
-                v561:Create(game.SoundService.Main.EqualizerSoundEffect, TweenInfo.new(15, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
-                    LowGain = 0,
-                    HighGain = 0,
-                    MidGain = 0
-                }):Play()
-                v561:Create(game.SoundService.Main, TweenInfo.new(5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                    Volume = 1
-                }):Play()
-                task.spawn(function()
-                    while vu573 do
-                        local v575 = 100 + 0.1
-                        task.wait()
-                        vu564.Static.Position = UDim2.new(Random.new():NextNumber(0, v575) / 100, 0, Random.new():NextNumber(0, v575) / 100, 0)
-                        vu564.Static.Rotation = math.random(0, 1) * 180
-                        vu564.Static2.Position = UDim2.new(Random.new():NextNumber(0, v575) / 100, 0, Random.new():NextNumber(0, v575) / 100, 0)
-                        vu564.Static2.Rotation = math.random(0, 1) * 180
-                    end
-                end)
-                task.delay(20, function()
-                    vu573 = false
-                    vu564.Visible = false
-                    vu564.BackgroundTransparency = 0
-                    vu564.Static.ImageTransparency = 1
-                    vu564.Static2.ImageTransparency = 1
-                end)
-            else
-                v565.Spawn:Stop()
-                vu564.BackgroundTransparency = 1
-                vu564.Visible = false
-                v560:ShakeOnce(5, 10, 0.1, 1)
-                vu567 = false
-                game.SoundService.Main.Volume = 1
-            end
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local Player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local MainUI = PlayerGui:WaitForChild("MainUI")
+local Jumpscare = MainUI:WaitForChild("Jumpscare")
+local A90Gui = Jumpscare:WaitForChild("Jumpscare_A90")
+local MainGameFolder = MainUI.Initiator.Main_Game
+local A90Module = MainGameFolder.RemoteListener.Modules.A90
+local MainGame = require(MainGameFolder)
+local CameraShaker = require(ReplicatedStorage:WaitForChild("CameraShaker"))
+local RNG = Random.new()
+if A90Gui:GetAttribute("CustomA90Running") then
+	return
 end
+A90Gui:SetAttribute("CustomA90Running", true)
+local Running = true
+local StaticRunning = false
+local Cleaned = false
+local Moved = false
+local Intensity = 0
+local StartLookVector = MainGame.cam.CFrame.LookVector
+local CameraShake = CameraShaker.new(
+	Enum.RenderPriority.Camera.Value,
+	function(shakeCFrame)
+		if Camera then
+			Camera.CFrame = Camera.CFrame * shakeCFrame
+		end
+	end
+)
+CameraShake:Start()
+local function setDeathCause(cause)
+	local gameStats = ReplicatedStorage:FindFirstChild("GameStats")
+
+	if not gameStats then
+		return
+	end
+
+	local playerStats = gameStats:FindFirstChild("Player_" .. Player.Name)
+
+	if not playerStats then
+		return
+	end
+
+	local total = playerStats:FindFirstChild("Total")
+
+	if not total then
+		return
+	end
+
+	local deathCause = total:FindFirstChild("DeathCause")
+
+	if deathCause then
+		deathCause.Value = cause
+	end
+end
+
+local function cleanup()
+	if Cleaned then
+		return
+	end
+
+	Cleaned = true
+	Running = false
+	StaticRunning = false
+
+	pcall(function()
+		A90Module.Spawn:Stop()
+	end)
+
+	pcall(function()
+		CameraShake:Stop()
+	end)
+
+	A90Gui:SetAttribute("CustomA90Running", false)
+end
+
+SoundService.Main.Volume = 0
+
+A90Gui.Face.Image = "http://www.roblox.com/asset/?id=12635832722"
+A90Gui.FaceAngry.Image = "http://www.roblox.com/asset/?id=12635955412"
+
+pcall(function()
+	A90Module.Spawn.SoundGroup = nil
+	A90Module.Hit.SoundGroup = nil
+end)
+
+A90Module.Spawn:Play()
+
+A90Gui.BackgroundTransparency = 1
+A90Gui.Face.Visible = true
+A90Gui.FaceAngry.Visible = false
+A90Gui.Static.Visible = true
+A90Gui.Static2.Visible = true
+A90Gui.Static.ImageTransparency = 1
+A90Gui.Static2.ImageTransparency = 1
+A90Gui.Face.ImageColor3 = Color3.new(0, 0, 0)
+A90Gui.Face.Rotation = RNG:NextNumber(-5, 5)
+
+A90Gui.Face.Position = UDim2.new(
+	RNG:NextNumber(10, 90) / 100,
+	0,
+	RNG:NextNumber(10, 90) / 100,
+	0
+)
+
+A90Gui.Visible = true
+
+task.wait(0.03)
+
+A90Gui.Face.ImageColor3 = Color3.new(1, 1, 1)
+
+task.wait(0.28)
+
+A90Gui.BackgroundTransparency = 0
+A90Gui.Face.Rotation = 0
+A90Gui.Face.Position = UDim2.new(0.5, 0, 0.49, 0)
+
+task.wait(0.03)
+
+A90Gui.StopIcon.Visible = true
+A90Gui.BackgroundColor3 = Color3.new(0, 0, 0)
+A90Gui.BackgroundTransparency = 1
+A90Gui.Static.ImageTransparency = 0.8
+A90Gui.Static2.ImageTransparency = 0.8
+
+task.delay(0.2, function()
+	A90Gui.StopIcon.Visible = false
+
+	while Running do
+		task.wait(0.03)
+
+		if not Running then
+			break
+		end
+
+		Intensity += 15
+
+		local effectIntensity = 100 + Intensity * 0.5
+		local randomColor = math.random(0, 1)
+
+		A90Gui.Static.Position = UDim2.new(
+			math.random(0, 100) / 100,
+			0,
+			math.random(0, 100) / 100,
+			0
+		)
+
+		A90Gui.Static.Rotation = math.random(0, 1) * 180
+
+		A90Gui.Static2.Position = UDim2.new(
+			math.random(0, 100) / 100,
+			0,
+			math.random(0, 100) / 100,
+			0
+		)
+
+		A90Gui.Static2.Rotation = math.random(0, 1) * 180
+
+		A90Gui.Face.Position = UDim2.new(
+			0.5,
+			0,
+			0.49,
+			math.random(-1, 1)
+		)
+
+		A90Gui.FaceAngry.Position = UDim2.new(
+			0.5 + RNG:NextNumber(-effectIntensity, effectIntensity) / 50000,
+			0,
+			0.49 + RNG:NextNumber(-effectIntensity, effectIntensity) / 30000,
+			math.random(-1, 1)
+		)
+
+		A90Gui.FaceAngry.Rotation =
+			RNG:NextNumber(-1, 1) * (Intensity * 0.0015)
+
+		A90Gui.FaceAngry.ImageColor3 =
+			Color3.new(1, randomColor, randomColor)
+
+		if not Moved then
+			local currentCamera = MainGame.cam
+			local humanoid = MainGame.hum
+
+			if currentCamera and humanoid then
+				local currentLookVector = currentCamera.CFrame.LookVector
+
+				local cameraMoved =
+					(StartLookVector - currentLookVector).Magnitude > 0.4
+
+				local playerMoved =
+					humanoid.MoveDirection.Magnitude > 0.4
+
+				if cameraMoved or playerMoved then
+					Moved = true
+				end
+			end
+		end
+	end
+end)
+
+task.wait(0.3)
+
+A90Gui.BackgroundColor3 = Color3.new(0, 0, 0)
+A90Gui.BackgroundTransparency = 0
+A90Gui.Static.ImageTransparency = 0
+A90Gui.Static2.ImageTransparency = 0.5
+
+task.wait(0.03)
+
+A90Gui.Face.ImageColor3 = Color3.new(1, 0, 0)
+
+task.wait(0.03)
+
+A90Gui.Visible = false
+
+task.wait(0.08)
+
+if Moved then
+	A90Gui.Visible = true
+	A90Module.Hit:Play()
+
+	task.wait(0.03)
+
+	A90Gui.Face.ImageColor3 = Color3.new(1, 1, 1)
+
+	task.wait(0.03)
+
+	A90Gui.BackgroundTransparency = 0
+	A90Gui.Static.ImageTransparency = 0
+	A90Gui.Static2.ImageTransparency = 0.5
+
+	task.wait(0.067)
+
+	A90Gui.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
+	A90Gui.FaceAngry.Rotation = 0
+	A90Gui.FaceAngry.ImageTransparency = 0
+	A90Gui.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
+	A90Gui.FaceAngry.Visible = true
+
+	task.wait(0.067)
+
+	A90Gui.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
+	A90Gui.Face.Visible = false
+
+	task.wait(0.75)
+
+	Running = false
+
+	task.wait()
+
+	local Character = Player.Character
+	local Humanoid =
+		Character
+		and Character:FindFirstChildOfClass("Humanoid")
+
+	if Humanoid and Humanoid.Health > 0 then
+		local Damage = 70
+		local WillDie = Humanoid.Health <= Damage
+
+		if WillDie then
+			setDeathCause("A-90")
+		end
+
+		Humanoid:TakeDamage(Damage)
+	end
+
+	task.wait(0.1)
+
+	A90Gui.FaceAngry.Visible = false
+	A90Gui.BackgroundColor3 = Color3.new(1, 1, 1)
+	A90Gui.Static.ImageTransparency = 1
+	A90Gui.Static2.ImageTransparency = 1
+
+	task.wait(0.067)
+
+	A90Gui.BackgroundColor3 = Color3.new(1, 0, 0)
+
+	task.wait(0.067)
+
+	A90Gui.BackgroundColor3 = Color3.new(0, 0, 0)
+
+	task.wait(0.067)
+
+	CameraShake:ShakeOnce(25, 8, 0, 4)
+
+	task.wait(0.03)
+
+	A90Module.Spawn:Stop()
+
+	A90Gui.BackgroundTransparency = 1
+	A90Gui.Static.ImageTransparency = 0.5
+	A90Gui.Static2.ImageTransparency = 0.5
+
+	TweenService:Create(
+		A90Gui.Static,
+		TweenInfo.new(
+			20,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		),
+		{
+			ImageTransparency = 1
+		}
+	):Play()
+
+	TweenService:Create(
+		A90Gui.Static2,
+		TweenInfo.new(
+			5,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		),
+		{
+			ImageTransparency = 1
+		}
+	):Play()
+
+	local FaceSize = RNG:NextNumber(2, 3)
+
+	A90Gui.FaceAngry.Rotation = RNG:NextNumber(-3, 3)
+	A90Gui.FaceAngry.Visible = true
+	A90Gui.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
+	A90Gui.FaceAngry.Size = UDim2.new(FaceSize, 0, FaceSize, 0)
+
+	TweenService:Create(
+		A90Gui.FaceAngry,
+		TweenInfo.new(
+			5,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		),
+		{
+			ImageTransparency = 1
+		}
+	):Play()
+
+	SoundService.Main.Volume = 0
+
+	local Equalizer =
+		SoundService.Main:FindFirstChild("EqualizerSoundEffect")
+
+	if Equalizer then
+		Equalizer.Enabled = true
+		Equalizer.HighGain = -50
+		Equalizer.LowGain = 10
+		Equalizer.MidGain = -50
+
+		TweenService:Create(
+			Equalizer,
+			TweenInfo.new(
+				15,
+				Enum.EasingStyle.Quint,
+				Enum.EasingDirection.InOut
+			),
+			{
+				LowGain = 0,
+				HighGain = 0,
+				MidGain = 0
+			}
+		):Play()
+	end
+
+	TweenService:Create(
+		SoundService.Main,
+		TweenInfo.new(
+			5,
+			Enum.EasingStyle.Quint,
+			Enum.EasingDirection.Out
+		),
+		{
+			Volume = 1
+		}
+	):Play()
+
+	StaticRunning = true
+
+	task.spawn(function()
+		while StaticRunning do
+			task.wait()
+
+			if not StaticRunning then
+				break
+			end
+
+			local MaxPosition = 100.1
+
+			A90Gui.Static.Position = UDim2.new(
+				RNG:NextNumber(0, MaxPosition) / 100,
+				0,
+				RNG:NextNumber(0, MaxPosition) / 100,
+				0
+			)
+
+			A90Gui.Static.Rotation = math.random(0, 1) * 180
+
+			A90Gui.Static2.Position = UDim2.new(
+				RNG:NextNumber(0, MaxPosition) / 100,
+				0,
+				RNG:NextNumber(0, MaxPosition) / 100,
+				0
+			)
+
+			A90Gui.Static2.Rotation = math.random(0, 1) * 180
+		end
+	end)
+
+	task.wait(20)
+
+	StaticRunning = false
+	A90Gui.Visible = false
+	A90Gui.BackgroundTransparency = 0
+	A90Gui.Static.ImageTransparency = 1
+	A90Gui.Static2.ImageTransparency = 1
+
+	cleanup()
+else
+	Running = false
+	A90Module.Spawn:Stop()
+	A90Gui.BackgroundTransparency = 1
+	A90Gui.Visible = false
+	CameraShake:ShakeOnce(5, 10, 0.1, 1)
+	SoundService.Main.Volume = 1
+	task.wait(1.2)
+	cleanup()
+end
+end
+
 function entityBehaviors.WH1T3()
 local entity = spawner.Create({Entity = {Name = "WH1T3",
 Asset = "91653443213214",HeightOffset = 5},Lights = {Flicker = {Enabled = false,Duration = 10},Shatter = false,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = false,Range = 200,Values = {1.5, 20, 0.1, 1}},
@@ -2640,280 +2894,587 @@ entity:Run()
 end
 
 function entityBehaviors.coomon()
-function DEATHMESSAGE(messages, deathCause)
-    spawn(function()
-        for _ = 1, 50 do
-            wait()
-            game:GetService("ReplicatedStorage").GameStats["Player_" .. game.Players.LocalPlayer.Name].Total.DeathCause.Value = deathCause
-            firesignal(game:GetService("ReplicatedStorage").RemotesFolder.DeathHint.OnClientEvent, messages, "Blue")
-        end
-    end)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+
+local OldEntity = workspace:FindFirstChild("Common Sence")
+
+if OldEntity then
+	pcall(function()
+		OldEntity:Destroy()
+	end)
 end
 
-local models = game:GetObjects("rbxassetid://112572076699068")
+local function setDeathCause(cause)
+	local gameStats = ReplicatedStorage:FindFirstChild("GameStats")
+
+	if not gameStats then
+		return
+	end
+
+	local playerStats = gameStats:FindFirstChild("Player_" .. Player.Name)
+
+	if not playerStats then
+		return
+	end
+
+	local total = playerStats:FindFirstChild("Total")
+
+	if not total then
+		return
+	end
+
+	local deathCause = total:FindFirstChild("DeathCause")
+
+	if deathCause then
+		deathCause.Value = cause
+	end
+end
+
+local success, models = pcall(function()
+	return game:GetObjects(
+		"rbxassetid://112572076699068"
+	)
+end)
+
+if not success
+	or not models
+	or not models[1]
+then
+	return
+end
+
 local figureModel = models[1]
+
+figureModel.Name = "Common Sence"
 figureModel.Parent = workspace
 
-local room50 = workspace.CurrentRooms["50"]
-local startModel = room50:FindFirstChild("Door", true)
+local EntityRunning = true
+local IsAttacking = false
+
+local function destroyEntity()
+	if not EntityRunning then
+		return
+	end
+
+	EntityRunning = false
+
+	if figureModel then
+		pcall(function()
+			figureModel:Destroy()
+		end)
+	end
+end
+
+local CurrentRooms =
+	workspace:FindFirstChild("CurrentRooms")
+
+if not CurrentRooms then
+	destroyEntity()
+	return
+end
+
+local room50 =
+	CurrentRooms:FindFirstChild("50")
+
+if not room50 then
+	destroyEntity()
+	return
+end
+
+local startModel =
+	room50:FindFirstChild(
+		"Door",
+		true
+	)
 
 if not startModel then
-    return
+	destroyEntity()
+	return
 end
 
-local startPart = startModel:FindFirstChild("Hidden")
-if not startPart then
-    return
+local startPart =
+	startModel:FindFirstChild("Hidden")
+
+if not startPart
+	or not startPart:IsA("BasePart")
+then
+	destroyEntity()
+	return
 end
 
-local figureNodesFolder = workspace.CurrentRooms["50"].FigureSetup.FigureNodes
+local FigureSetup =
+	room50:FindFirstChild("FigureSetup")
+
+if not FigureSetup then
+	destroyEntity()
+	return
+end
+
+local FigureNodesFolder =
+	FigureSetup:FindFirstChild("FigureNodes")
+
+if not FigureNodesFolder then
+	destroyEntity()
+	return
+end
+
 local allWaypoints = {}
 
-for _, waypoint in pairs(figureNodesFolder:GetChildren()) do
-    if waypoint:IsA("BasePart") then
-        table.insert(allWaypoints, waypoint)
-    end
+for _, waypoint in ipairs(
+	FigureNodesFolder:GetChildren()
+) do
+	if waypoint:IsA("BasePart") then
+		table.insert(
+			allWaypoints,
+			waypoint
+		)
+	end
 end
 
 if #allWaypoints == 0 then
-    return
+	destroyEntity()
+	return
 end
 
 if not figureModel.PrimaryPart then
-    for _, part in pairs(figureModel:GetDescendants()) do
-        if part:IsA("BasePart") then
-            figureModel.PrimaryPart = part
-            break
-        end
-    end
+	for _, object in ipairs(
+		figureModel:GetDescendants()
+	) do
+		if object:IsA("BasePart") then
+			figureModel.PrimaryPart = object
+			break
+		end
+	end
 end
 
 if not figureModel.PrimaryPart then
-    return
+	destroyEntity()
+	return
 end
 
-local startHeightOffset = 3
-local startPos = Vector3.new(
-    startPart.Position.X,
-    startPart.Position.Y + startHeightOffset,
-    startPart.Position.Z
+local HEIGHT_OFFSET = 3
+
+local startPosition =
+	Vector3.new(
+		startPart.Position.X,
+		startPart.Position.Y + HEIGHT_OFFSET,
+		startPart.Position.Z
+	)
+
+figureModel:PivotTo(
+	CFrame.new(startPosition)
 )
 
-if figureModel and figureModel.PrimaryPart then
-    figureModel:SetPrimaryPartCFrame(CFrame.new(startPos))
+local LatestRoom =
+	ReplicatedStorage
+		:WaitForChild("GameData")
+		:WaitForChild("LatestRoom")
+
+local StartingRoomValue =
+	LatestRoom.Value
+
+task.spawn(function()
+	while EntityRunning do
+		LatestRoom.Changed:Wait()
+
+		if not EntityRunning then
+			break
+		end
+
+		if LatestRoom.Value ~= StartingRoomValue then
+			destroyEntity()
+			break
+		end
+	end
+end)
+
+local function entityAlive()
+	return
+		EntityRunning
+		and figureModel
+		and figureModel.Parent
+		and figureModel.PrimaryPart
 end
 
-local function moveToPosition(targetPosition, speed)
-    if not figureModel or not figureModel.PrimaryPart then
-        return
-    end
-    
-    local startPos = figureModel.PrimaryPart.Position
-    local endPos = Vector3.new(
-        targetPosition.X,
-        targetPosition.Y + startHeightOffset,
-        targetPosition.Z
-    )
-    
-    local distance = (endPos - startPos).Magnitude
-    if distance == 0 then
-        return
-    end
-    
-    local duration = distance / speed
-    local startTime = tick()
-    
-    local RunService = game:GetService("RunService")
-    local connection
-    connection = RunService.Heartbeat:Connect(function(deltaTime)
-        if not figureModel or not figureModel.PrimaryPart then
-            if connection then
-                connection:Disconnect()
-            end
-            return
-        end
-        
-        local elapsed = tick() - startTime
-        local progress = math.min(elapsed / duration, 1)
-        
-        local currentPos = Vector3.new(
-            startPos.X + (endPos.X - startPos.X) * progress,
-            startPos.Y + (endPos.Y - startPos.Y) * progress,
-            startPos.Z + (endPos.Z - startPos.Z) * progress
-        )
-        
-        figureModel:SetPrimaryPartCFrame(CFrame.new(currentPos))
-        
-        if progress >= 1 and connection then
-            connection:Disconnect()
-        end
-    end)
-    
-    while tick() - startTime < duration do
-        wait()
-    end
-    
-    if figureModel and figureModel.PrimaryPart then
-        figureModel:SetPrimaryPartCFrame(CFrame.new(endPos))
-    end
+local function moveToPosition(
+	targetPosition,
+	speed
+)
+	if not entityAlive() then
+		return false
+	end
+
+	local currentPivot =
+		figureModel:GetPivot()
+
+	local startPos =
+		currentPivot.Position
+
+	local endPos =
+		Vector3.new(
+			targetPosition.X,
+			targetPosition.Y + HEIGHT_OFFSET,
+			targetPosition.Z
+		)
+
+	local distance =
+		(endPos - startPos).Magnitude
+
+	if distance <= 0.01 then
+		figureModel:PivotTo(
+			CFrame.new(endPos)
+		)
+
+		return true
+	end
+
+	local duration =
+		distance / speed
+
+	local elapsed = 0
+	local updateAccumulator = 0
+
+	while elapsed < duration do
+		if not entityAlive() then
+			return false
+		end
+
+		local deltaTime =
+			RunService.Heartbeat:Wait()
+
+		elapsed += deltaTime
+		updateAccumulator += deltaTime
+
+		if updateAccumulator >= 1 / 30
+			or elapsed >= duration
+		then
+			updateAccumulator = 0
+
+			local progress =
+				math.clamp(
+					elapsed / duration,
+					0,
+					1
+				)
+
+			local currentPos =
+				startPos:Lerp(
+					endPos,
+					progress
+				)
+
+			figureModel:PivotTo(
+				CFrame.new(currentPos)
+			)
+		end
+	end
+
+	if entityAlive() then
+		figureModel:PivotTo(
+			CFrame.new(endPos)
+		)
+
+		return true
+	end
+
+	return false
 end
 
-local function getNearestWaypoint(currentPos, remainingWaypoints)
-    local nearest = nil
-    local nearestDistance = math.huge
-    
-    for _, waypoint in pairs(remainingWaypoints) do
-        local waypointWithOffset = Vector3.new(
-            waypoint.Position.X,
-            waypoint.Position.Y + startHeightOffset,
-            waypoint.Position.Z
-        )
-        local distance = (waypointWithOffset - currentPos).Magnitude
-        if distance < nearestDistance then
-            nearestDistance = distance
-            nearest = waypoint
-        end
-    end
-    
-    return nearest
+local function getNearestWaypoint(
+	currentPos,
+	remainingWaypoints
+)
+	local nearest = nil
+	local nearestDistance = math.huge
+
+	for _, waypoint in ipairs(
+		remainingWaypoints
+	) do
+		if waypoint
+			and waypoint.Parent
+		then
+			local waypointPosition =
+				Vector3.new(
+					waypoint.Position.X,
+					waypoint.Position.Y + HEIGHT_OFFSET,
+					waypoint.Position.Z
+				)
+
+			local distance =
+				(
+					waypointPosition
+					- currentPos
+				).Magnitude
+
+			if distance < nearestDistance then
+				nearestDistance = distance
+				nearest = waypoint
+			end
+		end
+	end
+
+	return nearest
 end
 
 local function setupAttackDetection()
-    local isAttacking = false
-    local attackRange = 10
-    local attackCooldown = 0.5
-    local deathMessages = {
-        "你被Common Sence击败了...",
-        "它会沿着固定路径移动，但能感知到你的存在",
-        "当它靠近时，它会烧毁附近的路径",
-        "保持距离，寻找安全的位置"
-    }
-    
-    spawn(function()
-        while figureModel and figureModel.Parent do
-            wait(attackCooldown)
-            
-            local player = game.Players.LocalPlayer
-            if player and player.Character and player.Character:FindFirstChild("Humanoid") then
-                local character = player.Character
-                local humanoid = character:FindFirstChild("Humanoid")
-                local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-                
-                if humanoid and humanoidRootPart and humanoid.Health > 0 then
-                    if not figureModel or not figureModel.PrimaryPart then
-                        break
-                    end
-                    
-                    local entityPosition = figureModel.PrimaryPart.Position
-                    local playerPosition = humanoidRootPart.Position
-                    local distance = (playerPosition - entityPosition).Magnitude
-                    
-                    if distance <= attackRange then
-                        local rayDirection = (playerPosition - entityPosition).Unit
-                        local ray = Ray.new(entityPosition, rayDirection * attackRange)
-                        
-                        local ignoreList = {figureModel}
-                        local hitPart, hitPosition = workspace:FindPartOnRayWithIgnoreList(ray, ignoreList)
-                        
-                        if hitPart and hitPart:IsDescendantOf(character) then
-                            if not isAttacking then
-                                isAttacking = true
-                                
-                                humanoid:TakeDamage(70)
-                                
-                                DEATHMESSAGE(deathMessages, "Common Sence")
-                                
-                                wait(1)
-                                isAttacking = false
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
+	local ATTACK_RANGE = 10
+	local ATTACK_COOLDOWN = 0.5
+	local DAMAGE = 70
+
+	task.spawn(function()
+		while entityAlive() do
+			task.wait(
+				ATTACK_COOLDOWN
+			)
+
+			if not entityAlive() then
+				break
+			end
+
+			local Character =
+				Player.Character
+
+			if not Character then
+				continue
+			end
+
+			local Humanoid =
+				Character
+					:FindFirstChildOfClass(
+						"Humanoid"
+					)
+
+			local RootPart =
+				Character
+					:FindFirstChild(
+						"HumanoidRootPart"
+					)
+
+			if not Humanoid
+				or not RootPart
+				or Humanoid.Health <= 0
+			then
+				continue
+			end
+
+			if IsAttacking then
+				continue
+			end
+
+			local EntityRoot =
+				figureModel.PrimaryPart
+
+			if not EntityRoot then
+				break
+			end
+
+			local entityPosition =
+				EntityRoot.Position
+
+			local playerPosition =
+				RootPart.Position
+
+			local offset =
+				playerPosition
+				- entityPosition
+
+			local distance =
+				offset.Magnitude
+
+			if distance > ATTACK_RANGE then
+				continue
+			end
+
+			if distance <= 0.05 then
+				IsAttacking = true
+
+				local WillDie =
+					Humanoid.Health <= DAMAGE
+
+				if WillDie then
+					setDeathCause(
+						"Common Sence"
+					)
+				end
+
+				Humanoid:TakeDamage(DAMAGE)
+
+				task.wait(1)
+
+				IsAttacking = false
+
+				continue
+			end
+
+			local raycastParams =
+				RaycastParams.new()
+
+			raycastParams.FilterType =
+				Enum.RaycastFilterType.Exclude
+
+			raycastParams.FilterDescendantsInstances =
+				{
+					figureModel
+				}
+
+			raycastParams.IgnoreWater = true
+
+			local result =
+				workspace:Raycast(
+					entityPosition,
+					offset,
+					raycastParams
+				)
+
+			if result
+				and result.Instance
+				and result.Instance:IsDescendantOf(
+					Character
+				)
+			then
+				IsAttacking = true
+
+				local WillDie =
+					Humanoid.Health <= DAMAGE
+
+				if WillDie then
+					setDeathCause(
+						"Common Sence"
+					)
+				end
+
+				Humanoid:TakeDamage(
+					DAMAGE
+				)
+
+				task.wait(1)
+
+				IsAttacking = false
+			end
+		end
+	end)
 end
 
 local function moveThroughWaypoints()
-    if not figureModel or not figureModel.PrimaryPart then
-        return
-    end
-    
-    local remainingWaypoints = {}
-    for _, wp in pairs(allWaypoints) do
-        table.insert(remainingWaypoints, wp)
-    end
-    
-    local visitedWaypoints = {}
-    local currentPos = figureModel.PrimaryPart.Position
-    
-    while #remainingWaypoints > 0 do
-        if not figureModel or not figureModel.PrimaryPart then
-            break
-        end
-        
-        local nearest = getNearestWaypoint(currentPos, remainingWaypoints)
-        if nearest then
-            moveToPosition(nearest.Position, 14)
-            
-            if not figureModel or not figureModel.PrimaryPart then
-                break
-            end
-            
-            currentPos = figureModel.PrimaryPart.Position
-            table.insert(visitedWaypoints, nearest)
-            
-            for i, wp in pairs(remainingWaypoints) do
-                if wp == nearest then
-                    table.remove(remainingWaypoints, i)
-                    break
-                end
-            end
-        else
-            break
-        end
-    end
-    
-    for i = #visitedWaypoints - 1, 1, -1 do
-        if not figureModel or not figureModel.PrimaryPart then
-            break
-        end
-        
-        local waypoint = visitedWaypoints[i]
-        moveToPosition(waypoint.Position, 14)
-        
-        if not figureModel or not figureModel.PrimaryPart then
-            break
-        end
-        
-        currentPos = figureModel.PrimaryPart.Position
-    end
-    
-    for i = 2, #visitedWaypoints do
-        if not figureModel or not figureModel.PrimaryPart then
-            break
-        end
-        
-        local waypoint = visitedWaypoints[i]
-        moveToPosition(waypoint.Position, 14)
-        
-        if not figureModel or not figureModel.PrimaryPart then
-            break
-        end
-        
-        currentPos = figureModel.PrimaryPart.Position
-    end
+	if not entityAlive() then
+		return
+	end
+
+	local remainingWaypoints = {}
+
+	for _, waypoint in ipairs(
+		allWaypoints
+	) do
+		table.insert(
+			remainingWaypoints,
+			waypoint
+		)
+	end
+
+	local visitedWaypoints = {}
+
+	local currentPos =
+		figureModel.PrimaryPart.Position
+
+	while #remainingWaypoints > 0
+		and entityAlive()
+	do
+		local nearest =
+			getNearestWaypoint(
+				currentPos,
+				remainingWaypoints
+			)
+
+		if not nearest then
+			break
+		end
+
+		local moved =
+			moveToPosition(
+				nearest.Position,
+				14
+			)
+
+		if not moved
+			or not entityAlive()
+		then
+			break
+		end
+
+		currentPos =
+			figureModel.PrimaryPart.Position
+
+		table.insert(
+			visitedWaypoints,
+			nearest
+		)
+
+		for index, waypoint in ipairs(
+			remainingWaypoints
+		) do
+			if waypoint == nearest then
+				table.remove(
+					remainingWaypoints,
+					index
+				)
+
+				break
+			end
+		end
+	end
+
+	for index =
+		#visitedWaypoints - 1,
+		1,
+		-1
+	do
+		if not entityAlive() then
+			break
+		end
+
+		local waypoint =
+			visitedWaypoints[index]
+
+		local moved =
+			moveToPosition(
+				waypoint.Position,
+				14
+			)
+
+		if not moved then
+			break
+		end
+	end
+
+	for index =
+		2,
+		#visitedWaypoints
+	do
+		if not entityAlive() then
+			break
+		end
+
+		local waypoint =
+			visitedWaypoints[index]
+
+		local moved =
+			moveToPosition(
+				waypoint.Position,
+				14
+			)
+
+		if not moved then
+			break
+		end
+	end
 end
+
 setupAttackDetection()
 moveThroughWaypoints()
-spawn(function()
-    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-    local targetModel = workspace:FindFirstChild("Common Sence")
-    if targetModel then
-        targetModel:Destroy()
-    else
-    end
-end)
 end
 
 function entityBehaviors.MOVERS()

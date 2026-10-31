@@ -5,6 +5,405 @@ local marker = Instance.new("BoolValue")
 marker.Name = "HardcoreITEM"
 marker.Value = true
 marker.Parent = workspace
+
+task.spawn(function()
+    local WorkspaceService = game:GetService("Workspace")
+    local CurrentRooms = WorkspaceService:WaitForChild("CurrentRooms")
+
+    local function loadTemplate(assetId)
+        local ok, objects = pcall(function()
+            return game:GetObjects("rbxassetid://" .. assetId)
+        end)
+
+        if not ok or not objects or #objects == 0 then
+            return nil
+        end
+
+        local template = objects[1]
+        template.Parent = nil
+        return template
+    end
+
+    local LightTemplate = loadTemplate("115669442831464")
+    local WindowTemplate = loadTemplate("88364164011150")
+    local TallWindowTemplate = loadTemplate("126414024738813")
+    local ChandelierTemplate = loadTemplate("137882841439230")
+
+    local SpawnedLight = {}
+    local SpawnedWindow = {}
+    local SpawnedTallWindow = {}
+    local SpawnedChandelier = {}
+
+    local function getCFrame(object)
+        if not object then
+            return nil
+        end
+
+        if object:IsA("Attachment") then
+            return object.WorldCFrame
+        end
+
+        if object:IsA("BasePart") then
+            return object.CFrame
+        end
+
+        if object:IsA("Model") then
+            return object:GetPivot()
+        end
+
+        local model = object:FindFirstChildWhichIsA("Model", true)
+
+        if model then
+            return model:GetPivot()
+        end
+
+        local part = object:FindFirstChildWhichIsA("BasePart", true)
+
+        if part then
+            return part.CFrame
+        end
+
+        return nil
+    end
+
+    local function moveObject(object, targetCFrame)
+        if not object or not targetCFrame then
+            return false
+        end
+
+        if object:IsA("Model") then
+            object:PivotTo(targetCFrame)
+            return true
+        end
+
+        if object:IsA("BasePart") then
+            object.CFrame = targetCFrame
+            return true
+        end
+
+        local parts = {}
+
+        for _, descendant in ipairs(object:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                table.insert(parts, descendant)
+            end
+        end
+
+        if #parts == 0 then
+            return false
+        end
+
+        local root = parts[1]
+        local rootCFrame = root.CFrame
+        local offsets = {}
+
+        for _, part in ipairs(parts) do
+            offsets[part] = rootCFrame:ToObjectSpace(part.CFrame)
+        end
+
+        for part, offset in pairs(offsets) do
+            part.CFrame = targetCFrame * offset
+        end
+
+        return true
+    end
+
+    local function getDirectRoom(instance)
+        local current = instance
+
+        while current and current ~= CurrentRooms do
+            if current.Parent == CurrentRooms then
+                return current
+            end
+            current = current.Parent
+        end
+
+        return nil
+    end
+
+    local function isValidLightFixture(lightFixture)
+        if not lightFixture:IsA("BasePart") or lightFixture.Name ~= "LightFixture" then
+            return false
+        end
+
+        local lightStand = lightFixture.Parent
+        local lightFixtures = lightStand and lightStand.Parent
+        local assets = lightFixtures and lightFixtures.Parent
+        local room = assets and assets.Parent
+
+        return lightStand ~= nil
+            and lightStand.Name == "LightStand"
+            and lightFixtures ~= nil
+            and lightFixtures.Name == "Light_Fixtures"
+            and assets ~= nil
+            and assets.Name == "Assets"
+            and room ~= nil
+            and room.Parent == CurrentRooms
+    end
+
+    local function isValidWindow(window)
+        if window.Name ~= "Window" then
+            return false
+        end
+
+        local parent = window.Parent
+
+        if not parent then
+            return false
+        end
+
+        if parent.Name == "Assets" then
+            local room = parent.Parent
+            return room ~= nil and room.Parent == CurrentRooms
+        end
+
+        if parent.Name == "Windows" then
+            local assets = parent.Parent
+            local room = assets and assets.Parent
+            return assets ~= nil
+                and assets.Name == "Assets"
+                and room ~= nil
+                and room.Parent == CurrentRooms
+        end
+
+        return false
+    end
+
+    local function isValidTallWindow(windowTall)
+        if windowTall.Name ~= "Window_Tall" then
+            return false
+        end
+
+        local parent = windowTall.Parent
+
+        if not parent then
+            return false
+        end
+
+        if parent.Name == "Windowed" then
+            local room = parent.Parent
+            return room ~= nil and room.Parent == CurrentRooms
+        end
+
+        if parent.Name == "Assets" then
+            local room = parent.Parent
+            return room ~= nil and room.Parent == CurrentRooms
+        end
+
+        if parent.Name == "Windows" then
+            local assets = parent.Parent
+            local room = assets and assets.Parent
+            return assets ~= nil
+                and assets.Name == "Assets"
+                and room ~= nil
+                and room.Parent == CurrentRooms
+        end
+
+        return false
+    end
+
+    local function isValidChandelier(chandelier)
+        if chandelier.Name ~= "Chandelier" then
+            return false
+        end
+
+        local parent = chandelier.Parent
+
+        if not parent then
+            return false
+        end
+
+        if parent.Name == "Assets" then
+            local room = parent.Parent
+            return room ~= nil and room.Parent == CurrentRooms
+        end
+
+        if parent.Name == "Light_Fixtures" then
+            local assets = parent.Parent
+            local room = assets and assets.Parent
+            return assets ~= nil
+                and assets.Name == "Assets"
+                and room ~= nil
+                and room.Parent == CurrentRooms
+        end
+
+        return false
+    end
+
+    local function cleanupSpawn(map, target)
+        local spawned = map[target]
+
+        if typeof(spawned) == "Instance" and spawned.Parent then
+            spawned:Destroy()
+        end
+
+        map[target] = nil
+    end
+
+    local function spawnForTarget(target, template, map, validFunction, name, cframeTarget, parentTarget)
+        if not template then
+            return
+        end
+
+        local existing = map[target]
+
+        if existing then
+            if existing == true then
+                return
+            end
+
+            if typeof(existing) == "Instance" and existing.Parent then
+                return
+            end
+
+            map[target] = nil
+        end
+
+        if not target or not target.Parent or not target:IsDescendantOf(CurrentRooms) then
+            return
+        end
+
+        if not validFunction(target) then
+            return
+        end
+
+        local positionTarget = cframeTarget and cframeTarget(target) or target
+
+        if not positionTarget then
+            return
+        end
+
+        local targetCFrame = getCFrame(positionTarget)
+
+        if not targetCFrame then
+            return
+        end
+
+        map[target] = true
+
+        local clone = template:Clone()
+        clone.Name = name
+        clone.Parent = parentTarget and parentTarget(target) or target.Parent
+
+        if not moveObject(clone, targetCFrame) then
+            clone:Destroy()
+            map[target] = nil
+            return
+        end
+
+        map[target] = clone
+
+        target.AncestryChanged:Connect(function()
+            if not target:IsDescendantOf(CurrentRooms) then
+                cleanupSpawn(map, target)
+            end
+        end)
+    end
+
+    local function spawnLight(lightFixture)
+        spawnForTarget(
+            lightFixture,
+            LightTemplate,
+            SpawnedLight,
+            isValidLightFixture,
+            "LoadedLight_New",
+            function(target)
+                return target:FindFirstChild("Neon")
+            end,
+            function(target)
+                return target
+            end
+        )
+    end
+
+    local function spawnWindow(window)
+        spawnForTarget(
+            window,
+            WindowTemplate,
+            SpawnedWindow,
+            isValidWindow,
+            "LoadedWindow_88364164011150"
+        )
+    end
+
+    local function spawnTallWindow(windowTall)
+        spawnForTarget(
+            windowTall,
+            TallWindowTemplate,
+            SpawnedTallWindow,
+            isValidTallWindow,
+            "LoadedWindowTall_126414024738813"
+        )
+    end
+
+    local function spawnChandelier(chandelier)
+        spawnForTarget(
+            chandelier,
+            ChandelierTemplate,
+            SpawnedChandelier,
+            isValidChandelier,
+            "LoadedChandelier_New"
+        )
+    end
+
+    local function checkInstance(instance)
+        if not instance or not instance.Parent then
+            return
+        end
+
+        if instance.Name == "LightFixture" and instance:IsA("BasePart") then
+            task.defer(spawnLight, instance)
+            return
+        end
+
+        if instance.Name == "Neon" then
+            local lightFixture = instance.Parent
+
+            if lightFixture and lightFixture.Name == "LightFixture" and lightFixture:IsA("BasePart") then
+                task.defer(spawnLight, lightFixture)
+            end
+
+            return
+        end
+
+        if instance.Name == "Window" then
+            task.defer(spawnWindow, instance)
+            return
+        end
+
+        if instance.Name == "Window_Tall" then
+            task.defer(spawnTallWindow, instance)
+            return
+        end
+
+        if instance.Name == "Chandelier" then
+            task.defer(spawnChandelier, instance)
+        end
+    end
+
+    local function scanRoom(room)
+        if not room or room.Parent ~= CurrentRooms then
+            return
+        end
+
+        for _, instance in ipairs(room:GetDescendants()) do
+            checkInstance(instance)
+        end
+    end
+
+    for _, room in ipairs(CurrentRooms:GetChildren()) do
+        task.spawn(scanRoom, room)
+    end
+
+    CurrentRooms.ChildAdded:Connect(function(room)
+        task.defer(scanRoom, room)
+    end)
+
+    CurrentRooms.DescendantAdded:Connect(function(instance)
+        checkInstance(instance)
+    end)
+end)
+
 local player = game.Players.LocalPlayer
 local runService = game:GetService("RunService")
 local workspace = game:GetService("Workspace")

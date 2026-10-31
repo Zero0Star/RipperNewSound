@@ -3538,32 +3538,50 @@ local stopCheckTime = 0
 local lastMoveTime = 0
 local damageApplied = false
 
+local function setDeathCause(deathCause)
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    local gameStats = replicatedStorage:FindFirstChild("GameStats")
+    local playerStats = gameStats and gameStats:FindFirstChild("Player_" .. plr.Name)
+    local total = playerStats and playerStats:FindFirstChild("Total")
+    local value = total and total:FindFirstChild("DeathCause")
+    if value then
+        value.Value = deathCause
+    end
+end
+
 local function applyDamage()
     if damageApplied then return end
     damageApplied = true
-    
-    plr.Character.Humanoid.Health -= 99
-    
-    local function TriggerDeathHint(DeathMessages, DeathCauseString)
-        spawn(function()
-            for _ = 1, 50 do
-                game:GetService("ReplicatedStorage").GameStats["Player_" .. game.Players.LocalPlayer.Name].Total.DeathCause.Value = DeathCauseString
-                firesignal(game:GetService("ReplicatedStorage").RemotesFolder.DeathHint.OnClientEvent, DeathMessages, "Yellow")
-                wait()
-            end
-        end)
+
+    local character = plr.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then
+        return
     end
 
-    TriggerDeathHint({
-        "嗯,又死了,你死于Mover",
-        "它非常讨厌A-90",
-        "出现时务必保持移动"
-    }, "Mover")
+    local damage = 99
+    if humanoid.Health <= damage then
+        setDeathCause("Mover")
+    end
+
+    humanoid:TakeDamage(damage)
 end
 
 task.delay(0.2, function()
     while isActive do
         task.wait(0.03333333333333333)
+
+        if not isActive or not Jumpscare_Mover.Parent then
+            break
+        end
+
+        local character = plr.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if not humanoid or humanoid.Health <= 0 then
+            isActive = false
+            break
+        end
+
         Jumpscare_Mover.Static.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
         Jumpscare_Mover.Static.Rotation = math.random(0, 1) * 180
         Jumpscare_Mover.Static2.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
@@ -3572,15 +3590,15 @@ task.delay(0.2, function()
         Jumpscare_Mover.FaceAngry.Position = UDim2.new(0.5 + math.random(-100, 100) / 50000, 0, 0.49 + math.random(-100, 100) / 30000, math.random(-1, 1))
         local randint = math.random(0, 1)
         Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, randint, randint)
-        
+
         local currentMoving = false
         if 0.4 < (LookVector - arg1.CFrame.LookVector).Magnitude then
             currentMoving = true
         end
-        if 0.4 < plr.Character.Humanoid.MoveDirection.Magnitude then
+        if 0.4 < humanoid.MoveDirection.Magnitude then
             currentMoving = true
         end
-        
+
         if currentMoving then
             isMoving = true
             wasMoving = true
@@ -3590,41 +3608,41 @@ task.delay(0.2, function()
                 isActive = false
                 Jumpscare_Mover.Face.Image = "rbxassetid://77341058717266"
                 jumpscareSound:Play()
-                
+
                 task.wait(0.03333333333333333)
                 Jumpscare_Mover.Face.ImageColor3 = Color3.new(1, 0, 0)
                 Jumpscare_Mover.Static.ImageTransparency = 0
                 Jumpscare_Mover.Static2.ImageTransparency = 0.5
-                
+
                 task.wait(0.06666666666666667)
                 Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
                 Jumpscare_Mover.FaceAngry.Visible = true
-                
+
                 task.wait(0.06666666666666667)
                 Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
                 Jumpscare_Mover.Face.Visible = false
                 Jumpscare_Mover.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
-                
+
                 task.wait(0.75)
                 applyDamage()
-                
+
                 task.wait(0.1)
                 Jumpscare_Mover.FaceAngry.Visible = false
                 Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 1, 1)
                 Jumpscare_Mover.Static.ImageTransparency = 1
                 Jumpscare_Mover.Static2.ImageTransparency = 1
-                
+
                 task.wait(0.06666666666666667)
                 Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 0, 0)
-                
+
                 task.wait(0.06666666666666667)
                 Jumpscare_Mover.BackgroundColor3 = Color3.new(0, 0, 0)
-                
+
                 task.wait(0.06666666666666667)
                 break
             end
         end
-        
+
         LookVector = arg1.CFrame.LookVector
     end
 end)
@@ -3635,36 +3653,36 @@ if isActive then
     if not wasMoving then
         Jumpscare_Mover.Face.Image = "rbxassetid://77341058717266"
         jumpscareSound:Play()
-        
+
         task.wait(0.03333333333333333)
         Jumpscare_Mover.Face.ImageColor3 = Color3.new(1, 0, 0)
         Jumpscare_Mover.Static.ImageTransparency = 0
         Jumpscare_Mover.Static2.ImageTransparency = 0.5
-        
+
         task.wait(0.06666666666666667)
         Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
         Jumpscare_Mover.FaceAngry.Visible = true
-        
+
         task.wait(0.06666666666666667)
         Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
         Jumpscare_Mover.Face.Visible = false
         Jumpscare_Mover.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
-        
+
         task.wait(0.75)
         applyDamage()
-        
+
         task.wait(0.1)
         Jumpscare_Mover.FaceAngry.Visible = false
         Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 1, 1)
         Jumpscare_Mover.Static.ImageTransparency = 1
         Jumpscare_Mover.Static2.ImageTransparency = 1
-        
+
         task.wait(0.06666666666666667)
         Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 0, 0)
-        
+
         task.wait(0.06666666666666667)
         Jumpscare_Mover.BackgroundColor3 = Color3.new(0, 0, 0)
-        
+
         task.wait(0.06666666666666667)
     else
         spawnSound:Stop()
@@ -3679,6 +3697,7 @@ isActive = false
 Jumpscare_Mover.Visible = false
 task.wait(2)
 MainUI:Destroy()
+
 end
 function entityBehaviors.SMILEWH()
 function GetRoom()

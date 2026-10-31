@@ -5227,13 +5227,15 @@ local vu5 = game:GetObjects("rbxassetid://85104600103168")[1]
             local function vu529()
                 while true do
                     function DEATHMESSAGE(pu506, pu507)
-                        spawn(function()
-                            for _ = 1, 50 do
-                                wait()
-                                game:GetService("ReplicatedStorage").GameStats["Player_" .. game.Players.LocalPlayer.Name].Total.DeathCause.Value = pu507
-                                firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, pu506, "Blue")
-                            end
-                        end)
+                        local replicatedStorage = game:GetService("ReplicatedStorage")
+                        local player = game.Players.LocalPlayer
+                        local gameStats = replicatedStorage:FindFirstChild("GameStats")
+                        local playerStats = gameStats and gameStats:FindFirstChild("Player_" .. player.Name)
+                        local total = playerStats and playerStats:FindFirstChild("Total")
+                        local deathCause = total and total:FindFirstChild("DeathCause")
+                        if deathCause then
+                            deathCause.Value = pu507
+                        end
                     end
                     if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
                         break
@@ -5293,7 +5295,9 @@ local vu5 = game:GetObjects("rbxassetid://85104600103168")[1]
                         end
                     end
                     if not spawnPart then
-                        warn("Frostbite: 当前房间缺少可用的生成位置: " .. v517.Name)
+                        pcall(function()
+                            v512:Stop()
+                        end)
                         v514:Destroy()
                         return
                     end
@@ -5641,16 +5645,16 @@ local vu5 = game:GetObjects("rbxassetid://85104600103168")[1]
                                         if frostbiteLighterDebug then
                                             warn("Frostbite damage: Lighter not detected as active")
                                         end
+                                        if v523.Health <= 5 then
+                                            DEATHMESSAGE({
+                                                "You died to who you call Frostbite...",
+                                                "He will spawn in the middle and start freezing the room.",
+                                                "Find something that has heat to keep you warm!"
+                                            }, "FrostBite")
+                                        end
                                         v523:TakeDamage(5)
                                     elseif frostbiteLighterDebug then
                                         print("Frostbite damage blocked: Lighter active")
-                                    end
-                                    if v523.Health < 10 then
-                                        DEATHMESSAGE({
-                                            "You died to who you call Frostbite...",
-                                            "He will spawn in the middle and start freezing the room.",
-                                            "Find something that has heat to keep you warm!"
-                                        }, "FrostBite")
                                     end
                                 end
                             end
@@ -5717,6 +5721,9 @@ local vu5 = game:GetObjects("rbxassetid://85104600103168")[1]
                     v516.BlackTrai2l.Enabled = false
                     v516.smoke.Enabled = false
                     wait(2)
+                    pcall(function()
+                        v512:Stop()
+                    end)
                     v514:Destroy()
                     break
                 end

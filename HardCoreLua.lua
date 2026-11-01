@@ -5185,39 +5185,1591 @@ entity:Run()
 end
 
 function entityBehaviors.Silence()
-local entity = spawner.Create({Entity = {Name = "Silence",Asset = "115741296805200",HeightOffset = 1},Lights = {Flicker = {Enabled = false,Duration = 0.1},Shatter = true,Repair = false},Earthquake = {Enabled = false},CameraShake = {Enabled = true,Range = 20,Values = {1.5, 20, 0.1, 1}},Movement = {Speed = 35,Delay = 2,Reversed = false},Rebounding = {Enabled = false,Type = "Blitz",Min = 1,Max = math.random(1, 2),Delay = math.random(10, 30) / 10},Damage = {Enabled = true,Range = 200,Amount = 125},Crucifixion = {Enabled = true,Range = 200,Resist = false,Break = true},Death = {Type = "Guiding",Hints = {"你被 Silence 吞噬了...", "你该学会不在寂静中消亡", "请仔细辨别环境中的声音", "他随时都可能出现"},Cause = ""}})
-entity:SetCallback("OnRebounding", function(startOfRebound)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local InsertService = game:GetService("InsertService")
 
-	local entityModel = entity.Model
-	local main = entityModel:WaitForChild("Main")
-	local attachment = main:WaitForChild("Attachment")
-	local AttachmentSwitch = main:WaitForChild("AttachmentSwitch")
-	local sounds = {
-		footsteps = main:WaitForChild("Footsteps"),
-		playSound = main:WaitForChild("PlaySound"),
-		switch = main:WaitForChild("Switch"),
-		switchBack = main:WaitForChild("SwitchBack")
-	}
+local SILENCE_ASSET_ID = 131179838362680
+local CRUCIFIX_ASSET_ID = 128235155752478
+local JUMPSCARE_SOUND_ID = "rbxassetid://1592934514"
+local JUMPSCARE_IMAGE_ID = "rbxassetid://139425974297545"
+local JUMPSCARE_IMAGE_ALT_ID = "rbxassetid://71258076152603"
+local SILENCE_SPEED = 20
+local DETECTION_DISTANCE = 200
+local HEIGHT_OFFSET = Vector3.new(0, -0.7, 0)
+local JUMPSCARE_DAMAGE = 180
 
-	for _, c in attachment:GetChildren() do
-		c.Enabled = (not startOfRebound)
-	end
-	for _, c in AttachmentSwitch:GetChildren() do
-		c.Enabled = startOfRebound
-	end
+local silence = nil
+local isJumpScaring = false
+local hasJumpScared = false
+local isSilenceDespawning = false
+local crucifixActivated = false
+local silenceIsMoving = false
+local silenceMoveCancelled = false
+local ceaseFreezeActive = false
+local ceaseSpeedScale = 1
+local ceaseFreezeSerial = 0
+local ceaseSavedEffects = {}
+local ceaseDescendantConnection = nil
+local ceaseHandledModels = setmetatable({}, { __mode = "k" })
 
-	if startOfRebound == true then
-		sounds.footsteps.PlaybackSpeed = 0.35
-		sounds.playSound.PlaybackSpeed = 0.25
-		sounds.switch:Play()
-	else
-		sounds.footsteps.PlaybackSpeed = 0.25
-		sounds.playSound.PlaybackSpeed = 0.16
-		sounds.switchBack:Play()
-	end
-	
-end)
-entity:Run()
+local function ease(alpha)
+    alpha = math.clamp(alpha, 0, 1)
+    return alpha * alpha * (3 - 2 * alpha)
+end
+
+local function loadModel(assetId, fallbackName)
+    local success, objects = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(assetId))
+    end)
+
+    if success and type(objects) == "table" then
+        for _, object in ipairs(objects) do
+            if object:IsA("Model") then
+                return object
+            end
+        end
+    end
+
+    local template = ReplicatedStorage:FindFirstChild(fallbackName, true)
+    if template and template:IsA("Model") then
+        return template:Clone()
+    end
+
+    local loaded, asset = pcall(function()
+        return InsertService:LoadAsset(assetId)
+    end)
+
+    if loaded and asset and asset:IsA("Model") then
+        return asset
+    end
+
+    return nil
+end
+
+local function prepareModel(model, queryable)
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            descendant.Anchored = true
+            descendant.CanCollide = false
+            descendant.CanTouch = false
+            descendant.CanQuery = queryable
+        end
+    end
+end
+
+local function getSilencePosition()
+    if silence and silence.Parent then
+        return silence:GetPivot().Position
+    end
+    return nil
+end
+
+local function isActive()
+    return silence ~= nil
+        and silence.Parent ~= nil
+        and not crucifixActivated
+        and not isSilenceDespawning
+        and not silenceMoveCancelled
+end
+
+local function applyCeaseSpeed(scale)
+    ceaseSpeedScale = math.clamp(scale, 0, 1)
+
+    for object, saved in pairs(ceaseSavedEffects) do
+        if object.Parent then
+            if saved.Type == "Particle" then
+                pcall(function()
+                    object.TimeScale = saved.TimeScale * ceaseSpeedScale
+                end)
+            else
+                pcall(function()
+                    object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                    object.Volume = saved.Volume * ceaseSpeedScale
+                end)
+            end
+        end
+    end
+end
+
+local function trackCeaseEffect(object)
+    if ceaseSavedEffects[object] then
+        return
+    end
+
+    if object:IsA("ParticleEmitter") then
+        ceaseSavedEffects[object] = {
+            Type = "Particle",
+            TimeScale = object.TimeScale
+        }
+    elseif object:IsA("Sound") then
+        ceaseSavedEffects[object] = {
+            Type = "Sound",
+            PlaybackSpeed = object.PlaybackSpeed,
+            Volume = object.Volume
+        }
+    else
+        return
+    end
+
+    if ceaseFreezeActive then
+        local saved = ceaseSavedEffects[object]
+        if saved.Type == "Particle" then
+            pcall(function()
+                object.TimeScale = saved.TimeScale * ceaseSpeedScale
+            end)
+        else
+            pcall(function()
+                object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                object.Volume = saved.Volume * ceaseSpeedScale
+            end)
+        end
+    end
+end
+
+local function cancelCeaseFreeze()
+    ceaseFreezeSerial = ceaseFreezeSerial + 1
+
+    if ceaseDescendantConnection then
+        ceaseDescendantConnection:Disconnect()
+        ceaseDescendantConnection = nil
+    end
+
+    for object, saved in pairs(ceaseSavedEffects) do
+        if object.Parent then
+            if saved.Type == "Particle" then
+                pcall(function()
+                    object.TimeScale = saved.TimeScale
+                end)
+            else
+                pcall(function()
+                    object.PlaybackSpeed = saved.PlaybackSpeed
+                    object.Volume = saved.Volume
+                end)
+            end
+        end
+    end
+
+    ceaseSavedEffects = {}
+    ceaseSpeedScale = 1
+    ceaseFreezeActive = false
+end
+
+local function startCeaseFreeze(ceaseModel)
+    if ceaseFreezeActive or not silenceIsMoving or not isActive()
+        or isJumpScaring or ceaseHandledModels[ceaseModel] then
+        return
+    end
+
+    ceaseHandledModels[ceaseModel] = true
+    ceaseFreezeActive = true
+    ceaseFreezeSerial = ceaseFreezeSerial + 1
+    local freezeSerial = ceaseFreezeSerial
+    local currentSilence = silence
+
+    for _, descendant in ipairs(currentSilence:GetDescendants()) do
+        trackCeaseEffect(descendant)
+    end
+
+    ceaseDescendantConnection = currentSilence.DescendantAdded:Connect(function(descendant)
+        if ceaseFreezeActive and ceaseFreezeSerial == freezeSerial then
+            trackCeaseEffect(descendant)
+        end
+    end)
+
+    task.spawn(function()
+        local function stillValid()
+            return ceaseFreezeSerial == freezeSerial
+                and silence == currentSilence
+                and currentSilence.Parent ~= nil
+                and not isJumpScaring
+                and not crucifixActivated
+                and not isSilenceDespawning
+        end
+
+        local function transition(fromScale, toScale, duration)
+            local startedAt = os.clock()
+            while true do
+                if not stillValid() then
+                    if ceaseFreezeSerial == freezeSerial then
+                        cancelCeaseFreeze()
+                    end
+                    return false
+                end
+
+                local alpha = math.clamp((os.clock() - startedAt) / duration, 0, 1)
+                applyCeaseSpeed(fromScale + (toScale - fromScale) * ease(alpha))
+                if alpha >= 1 then
+                    return true
+                end
+                RunService.Heartbeat:Wait()
+            end
+        end
+
+        if not transition(1, 0, 2.25) then
+            return
+        end
+
+        local holdStartedAt = os.clock()
+        while os.clock() - holdStartedAt < 13 do
+            if not stillValid() then
+                if ceaseFreezeSerial == freezeSerial then
+                    cancelCeaseFreeze()
+                end
+                return
+            end
+            task.wait(0.05)
+        end
+
+        if not transition(0, 1, 2) then
+            return
+        end
+
+        if ceaseFreezeSerial == freezeSerial then
+            cancelCeaseFreeze()
+        end
+    end)
+end
+
+local function stopSilenceMovement()
+    silenceMoveCancelled = true
+    silenceIsMoving = false
+    cancelCeaseFreeze()
+end
+
+local function destroySilence()
+    stopSilenceMovement()
+    isSilenceDespawning = true
+    local previousSilence = silence
+    silence = nil
+    if previousSilence then
+        previousSilence:Destroy()
+    end
+end
+
+local function getCrucifixTool(character)
+    if not character or not character:IsA("Model") then
+        return nil
+    end
+
+    local direct = character:FindFirstChild("Crucifix")
+    if direct and direct:IsA("Tool") then
+        return direct
+    end
+
+    for _, descendant in ipairs(character:GetDescendants()) do
+        if descendant.Name == "Crucifix" and descendant:IsA("Tool") then
+            return descendant
+        end
+    end
+
+    return nil
+end
+
+local function getCharacterFromHit(hitInstance)
+    local current = hitInstance
+    while current and current ~= workspace do
+        if current:IsA("Model") and Players:GetPlayerFromCharacter(current) then
+            return current
+        end
+        current = current.Parent
+    end
+    return nil
+end
+
+local function rayEntryDistanceToPart(origin, directionUnit, part)
+    if not part or not part.Parent or not part:IsA("BasePart") then
+        return nil
+    end
+
+    local localOrigin = part.CFrame:PointToObjectSpace(origin)
+    local localDirection = part.CFrame:VectorToObjectSpace(directionUnit)
+    local half = part.Size * 0.5
+    local entry, exitDistance = 0, math.huge
+
+    for _, axis in ipairs({ "X", "Y", "Z" }) do
+        local position = localOrigin[axis]
+        local velocity = localDirection[axis]
+        local extent = half[axis]
+
+        if math.abs(velocity) < 0.00001 then
+            if position < -extent or position > extent then
+                return nil
+            end
+        else
+            local near = (-extent - position) / velocity
+            local far = (extent - position) / velocity
+            if near > far then
+                near, far = far, near
+            end
+            entry = math.max(entry, near)
+            exitDistance = math.min(exitDistance, far)
+            if exitDistance < entry then
+                return nil
+            end
+        end
+    end
+
+    return entry
+end
+
+local easeCease = ease
+
+local function getCrucifixVisualStates(root, shouldInclude, onlyRoot)
+    local states = {}
+
+    local function capture(object)
+        if shouldInclude and not shouldInclude(object) then
+            return
+        end
+
+        if object:IsA("BasePart") or object:IsA("Decal")
+            or object:IsA("Texture") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Transparency",
+                Original = object.Transparency
+            })
+        elseif object:IsA("ParticleEmitter") or object:IsA("Beam")
+            or object:IsA("Trail") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Sequence",
+                Original = object.Transparency
+            })
+        elseif object:IsA("Light") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Brightness",
+                Original = object.Brightness
+            })
+        elseif object:IsA("Highlight") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Highlight",
+                Fill = object.FillTransparency,
+                Outline = object.OutlineTransparency
+            })
+        elseif object:IsA("Smoke") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Smoke",
+                Original = object.Opacity
+            })
+        elseif object:IsA("Fire") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Fire",
+                Size = object.Size,
+                Heat = object.Heat
+            })
+        elseif object:IsA("Sound") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Sound",
+                Original = object.Volume
+            })
+        elseif object:IsA("GuiObject") then
+            local state = {
+                Object = object,
+                Kind = "GuiObject",
+                Background = object.BackgroundTransparency
+            }
+
+            if object:IsA("ImageLabel") or object:IsA("ImageButton") then
+                state.Image = object.ImageTransparency
+            end
+
+            if object:IsA("TextLabel") or object:IsA("TextButton")
+                or object:IsA("TextBox") then
+                state.Text = object.TextTransparency
+            end
+
+            table.insert(states, state)
+        end
+    end
+
+    capture(root)
+    if not onlyRoot then
+        for _, descendant in ipairs(root:GetDescendants()) do
+            capture(descendant)
+        end
+    end
+
+    return states
+end
+
+local function crucifixFadedSequence(original, factor)
+    local keypoints = {}
+
+    for _, keypoint in ipairs(original.Keypoints) do
+        local nextTransparency = 1 - (1 - keypoint.Value) * factor
+        table.insert(keypoints, NumberSequenceKeypoint.new(
+            keypoint.Time,
+            math.clamp(nextTransparency, 0, 1),
+            keypoint.Envelope * factor
+        ))
+    end
+
+    return NumberSequence.new(keypoints)
+end
+
+local function setCrucifixVisualFactor(states, factor)
+    factor = math.clamp(factor, 0, 1)
+
+    for _, state in ipairs(states) do
+        local object = state.Object
+
+        if object and object.Parent then
+            if state.Kind == "Transparency" then
+                object.Transparency = 1 - (1 - state.Original) * factor
+            elseif state.Kind == "Sequence" then
+                object.Transparency = crucifixFadedSequence(state.Original, factor)
+            elseif state.Kind == "Brightness" then
+                object.Brightness = state.Original * factor
+            elseif state.Kind == "Highlight" then
+                object.FillTransparency = 1 - (1 - state.Fill) * factor
+                object.OutlineTransparency = 1 - (1 - state.Outline) * factor
+            elseif state.Kind == "Smoke" then
+                object.Opacity = state.Original * factor
+            elseif state.Kind == "Fire" then
+                object.Size = state.Size * factor
+                object.Heat = state.Heat * factor
+            elseif state.Kind == "Sound" then
+                object.Volume = state.Original * factor
+            elseif state.Kind == "GuiObject" then
+                object.BackgroundTransparency = 1 - (1 - state.Background) * factor
+
+                if state.Image ~= nil then
+                    object.ImageTransparency = 1 - (1 - state.Image) * factor
+                end
+
+                if state.Text ~= nil then
+                    object.TextTransparency = 1 - (1 - state.Text) * factor
+                end
+            end
+        end
+    end
+end
+
+local function fadeCrucifixVisuals(states, initialFactor, endFactor, duration)
+    if duration <= 0 then
+        setCrucifixVisualFactor(states, endFactor)
+        return
+    end
+
+    local startTime = os.clock()
+
+    while true do
+        local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+        local eased = easeCease(alpha)
+        setCrucifixVisualFactor(
+            states,
+            initialFactor + (endFactor - initialFactor) * eased
+        )
+
+        if alpha >= 1 then
+            break
+        end
+
+        RunService.Heartbeat:Wait()
+    end
+end
+
+local function findCrucifixBeams(rushNew)
+    local preferred = {}
+    local fallback = {}
+
+    for _, descendant in ipairs(rushNew:GetDescendants()) do
+        if descendant:IsA("Beam") then
+            table.insert(fallback, descendant)
+
+            local ancestor = descendant.Parent
+            while ancestor and ancestor ~= rushNew do
+                if string.lower(ancestor.Name) == "particlesin" then
+                    table.insert(preferred, descendant)
+                    break
+                end
+                ancestor = ancestor.Parent
+            end
+
+            if string.lower(descendant.Name) == "particlesin" then
+                local exists = false
+                for _, selected in ipairs(preferred) do
+                    if selected == descendant then
+                        exists = true
+                        break
+                    end
+                end
+                if not exists then
+                    table.insert(preferred, descendant)
+                end
+            end
+        end
+    end
+
+    local beams = #preferred > 0 and preferred or fallback
+    table.sort(beams, function(a, b)
+        return a:GetFullName() < b:GetFullName()
+    end)
+
+    return beams
+end
+
+local function prepareCrucifixBeams(beams, rushNew, movingAttachment)
+    for index, beam in ipairs(beams) do
+        if beam.Parent then
+            if not beam.Attachment0 then
+                beam.Attachment0 = movingAttachment
+            end
+
+            if not beam.Attachment1 or beam.Attachment1 == beam.Attachment0 then
+                local endpoint = Instance.new("Attachment")
+                endpoint.Name = "CrucifixBeamEndpoint" .. tostring(index)
+                local angle = (index - 1) * (math.pi / 2)
+                local offset = Vector3.new(
+                    math.cos(angle) * 3,
+                    2,
+                    math.sin(angle) * 3
+                )
+                endpoint.Position = movingAttachment.Position
+                    + rushNew.CFrame:VectorToObjectSpace(offset)
+                endpoint.Parent = rushNew
+                beam.Attachment1 = endpoint
+            end
+
+            if beam.Width0 <= 0 and beam.Width1 <= 0 then
+                beam.Width0 = 0.3
+                beam.Width1 = 0.3
+            end
+
+            beam.Enabled = true
+            beam.Transparency = NumberSequence.new(1)
+        end
+    end
+end
+
+local crucifixBeamSoundIds = {
+    "124444290902740",
+    "100133789671771",
+    "133850299035625",
+    "120232105146350"
+}
+
+local function createCrucifixBeamFeedback()
+    local beamCameraShaker = nil
+    local shakeCleanupScheduled = false
+
+    local function trigger(index)
+        local soundId = crucifixBeamSoundIds[index]
+        if not soundId then
+            return
+        end
+
+        local sound = Instance.new("Sound")
+        sound.Name = "CrucifixBeamSound" .. tostring(index)
+        sound.SoundId = "rbxassetid://" .. soundId
+        sound.Volume = 7
+        sound.Looped = false
+        sound.Parent = game:GetService("SoundService")
+        sound.Ended:Connect(function()
+            if sound.Parent then
+                sound:Destroy()
+            end
+        end)
+        task.delay(60, function()
+            if sound.Parent then
+                sound:Destroy()
+            end
+        end)
+        sound:Play()
+
+        if not beamCameraShaker then
+            local module = game.ReplicatedStorage:FindFirstChild("CameraShaker")
+            if module then
+                local loaded, CameraShaker = pcall(require, module)
+                if loaded and CameraShaker then
+                    local created, shaker = pcall(function()
+                        local currentShaker = CameraShaker.new(
+                            Enum.RenderPriority.Camera.Value,
+                            function(shakeCf)
+                                local camera = workspace.CurrentCamera
+                                if camera then
+                                    camera.CFrame = camera.CFrame * shakeCf
+                                end
+                            end
+                        )
+                        currentShaker:Start()
+                        return currentShaker
+                    end)
+                    if created then
+                        beamCameraShaker = shaker
+                    end
+                end
+            end
+        end
+
+        if beamCameraShaker then
+            local started, shakeInstance = pcall(function()
+                return beamCameraShaker:StartShake(10, 28, 0.1, 0.25, 0.35)
+            end)
+            if started and shakeInstance then
+                task.delay(0.3, function()
+                    pcall(function()
+                        shakeInstance:StartFadeOut(3)
+                    end)
+                end)
+            else
+                pcall(function()
+                    beamCameraShaker:ShakeOnce(10, 28, 0.1, 3, 0.25, 0.35)
+                end)
+            end
+
+            if not shakeCleanupScheduled then
+                shakeCleanupScheduled = true
+                task.delay(4.5, function()
+                    if beamCameraShaker then
+                        pcall(function()
+                            beamCameraShaker:Stop()
+                        end)
+                    end
+                end)
+            end
+        end
+    end
+
+    return trigger
+end
+
+local function revealCrucifixBeams(beams, onBeamBegin)
+    local startTime = os.clock()
+    local perBeamDuration = 0.5
+    local staggerDelay = 0.25
+    local totalDuration = perBeamDuration + math.max(0, #beams - 1) * staggerDelay
+    local begun = {}
+
+    while true do
+        local elapsed = os.clock() - startTime
+
+        for index, beam in ipairs(beams) do
+            if beam and beam.Parent then
+                local beamStartTime = (index - 1) * staggerDelay
+                if elapsed >= beamStartTime and not begun[index] then
+                    begun[index] = true
+                    if onBeamBegin then
+                        onBeamBegin(index)
+                    end
+                end
+
+                local beamAlpha = math.clamp(
+                    (elapsed - beamStartTime) / perBeamDuration,
+                    0,
+                    1
+                )
+                beam.Enabled = true
+                beam.Transparency = NumberSequence.new(1 - easeCease(beamAlpha))
+            end
+        end
+
+        if elapsed >= totalDuration then
+            break
+        end
+        RunService.Heartbeat:Wait()
+    end
+
+    for _, beam in ipairs(beams) do
+        if beam and beam.Parent then
+            beam.Enabled = true
+            beam.Transparency = NumberSequence.new(0)
+        end
+    end
+end
+
+local function fadeCrucifixBeamsOut(beams, duration)
+    local startTime = os.clock()
+
+    while true do
+        local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+        local transparency = easeCease(alpha)
+
+        for _, beam in ipairs(beams) do
+            if beam and beam.Parent then
+                beam.Transparency = NumberSequence.new(transparency)
+            end
+        end
+
+        if alpha >= 1 then
+            break
+        end
+        RunService.Heartbeat:Wait()
+    end
+
+    for _, beam in ipairs(beams) do
+        if beam and beam.Parent then
+            beam.Transparency = NumberSequence.new(1)
+            beam.Enabled = false
+        end
+    end
+end
+
+local function moveCrucifixAttachment(attachment, targetPosition, duration)
+    local origin = attachment.Position
+    local startTime = os.clock()
+
+    while true do
+        if not attachment.Parent then
+            return false
+        end
+
+        local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+        local progress = easeCease(alpha)
+        attachment.Position = origin:Lerp(targetPosition, progress)
+
+        if alpha >= 1 then
+            attachment.Position = targetPosition
+            return true
+        end
+        RunService.Heartbeat:Wait()
+    end
+end
+
+local function fadeCrucifixDescendantsRecursively(root, duration)
+    local found = {}
+    local allStates = {}
+    local stateCount = 0
+
+    local function findChildren(object)
+        if not object or found[object] then
+            return
+        end
+        found[object] = true
+
+        local states = getCrucifixVisualStates(object, nil, true)
+        for _, state in ipairs(states) do
+            table.insert(allStates, state)
+            stateCount = stateCount + 1
+        end
+
+        for _, child in ipairs(object:GetChildren()) do
+            findChildren(child)
+        end
+    end
+
+    local startTime = os.clock()
+    while true do
+        if not root.Parent then
+            return
+        end
+
+        findChildren(root)
+        local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+        setCrucifixVisualFactor(allStates, 1 - easeCease(alpha))
+
+        if alpha >= 1 then
+            break
+        end
+
+        for _, object in ipairs(root:GetDescendants()) do
+            if not found[object] then
+                findChildren(object)
+            end
+        end
+        RunService.Heartbeat:Wait()
+    end
+end
+
+local function startCrucifixAmbientShake(replacement)
+    local stepName = "SilenceCrucifixAmbient_"
+        .. game:GetService("HttpService"):GenerateGUID(false)
+    local startedAt = os.clock()
+    local active = true
+    local lastOffset = CFrame.new()
+    local lastCamera = nil
+
+    local function stop()
+        if not active then
+            return
+        end
+        active = false
+        RunService:UnbindFromRenderStep(stepName)
+    end
+
+    RunService:BindToRenderStep(
+        stepName,
+        Enum.RenderPriority.Camera.Value + 3,
+        function()
+            if not replacement.Parent then
+                stop()
+                return
+            end
+
+            local camera = workspace.CurrentCamera
+            if not camera then
+                return
+            end
+
+            if lastCamera ~= camera then
+                lastCamera = camera
+                lastOffset = CFrame.new()
+            end
+
+            local elapsed = os.clock() - startedAt
+            local strength = easeCease(math.clamp(elapsed / 0.5, 0, 1))
+            local offset = CFrame.new(
+                math.sin(elapsed * 13) * 0.055 * strength,
+                math.sin(elapsed * 16 + 0.7) * 0.04 * strength,
+                0
+            ) * CFrame.Angles(
+                math.sin(elapsed * 12) * math.rad(0.085) * strength,
+                math.sin(elapsed * 10 + 1.1) * math.rad(0.065) * strength,
+                0
+            )
+
+            camera.CFrame = camera.CFrame * lastOffset:Inverse() * offset
+            lastOffset = offset
+        end
+    )
+
+    return stop
+end
+
+local function runCrucifixReplacement(originalCFrame)
+
+    local loadedSuccessfully, replacement = pcall(function()
+        return game:GetObjects("rbxassetid://128235155752478")[1]
+    end)
+
+    if not loadedSuccessfully or not replacement then
+
+        return
+    end
+
+    local targetCFrame = originalCFrame + Vector3.new(0, 1, 0)
+    local bro = replacement.Name == "BRO" and replacement
+        or replacement:FindFirstChild("BRO", true)
+
+    local placed, placementError = pcall(function()
+        if replacement:IsA("Model") then
+            if bro and bro:IsA("Model") then
+                local pivotShift = targetCFrame * bro:GetPivot():Inverse()
+                replacement:PivotTo(pivotShift * replacement:GetPivot())
+            else
+                replacement:PivotTo(targetCFrame)
+            end
+        elseif bro and bro:IsA("Model") then
+            bro:PivotTo(targetCFrame)
+        elseif replacement:IsA("BasePart") then
+            replacement.CFrame = targetCFrame
+        end
+
+        for _, descendant in ipairs(replacement:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.Anchored = true
+                descendant.CanCollide = false
+                descendant.CanTouch = false
+            end
+        end
+
+        if replacement:IsA("BasePart") then
+            replacement.Anchored = true
+            replacement.CanCollide = false
+            replacement.CanTouch = false
+        end
+
+        replacement.Parent = workspace
+    end)
+
+    if not placed then
+
+        replacement:Destroy()
+        return
+    end
+
+    local stopAmbientShake = startCrucifixAmbientShake(replacement)
+    task.delay(30, function()
+        stopAmbientShake()
+        if replacement and replacement.Parent then
+            replacement:Destroy()
+        end
+    end)
+
+    local animationOK, animationError = xpcall(function()
+        local rushNew = bro and bro:FindFirstChild("RushNew", true)
+        local attachment = rushNew and rushNew:FindFirstChild("Attachment", true)
+        if attachment and not attachment:IsA("Attachment") then
+            attachment = nil
+        end
+        if not rushNew then
+
+        elseif not attachment then
+
+        else
+
+        end
+
+        task.wait(2.3)
+        if not replacement.Parent then
+            return
+        end
+
+        if rushNew and rushNew:IsA("BasePart") and attachment then
+            local beams = findCrucifixBeams(rushNew)
+            local introStates = getCrucifixVisualStates(attachment, function(object)
+                if not object:IsA("Beam") then
+                    return true
+                end
+                for _, beam in ipairs(beams) do
+                    if object == beam then
+                        return false
+                    end
+                end
+                return true
+            end)
+
+            setCrucifixVisualFactor(introStates, 0)
+            prepareCrucifixBeams(beams, rushNew, attachment)
+
+            local originalPosition = attachment.Position
+            local upOffset = rushNew.CFrame:VectorToObjectSpace(Vector3.new(0, 3, 0))
+            local downOffset = rushNew.CFrame:VectorToObjectSpace(Vector3.new(0, -20, 0))
+            local upPosition = originalPosition + upOffset
+            local downPosition = upPosition + downOffset
+
+            task.spawn(function()
+                if attachment.Parent then
+                    fadeCrucifixVisuals(introStates, 0, 1, 0.6)
+                end
+            end)
+
+            local beamsRevealFinished = #beams == 0
+            if not beamsRevealFinished then
+                local playBeamFeedback = createCrucifixBeamFeedback()
+                task.spawn(function()
+                    task.wait(0.8)
+                    if replacement.Parent and attachment.Parent then
+                        pcall(revealCrucifixBeams, beams, playBeamFeedback)
+                    end
+                    beamsRevealFinished = true
+                end)
+            end
+
+            if not moveCrucifixAttachment(attachment, upPosition, 1.8) then
+                error("Attachment 上升中被删除")
+            end
+
+            while not beamsRevealFinished and replacement.Parent and attachment.Parent do
+                RunService.Heartbeat:Wait()
+            end
+
+            if not moveCrucifixAttachment(attachment, downPosition, 1.2) then
+                error("Attachment 下降中被删除")
+            end
+            task.wait(2)
+            fadeCrucifixBeamsOut(beams, 0.5)
+        end
+    end, function(err)
+        return tostring(err) .. "\n" .. debug.traceback()
+    end)
+
+    if not animationOK then
+
+    end
+    local fadeOK, fadeError = pcall(function()
+        fadeCrucifixDescendantsRecursively(replacement, 1)
+    end)
+    if not fadeOK then
+
+    end
+    if replacement.Parent then
+        for _, descendant in ipairs(replacement:GetDescendants()) do
+            if descendant:IsA("ParticleEmitter") or descendant:IsA("Beam")
+                or descendant:IsA("Trail") or descendant:IsA("Sparkles")
+                or descendant:IsA("Smoke") or descendant:IsA("Fire") then
+                pcall(function()
+                    descendant.Enabled = false
+                end)
+            end
+        end
+    end
+    task.wait(3)
+    stopAmbientShake()
+    if replacement then
+
+        replacement:Destroy()
+    end
+end
+
+local function tryUseCrucifix(character)
+    if crucifixActivated or isJumpScaring or not isActive()
+        or not character or character:GetAttribute("Hiding") then
+        return false
+    end
+
+    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then
+        return false
+    end
+
+    local tool = getCrucifixTool(character)
+    if not tool then
+        return false
+    end
+
+    crucifixActivated = true
+    local lastCFrame = silence:GetPivot()
+    tool:Destroy()
+    destroySilence()
+    task.spawn(runCrucifixReplacement, lastCFrame)
+    return true
+end
+
+local function scanPlayerCrucifixRaycasts()
+    if not isActive() or isJumpScaring then
+        return false
+    end
+
+    local currentSilence = silence
+    local origin = getSilencePosition()
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.FilterDescendantsInstances = { currentSilence }
+
+    for _, candidatePlayer in ipairs(Players:GetPlayers()) do
+        if not isActive() or currentSilence ~= silence then
+            return crucifixActivated
+        end
+
+        local character = candidatePlayer.Character
+        if character and character:IsDescendantOf(workspace)
+            and not character:GetAttribute("Hiding") then
+            local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if humanoid and humanoid.Health > 0
+                and rootPart and rootPart:IsA("BasePart")
+                and getCrucifixTool(character) then
+                local targets = { rootPart }
+                for _, name in ipairs({ "Head", "UpperTorso", "Torso", "LowerTorso" }) do
+                    local part = character:FindFirstChild(name)
+                    if part and part:IsA("BasePart") then
+                        table.insert(targets, part)
+                    end
+                end
+
+                for _, targetPart in ipairs(targets) do
+                    local direction = targetPart.Position - origin
+                    local distance = direction.Magnitude
+                    if distance > 0.001 and distance <= DETECTION_DISTANCE then
+                        local result = workspace:Raycast(origin, direction, raycastParams)
+                        local hitCharacter = result and getCharacterFromHit(result.Instance)
+
+                        if not hitCharacter then
+                            local entryDistance = rayEntryDistanceToPart(origin, direction.Unit, targetPart)
+                            if entryDistance and entryDistance <= distance + 0.01
+                                and (not result or result.Distance > entryDistance + 0.02) then
+                                hitCharacter = character
+                            end
+                        end
+
+                        if hitCharacter and not hitCharacter:GetAttribute("Hiding") then
+                            if tryUseCrucifix(hitCharacter) then
+                                return true
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return false
+end
+
+local function setDeathCause(player)
+    local gameStats = ReplicatedStorage:FindFirstChild("GameStats")
+    if not gameStats then
+        return
+    end
+
+    local playerStat = gameStats:FindFirstChild("Player_" .. player.Name)
+    if not playerStat then
+        return
+    end
+
+    local total = playerStat:FindFirstChild("Total")
+    if not total then
+        return
+    end
+
+    local deathCause = total:FindFirstChild("DeathCause")
+    if deathCause then
+        deathCause.Value = "Silence"
+    end
+end
+
+local function playJumpscareSound()
+    local sound = Instance.new("Sound")
+    sound.Name = "SilenceJumpscareSound"
+    sound.SoundId = JUMPSCARE_SOUND_ID
+    sound.Volume = 3
+    sound.Looped = false
+    sound.Parent = SoundService
+
+    local cleaned = false
+    local function cleanup()
+        if cleaned then
+            return
+        end
+        cleaned = true
+        if sound.Parent then
+            sound:Destroy()
+        end
+    end
+
+    sound.Ended:Once(cleanup)
+    task.delay(30, cleanup)
+    sound:Play()
+end
+
+local function triggerSilenceJumpScare(character)
+    if not isActive() or isJumpScaring or hasJumpScared or crucifixActivated then
+        return
+    end
+
+    if tryUseCrucifix(character) then
+        return
+    end
+
+    local player = Players:GetPlayerFromCharacter(character)
+    if not player or player ~= Players.LocalPlayer then
+        return
+    end
+
+    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+    if not humanoid or humanoid.Health <= 0 or character:GetAttribute("Hiding") then
+        return
+    end
+
+    isJumpScaring = true
+    playJumpscareSound()
+    cancelCeaseFreeze()
+
+    local playerGui = player:FindFirstChildOfClass("PlayerGui") or player:WaitForChild("PlayerGui", 5)
+    if not playerGui then
+        isJumpScaring = false
+        return
+    end
+    hasJumpScared = true
+
+    local existing = playerGui:FindFirstChild("SilenceJumpscare")
+    if existing then
+        existing:Destroy()
+    end
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "SilenceJumpscare"
+    screenGui.ResetOnSpawn = false
+    screenGui.IgnoreGuiInset = true
+    screenGui.DisplayOrder = 10000
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Parent = playerGui
+
+    local background = Instance.new("Frame")
+    background.Name = "Background"
+    background.Size = UDim2.fromScale(1, 1)
+    background.BorderSizePixel = 0
+    background.BackgroundColor3 = Color3.new(0, 0, 0)
+    background.ZIndex = 1
+    background.Parent = screenGui
+
+    task.wait(0.8)
+    if not screenGui.Parent then
+        isJumpScaring = false
+        return
+    end
+
+    local image = Instance.new("ImageLabel")
+    image.Name = "SilenceImage"
+    image.AnchorPoint = Vector2.new(0.5, 0.5)
+    image.Position = UDim2.fromScale(0.5, 0.5)
+    image.Size = UDim2.fromScale(0.08, 0.08)
+    image.BackgroundTransparency = 1
+    image.Image = JUMPSCARE_IMAGE_ID
+    image.ScaleType = Enum.ScaleType.Fit
+    image.ZIndex = 2
+    image.Parent = screenGui
+
+    local flashActive = true
+    task.spawn(function()
+        local isWhite = false
+        while flashActive and background.Parent do
+            task.wait(0.065)
+            if not flashActive or not background.Parent then
+                break
+            end
+            isWhite = not isWhite
+            background.BackgroundColor3 = isWhite and Color3.new(1, 1, 1) or Color3.new(0, 0, 0)
+        end
+    end)
+
+    task.spawn(function()
+        local useAlternate = false
+        while flashActive and image.Parent do
+            task.wait(0.043)
+            if not flashActive or not image.Parent then
+                break
+            end
+            useAlternate = not useAlternate
+            image.Image = useAlternate and JUMPSCARE_IMAGE_ALT_ID or JUMPSCARE_IMAGE_ID
+        end
+    end)
+
+    local growTween = TweenService:Create(image, TweenInfo.new(
+        0.2,
+        Enum.EasingStyle.Exponential,
+        Enum.EasingDirection.Out
+    ), {
+        Size = UDim2.fromScale(1.65, 1.65)
+    })
+    growTween:Play()
+    growTween.Completed:Wait()
+    flashActive = false
+
+    if humanoid.Parent and humanoid.Health > 0 then
+        if humanoid.Health <= JUMPSCARE_DAMAGE then
+            setDeathCause(player)
+        end
+        humanoid:TakeDamage(JUMPSCARE_DAMAGE)
+    end
+
+    task.wait(0.12)
+    if screenGui.Parent then
+        screenGui:Destroy()
+    end
+    isJumpScaring = false
+end
+
+local function getOrderedRooms()
+    local currentRooms = workspace:FindFirstChild("CurrentRooms")
+    local orderedRooms = {}
+    if not currentRooms then
+        return orderedRooms
+    end
+
+    for _, room in ipairs(currentRooms:GetChildren()) do
+        if room:IsA("Model") then
+            local number = tonumber(room.Name)
+            if number then
+                table.insert(orderedRooms, { Number = number, Room = room })
+            end
+        end
+    end
+
+    table.sort(orderedRooms, function(a, b)
+        return a.Number < b.Number
+    end)
+    return orderedRooms
+end
+
+local function getOrderedNodes(pathfindNodes)
+    local orderedNodes = {}
+    for _, node in ipairs(pathfindNodes:GetChildren()) do
+        if node:IsA("BasePart") then
+            table.insert(orderedNodes, node)
+        end
+    end
+
+    table.sort(orderedNodes, function(a, b)
+        local aNumber = tonumber(a.Name)
+        local bNumber = tonumber(b.Name)
+        if aNumber and bNumber then
+            return aNumber < bNumber
+        elseif aNumber then
+            return true
+        elseif bNumber then
+            return false
+        end
+        return a.Name < b.Name
+    end)
+    return orderedNodes
+end
+
+local function moveSilenceTo(targetGetter)
+    if not isActive() then
+        return false
+    end
+
+    local movingSilence = silence
+    silenceIsMoving = true
+
+    while isActive() and silence == movingSilence do
+        local deltaTime = RunService.Heartbeat:Wait()
+        if not isActive() or silence ~= movingSilence then
+            break
+        end
+
+        if not isJumpScaring then
+            local targetCFrame = targetGetter()
+            if not targetCFrame then
+                silenceIsMoving = false
+                return "refresh"
+            end
+
+            local currentCFrame = movingSilence:GetPivot()
+            local distance = (targetCFrame.Position - currentCFrame.Position).Magnitude
+
+            if distance <= 0.05 then
+                if not ceaseFreezeActive then
+                    movingSilence:PivotTo(targetCFrame)
+                    silenceIsMoving = false
+                    return true
+                end
+            else
+                local step = SILENCE_SPEED * ceaseSpeedScale * math.min(deltaTime, 0.1)
+                if step > 0 then
+                    movingSilence:PivotTo(currentCFrame:Lerp(targetCFrame, math.min(step / distance, 1)))
+                end
+            end
+        end
+    end
+
+    silenceIsMoving = false
+    return false
+end
+
+local function startPlayerDetection()
+    task.spawn(function()
+        while isActive() do
+            if scanPlayerCrucifixRaycasts() then
+                return
+            end
+            task.wait(0.05)
+        end
+    end)
+
+    task.spawn(function()
+        while isActive() do
+            if silenceIsMoving and not ceaseFreezeActive and not isJumpScaring then
+                local ceaseModel = workspace:FindFirstChild("Cease", true)
+                if ceaseModel and ceaseModel:IsA("Model")
+                    and not ceaseHandledModels[ceaseModel] then
+                    startCeaseFreeze(ceaseModel)
+                end
+            end
+            task.wait(0.1)
+        end
+    end)
+
+    task.spawn(function()
+        local player = Players.LocalPlayer
+        while isActive() and not hasJumpScared do
+            RunService.RenderStepped:Wait()
+            if not isActive() then
+                return
+            end
+
+            local character = player and player.Character
+            if character and not character:GetAttribute("Hiding") then
+                local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+                local rootPart = character:FindFirstChild("HumanoidRootPart")
+                local camera = workspace.CurrentCamera
+                if humanoid and humanoid.Health > 0 and rootPart and camera then
+                    local entityPosition = getSilencePosition()
+                    local distance = (entityPosition - rootPart.Position).Magnitude
+                    if distance <= DETECTION_DISTANCE then
+                        local direction = entityPosition - camera.CFrame.Position
+                        if direction.Magnitude > 0.001
+                            and direction.Magnitude <= DETECTION_DISTANCE
+                            and camera.CFrame.LookVector:Dot(direction.Unit) >= 0.86 then
+                            local params = RaycastParams.new()
+                            params.FilterType = Enum.RaycastFilterType.Exclude
+                            params.FilterDescendantsInstances = { character }
+                            local result = workspace:Raycast(camera.CFrame.Position, direction, params)
+                            local hit = result and result.Instance
+                            local hitSilence = hit and (hit == silence or hit:IsDescendantOf(silence))
+                            local hitCharacter = hit and getCharacterFromHit(hit)
+
+                            if hitCharacter and hitCharacter ~= character then
+                                if tryUseCrucifix(hitCharacter) then
+                                    return
+                                end
+                            end
+
+                            if hitSilence then
+                                if tryUseCrucifix(character) then
+                                    return
+                                end
+                                triggerSilenceJumpScare(character)
+                                return
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function executeSilencePathfinding()
+    local loadedSilence = loadModel(SILENCE_ASSET_ID, "SilenceModel")
+    if not loadedSilence then
+        return
+    end
+
+    local initialRooms = getOrderedRooms()
+    if #initialRooms == 0 then
+        loadedSilence:Destroy()
+        return
+    end
+
+    local startRoomIndex = 1
+    if #initialRooms > 10 then
+        startRoomIndex = #initialRooms - 8
+    end
+
+    local startRoom = initialRooms[startRoomIndex].Room
+    local pathfindNodes = startRoom:FindFirstChild("PathfindNodes")
+    local startNode = nil
+    if pathfindNodes then
+        local orderedNodes = getOrderedNodes(pathfindNodes)
+        startNode = orderedNodes[1]
+    end
+    if not startNode then
+        startNode = startRoom:FindFirstChild("RoomExit")
+    end
+    if not startNode or not startNode:IsA("BasePart") then
+        loadedSilence:Destroy()
+        return
+    end
+
+    silence = loadedSilence
+    prepareModel(silence, true)
+    silence:PivotTo(startNode.CFrame + HEIGHT_OFFSET)
+    silence.Parent = workspace
+    isSilenceDespawning = false
+    silenceMoveCancelled = false
+    hasJumpScared = false
+    startPlayerDetection()
+
+    local startRoomNumber = initialRooms[startRoomIndex].Number
+    local completedRoomNumber = -math.huge
+    local states = {}
+    local missingSince = nil
+
+    while isActive() do
+        if isJumpScaring then
+            task.wait(0.05)
+        else
+            local rooms = getOrderedRooms()
+            if #rooms == 0 then
+                if not missingSince then
+                    missingSince = os.clock()
+                elseif os.clock() - missingSince >= 2 then
+                    break
+                end
+                task.wait(0.1)
+            else
+                local targetRoomNumber = rooms[math.max(1, #rooms - 1)].Number
+                local currentRoom = nil
+
+                for _, data in ipairs(rooms) do
+                    if data.Number >= startRoomNumber
+                        and data.Number > completedRoomNumber
+                        and data.Number <= targetRoomNumber then
+                        currentRoom = data
+                        break
+                    end
+                end
+
+                if not currentRoom then
+                    local latest = getOrderedRooms()
+                    local latestTarget = latest[math.max(1, #latest - 1)]
+                    if latestTarget and completedRoomNumber >= latestTarget.Number then
+                        break
+                    end
+                    if not missingSince then
+                        missingSince = os.clock()
+                    elseif os.clock() - missingSince >= 2 then
+                        break
+                    end
+                    task.wait(0.1)
+                else
+                    missingSince = nil
+                    local number = currentRoom.Number
+                    local room = currentRoom.Room
+                    local state = states[number]
+                    if not state or state.Model ~= room then
+                        state = { Model = room, Visited = {}, UsedExit = false, EmptySince = nil }
+                        states[number] = state
+                    end
+
+                    local nodesFolder = room:FindFirstChild("PathfindNodes")
+                    local nextNode = nil
+                    if nodesFolder then
+                        for _, node in ipairs(getOrderedNodes(nodesFolder)) do
+                            if not state.Visited[node.Name] then
+                                nextNode = node
+                                break
+                            end
+                        end
+                    end
+
+                    if nextNode then
+                        local moved = moveSilenceTo(function()
+                            if not room.Parent or not nextNode:IsDescendantOf(room) then
+                                return nil
+                            end
+                            return nextNode.CFrame + HEIGHT_OFFSET
+                        end)
+
+                        if moved == true then
+                            state.Visited[nextNode.Name] = true
+                        elseif moved == false then
+                            break
+                        else
+                            task.wait(0.05)
+                        end
+                    else
+                        local orderedNodes = nodesFolder and getOrderedNodes(nodesFolder) or {}
+                        local exit = room:FindFirstChild("RoomExit")
+                        if #orderedNodes == 0 and not state.UsedExit
+                            and exit and exit:IsA("BasePart") then
+                            local moved = moveSilenceTo(function()
+                                if not room.Parent or not exit:IsDescendantOf(room) then
+                                    return nil
+                                end
+                                return exit.CFrame + HEIGHT_OFFSET
+                            end)
+                            if moved == true then
+                                state.UsedExit = true
+                            elseif moved == false then
+                                break
+                            end
+                        elseif #orderedNodes > 0 or state.UsedExit then
+                            completedRoomNumber = number
+                        else
+                            if not state.EmptySince then
+                                state.EmptySince = os.clock()
+                            elseif os.clock() - state.EmptySince >= 2 then
+                                break
+                            end
+                            task.wait(0.1)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if silence and silence.Parent and not isJumpScaring and not crucifixActivated then
+        destroySilence()
+    end
+end
+
+task.spawn(executeSilencePathfinding)
+
 end
 
 function entityBehaviors.ForstBite()

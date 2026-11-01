@@ -454,8 +454,48 @@ local model = game:GetObjects("rbxassetid://" .. MODEL_ID)[1]
 model.Parent = Entities
 
 game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("HardCore Started",true)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).remind("⚠This mode is quite challenging and is recommended for 2-5 players.⚠", true)
+task.spawn(function()
+    local playerGui = game.Players.LocalPlayer.PlayerGui
+    local mainUI = playerGui:WaitForChild("MainUI")
+
+    local image = Instance.new("ImageLabel")
+    image.Name = "HardCoreImage"
+    image.BackgroundTransparency = 1
+    image.Image = "rbxassetid://96795082386229"
+    image.ImageTransparency = 1
+    image.AnchorPoint = Vector2.new(0.5, 0)
+    image.Position = UDim2.new(0.5, 0, 0, 20)
+    image.Size = UDim2.new(0, 650, 0, 220)
+    image.ScaleType = Enum.ScaleType.Fit
+    image.ZIndex = 100
+    image.Parent = mainUI
+
+    pcall(function()
+        game:GetService("ContentProvider"):PreloadAsync({image})
+    end)
+
+    local TweenService = game:GetService("TweenService")
+
+    local fadeIn = TweenService:Create(
+        image,
+        TweenInfo.new(0.5, Enum.EasingStyle.Linear),
+        {ImageTransparency = 0}
+    )
+    fadeIn:Play()
+    fadeIn.Completed:Wait()
+
+    task.wait(5)
+
+    local fadeOut = TweenService:Create(
+        image,
+        TweenInfo.new(1, Enum.EasingStyle.Linear),
+        {ImageTransparency = 1}
+    )
+    fadeOut:Play()
+    fadeOut.Completed:Wait()
+
+    image:Destroy()
+end)
 
 task.spawn(function()
     local Players = game:GetService("Players")
@@ -799,7 +839,3 @@ task.spawn(function()
     initialize()
     setupPlayerEvents()
 end)
-
-local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingItem... Doors HardCore V10.6.3 By Mr.key & HeavenNow & Number303 :)"
-game.Debris:AddItem(hint, 3)

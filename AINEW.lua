@@ -4,7 +4,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
-local TargetName = "Staryyy011"
+local TargetName = "woshiniruier"
 local ModelId = "rbxassetid://114870919830460"
 local AnimationId = "rbxassetid://124872988646325"
 

@@ -13,10 +13,10 @@ local TweenService = game:GetService("TweenService")
 local ChatConfig = TextChatService.ChatWindowConfiguration
 
 local PlayerLevels = {
-    ["QWQ75321"] = 334,
-    ["goat_qiu"] = 344,
-    ["Staryyy011"] = 68,
-    ["sppvve"] = 237,
+    ["QWQ75321"] = 335,
+    ["goat_qiu"] = 345,
+    ["Staryyy011"] = 69,
+    ["sppvve"] = 238,
     ["SOXIYU24"] = 59,
     ["SparkleAtom"] = 51,
     ["Nssys123"] = 112,

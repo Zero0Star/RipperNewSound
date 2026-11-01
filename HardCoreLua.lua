@@ -12353,15 +12353,19 @@ coroutine.wrap(function()
 
     v556.stopcam = false
     v556.freemouse = false
-    humanoid:TakeDamage(999)
 
-    pcall(function()
-        firesignal(ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
-            "You died to Dread...",
-            "Its presence is summoned when the clock hits 12...",
-            "Do not observe it! You may lose your sanity!"
-        }, "Blue")
-    end)
+    local damage = 999
+    if humanoid.Health <= damage then
+        local gameStats = ReplicatedStorage:FindFirstChild("GameStats")
+        local playerStats = gameStats and gameStats:FindFirstChild("Player_" .. LocalPlayer.Name)
+        local total = playerStats and playerStats:FindFirstChild("Total")
+        local deathCause = total and total:FindFirstChild("DeathCause")
+        if deathCause then
+            deathCause.Value = "Dread"
+        end
+    end
+
+    humanoid:TakeDamage(damage)
 end)()
 
 coroutine.wrap(function()
@@ -12377,6 +12381,7 @@ coroutine.wrap(function()
         restoreDreadVisuals()
     end
 end)()
+
 end
 
 local Players = game:GetService("Players")

@@ -10025,7 +10025,24 @@ if currentRooms then
 	end
 end
 end
-
+function entityBehaviors.JEFFDEATH()
+for _, model in ipairs(workspace:GetChildren()) do
+    if model.Name == "JeffTheKiller" then
+        local humanoid = model:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Health = 0
+        end
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://102588764079889"
+        sound.Volume = 1
+        sound.Parent = workspace
+        sound:Play()
+        sound.Ended:Connect(function()
+            sound:Destroy()
+        end)
+    end
+end
+end
 
 local entityConfig = {
     ["rbxassetid://1"]  = entityBehaviors.SA90,
@@ -10069,6 +10086,7 @@ local entityConfig = {
     ["rbxassetid://0855"]  = entityBehaviors.Baldi,
     ["rbxassetid://0856"]  = entityBehaviors.Baldi2,
     ["rbxassetid://0857"]  = entityBehaviors.FireMeld,
+    ["rbxassetid://08588"]  = entityBehaviors.JEFFDEATH,
     ["rbxassetid://12"]  = entityBehaviors.munci1
 }
 

@@ -5199,7 +5199,7 @@ local JUMPSCARE_IMAGE_ID = "rbxassetid://139425974297545"
 local JUMPSCARE_IMAGE_ALT_ID = "rbxassetid://71258076152603"
 local SILENCE_SPEED = 20
 local DETECTION_DISTANCE = 200
-local HEIGHT_OFFSET = Vector3.new(0, -0.7, 0)
+local HEIGHT_OFFSET = Vector3.new(0, 0, 0)
 local JUMPSCARE_DAMAGE = 180
 
 local silence = nil
@@ -10371,94 +10371,566 @@ function entityBehaviors.CL()
 end
 
 function entityBehaviors.Shok()
+
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
 
 local function spawnShocker()
-    local shockerModel = game:GetObjects("rbxassetid://129658537539698")[1]
+    local character = player.Character or player.CharacterAdded:Wait()
     local camera = Workspace.CurrentCamera
 
-    local rootPart = shockerModel:FindFirstChild("HumanoidRootPart") or shockerModel:FindFirstChildWhichIsA("Part")
-    shockerModel.PrimaryPart = rootPart
-    shockerModel:SetPrimaryPartCFrame(camera.CFrame * CFrame.new(0, 0, -7))
-    shockerModel.Parent = Workspace
-
-    local oogaBoogaaPart = shockerModel:WaitForChild("OOGA BOOGAAAA")
-    local horrorScream = oogaBoogaaPart:WaitForChild("HORROR SCREAM 15")
-    local boneSound = oogaBoogaaPart:FindFirstChild("Bone")
-
-    local lookDuration = 2
-    local lookStart = nil
-    local hasTriggered = false
-    local hasFallen = false
-
-    local function fallToGround()
-        if hasFallen then return end
-        hasFallen = true
-
-        oogaBoogaaPart.Anchored = false
-        oogaBoogaaPart.CanCollide = false
-
-        task.delay(2, function()
-            if shockerModel then
-                shockerModel:Destroy()
-            end
-        end)
+    while not camera do
+        task.wait()
+        camera = Workspace.CurrentCamera
     end
 
-    local connection
-    connection = game:GetService("RunService").RenderStepped:Connect(function()
-        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-        if hasTriggered then connection:Disconnect() return end
+    local success, objects = pcall(function()
+        return game:GetObjects("rbxassetid://140037062004703")
+    end)
 
-        local directionToShocker = (oogaBoogaaPart.Position - camera.CFrame.Position).Unit
-        local playerLookVector = camera.CFrame.LookVector
-        local dot = directionToShocker:Dot(playerLookVector)
+    if not success or not objects or not objects[1] then
+        return
+    end
 
-        if dot > 0.85 then
-            if not lookStart then
-                lookStart = tick()
-            elseif tick() - lookStart >= lookDuration then
-                hasTriggered = true
-                connection:Disconnect()
+    local shockerModel = objects[1]
 
-                horrorScream:Play()
-                if boneSound then boneSound:Play() end
-                humanoid:TakeDamage(30)
-                local targetPos = character.HumanoidRootPart.Position + Vector3.new(0, 2, 0)
-                local tweenInfo = TweenInfo.new(1.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-                local tween = TweenService:Create(oogaBoogaaPart, tweenInfo, {Position = targetPos})
-                tween:Play()
+    local rootPart = shockerModel:FindFirstChild("HumanoidRootPart", true)
 
-                tween.Completed:Connect(function()
-                    fallToGround()
-                end)
+    if not rootPart or not rootPart:IsA("BasePart") then
+        rootPart = shockerModel:FindFirstChildWhichIsA("BasePart", true)
+    end
 
-                ReplicatedStorage.GameStats["Player_".. player.Name].Total.DeathCause.Value = "Shocker"
-                firesignal(ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
-                    "You died to who you call Shocker...",
-                    "Don't look at it or it stuns you!"
-                }, "Blue")
+    if not rootPart then
+        shockerModel:Destroy()
+        return
+    end
+
+    shockerModel.PrimaryPart = rootPart
+
+    for _, object in ipairs(shockerModel:GetDescendants()) do
+        if object:IsA("BasePart") then
+            object.Anchored = true
+            object.CanCollide = false
+        end
+    end
+
+    shockerModel.Parent = Workspace
+
+    local followOffset = CFrame.new(0, -0.7, -18)
+
+    shockerModel:PivotTo(camera.CFrame * followOffset)
+
+    local base = shockerModel:FindFirstChild("Base", true) or rootPart
+    local playSound = base:FindFirstChild("PlaySound", true)
+
+    local oogaBoogaaPart = shockerModel:FindFirstChild("OOGA BOOGAAAA", true) or base
+
+    local horrorScream = oogaBoogaaPart:FindFirstChild("HORROR SCREAM 15", true)
+
+    if not horrorScream then
+        horrorScream = shockerModel:FindFirstChild("HORROR SCREAM 15", true)
+    end
+
+    local face2Emitters = {}
+    local originalFaceRates = {}
+
+    for _, object in ipairs(shockerModel:GetDescendants()) do
+        if object.Name == "FACE2" and object:IsA("ParticleEmitter") then
+            table.insert(face2Emitters, object)
+            originalFaceRates[object] = object.Rate
+            object.Enabled = false
+            object:Clear()
+        end
+    end
+
+    local function setFaceVisible(enabled)
+        for _, emitter in ipairs(face2Emitters) do
+            if emitter.Parent and emitter:IsDescendantOf(shockerModel) then
+                if enabled then
+                    if emitter.Rate <= 0 then
+                        emitter.Rate = 18
+                    end
+
+                    emitter.Enabled = true
+                    emitter:Emit(20)
+                else
+                    emitter.Enabled = false
+                    emitter.Rate = originalFaceRates[emitter] or 0
+                    emitter:Clear()
+                end
             end
-        else
-            connection:Disconnect()
-            fallToGround()
         end
-    end)
+    end
 
-    task.delay(5, function()
-        if not hasTriggered and not hasFallen then
-            fallToGround()
+    setFaceVisible(false)
+
+    if playSound and playSound:IsA("Sound") then
+        playSound.PlaybackSpeed = 0.9
+        playSound:Play()
+    end
+
+    local function tweenModelTo(targetCFrame, duration, easingStyle, easingDirection)
+        if not shockerModel.Parent then
+            return false
         end
-    end)
+
+        local pivotValue = Instance.new("CFrameValue")
+        pivotValue.Value = shockerModel:GetPivot()
+
+        local connection = pivotValue:GetPropertyChangedSignal("Value"):Connect(function()
+            if shockerModel.Parent then
+                shockerModel:PivotTo(pivotValue.Value)
+            end
+        end)
+
+        local tween = TweenService:Create(
+            pivotValue,
+            TweenInfo.new(
+                duration,
+                easingStyle or Enum.EasingStyle.Exponential,
+                easingDirection or Enum.EasingDirection.Out
+            ),
+            {
+                Value = targetCFrame
+            }
+        )
+
+        tween:Play()
+
+        local state = tween.Completed:Wait()
+
+        connection:Disconnect()
+        pivotValue:Destroy()
+
+        return state == Enum.PlaybackState.Completed and shockerModel.Parent ~= nil
+    end
+
+    local lookStart = os.clock()
+
+    while os.clock() - lookStart < 3 do
+        local deltaTime = RunService.RenderStepped:Wait()
+
+        if not shockerModel.Parent then
+            return
+        end
+
+        camera = Workspace.CurrentCamera or camera
+
+        local elapsed = math.min(os.clock() - lookStart, 3)
+
+        if playSound and playSound.Parent then
+            local alpha = math.clamp(elapsed / 3, 0, 1)
+            local smoothAlpha = alpha * alpha * (3 - 2 * alpha)
+
+            playSound.PlaybackSpeed = 0.9 + smoothAlpha
+        end
+
+        local sway = CFrame.new(
+            math.sin(elapsed * 2.7) * 0.18,
+            math.sin(elapsed * 2.1) * 0.12,
+            0
+        ) * CFrame.Angles(
+            math.rad(math.sin(elapsed * 1.8) * 2),
+            math.rad(math.sin(elapsed * 2.4) * 3),
+            math.rad(math.sin(elapsed * 2.1) * 1.5)
+        )
+
+        local targetCFrame = camera.CFrame * followOffset * sway
+
+        local currentCFrame = shockerModel:GetPivot()
+
+        local alpha = 1 - math.exp(-deltaTime * 3.8)
+
+        shockerModel:PivotTo(
+            currentCFrame:Lerp(targetCFrame, alpha)
+        )
+    end
+
+    if playSound and playSound.Parent then
+        playSound.PlaybackSpeed = 1.9
+    end
+
+    local attackCount = math.random(2, 5)
+
+    local retreatDistance = 2.8
+    local retreatDuration = 0.35
+    local dashDuration = 0.7
+    local hitRadius = 4.2
+    local damageAmount = 30
+
+    local hintSent = false
+
+    local function damagePlayer()
+        local currentCharacter = player.Character
+
+        if not currentCharacter then
+            return false
+        end
+
+        local currentHumanoid = currentCharacter:FindFirstChildOfClass("Humanoid")
+
+        if not currentHumanoid or currentHumanoid.Health <= 0 then
+            return false
+        end
+
+        local willDie = currentHumanoid.Health <= damageAmount
+
+        if willDie then
+            local gameStats = ReplicatedStorage:FindFirstChild("GameStats")
+            local playerStats = gameStats and gameStats:FindFirstChild("Player_" .. player.Name)
+            local totalStats = playerStats and playerStats:FindFirstChild("Total")
+            local deathCause = totalStats and totalStats:FindFirstChild("DeathCause")
+
+            if deathCause then
+                deathCause.Value = "Shocker"
+            end
+        end
+
+        currentHumanoid:TakeDamage(damageAmount)
+
+        return true
+    end
+
+    local function getSegmentDistance(point, startPosition, endPosition)
+        local segment = endPosition - startPosition
+        local lengthSquared = segment:Dot(segment)
+
+        if lengthSquared <= 0.0001 then
+            return (point - startPosition).Magnitude
+        end
+
+        local alpha = math.clamp(
+            (point - startPosition):Dot(segment) / lengthSquared,
+            0,
+            1
+        )
+
+        local closestPoint = startPosition + segment * alpha
+
+        return (point - closestPoint).Magnitude
+    end
+
+    local function dashTo(targetCFrame, duration)
+        if not shockerModel.Parent then
+            return false, false
+        end
+
+        local pivotValue = Instance.new("CFrameValue")
+        pivotValue.Value = shockerModel:GetPivot()
+
+        local previousPosition = shockerModel:GetPivot().Position
+        local hasHit = false
+
+        local movementConnection = pivotValue:GetPropertyChangedSignal("Value"):Connect(function()
+            if shockerModel.Parent then
+                shockerModel:PivotTo(pivotValue.Value)
+            end
+        end)
+
+        local hitConnection = RunService.RenderStepped:Connect(function()
+            if not shockerModel.Parent then
+                return
+            end
+
+            local currentPosition = shockerModel:GetPivot().Position
+
+            if not hasHit then
+                local currentCharacter = player.Character
+
+                local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
+                local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
+
+                if currentRoot and currentHumanoid and currentHumanoid.Health > 0 then
+                    local distance = getSegmentDistance(
+                        currentRoot.Position,
+                        previousPosition,
+                        currentPosition
+                    )
+
+                    if distance <= hitRadius then
+                        hasHit = damagePlayer()
+                    end
+                end
+            end
+
+            previousPosition = currentPosition
+        end)
+
+        local tween = TweenService:Create(
+            pivotValue,
+            TweenInfo.new(
+                duration,
+                Enum.EasingStyle.Cubic,
+                Enum.EasingDirection.In
+            ),
+            {
+                Value = targetCFrame
+            }
+        )
+
+        tween:Play()
+
+        local state = tween.Completed:Wait()
+
+        movementConnection:Disconnect()
+        hitConnection:Disconnect()
+        pivotValue:Destroy()
+
+        return state == Enum.PlaybackState.Completed and shockerModel.Parent ~= nil, hasHit
+    end
+
+    for attackIndex = 1, attackCount do
+        if not shockerModel.Parent then
+            return
+        end
+
+        setFaceVisible(false)
+
+        local currentCharacter = player.Character or character
+        local currentRoot = currentCharacter:FindFirstChild("HumanoidRootPart")
+
+        if not currentRoot then
+            break
+        end
+
+        local currentPivot = shockerModel:GetPivot()
+
+        local awayVector = currentPivot.Position - currentRoot.Position
+
+        if awayVector.Magnitude < 0.001 then
+            awayVector = camera.CFrame.LookVector
+        end
+
+        local awayDirection = awayVector.Unit
+
+        local retreatPosition =
+            currentPivot.Position + awayDirection * retreatDistance
+
+        local retreatCFrame =
+            CFrame.new(retreatPosition) * currentPivot.Rotation
+
+        local retreatSuccess = tweenModelTo(
+            retreatCFrame,
+            retreatDuration,
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out
+        )
+
+        if not retreatSuccess then
+            return
+        end
+
+        currentCharacter = player.Character or character
+        currentRoot = currentCharacter:FindFirstChild("HumanoidRootPart")
+
+        if not currentRoot then
+            break
+        end
+
+        local dashStartPosition = shockerModel:GetPivot().Position
+        local targetPlayerPosition = currentRoot.Position
+
+        local dashVector = targetPlayerPosition - dashStartPosition
+
+        if dashVector.Magnitude < 0.001 then
+            dashVector = -camera.CFrame.LookVector
+        end
+
+        local dashDirection = dashVector.Unit
+
+        local dashEndPosition =
+            targetPlayerPosition + dashDirection * 5.5
+
+        local dashCFrame =
+            CFrame.new(dashEndPosition) * shockerModel:GetPivot().Rotation
+
+        setFaceVisible(true)
+
+        if horrorScream and horrorScream.Parent then
+            pcall(function()
+                horrorScream:Stop()
+                horrorScream.TimePosition = 0
+                horrorScream:Play()
+            end)
+        end
+
+        local dashSuccess = dashTo(
+            dashCFrame,
+            dashDuration
+        )
+
+        setFaceVisible(false)
+
+        if not dashSuccess then
+            return
+        end
+
+        if attackIndex < attackCount then
+            local randomInterval = math.random(10, 18) / 10
+            task.wait(randomInterval)
+        end
+    end
+
+    if not shockerModel.Parent then
+        return
+    end
+
+    setFaceVisible(false)
+
+    local fadeItems = {}
+
+    local function addFade(instance, property, target, kind)
+        local success, startValue = pcall(function()
+            return instance[property]
+        end)
+
+        if success then
+            table.insert(fadeItems, {
+                instance = instance,
+                property = property,
+                startValue = startValue,
+                target = target,
+                kind = kind or "number"
+            })
+        end
+    end
+
+    local function fadeNumberSequence(sequence, alpha)
+        local keypoints = {}
+
+        for _, keypoint in ipairs(sequence.Keypoints) do
+            local newValue =
+                keypoint.Value + (1 - keypoint.Value) * alpha
+
+            local newEnvelope =
+                keypoint.Envelope * (1 - alpha)
+
+            table.insert(
+                keypoints,
+                NumberSequenceKeypoint.new(
+                    keypoint.Time,
+                    newValue,
+                    newEnvelope
+                )
+            )
+        end
+
+        return NumberSequence.new(keypoints)
+    end
+
+    for _, object in ipairs(shockerModel:GetDescendants()) do
+        if object:IsA("BasePart") then
+            addFade(object, "Transparency", 1)
+
+        elseif object:IsA("Decal") or object:IsA("Texture") then
+            addFade(object, "Transparency", 1)
+
+        elseif object:IsA("ParticleEmitter") or object:IsA("Beam") or object:IsA("Trail") then
+            addFade(object, "Transparency", 1, "sequence")
+
+        elseif object:IsA("Highlight") then
+            addFade(object, "FillTransparency", 1)
+            addFade(object, "OutlineTransparency", 1)
+
+        elseif object:IsA("Sound") then
+            addFade(object, "Volume", 0)
+
+        elseif object:IsA("PointLight") or object:IsA("SpotLight") or object:IsA("SurfaceLight") then
+            addFade(object, "Brightness", 0)
+
+        elseif object:IsA("Fire") then
+            addFade(object, "Size", 0)
+            addFade(object, "Heat", 0)
+
+        elseif object:IsA("Smoke") then
+            addFade(object, "Opacity", 0)
+            addFade(object, "Size", 0)
+
+        elseif object:IsA("ImageLabel") or object:IsA("ImageButton") then
+            addFade(object, "ImageTransparency", 1)
+            addFade(object, "BackgroundTransparency", 1)
+
+        elseif object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox") then
+            addFade(object, "TextTransparency", 1)
+            addFade(object, "TextStrokeTransparency", 1)
+            addFade(object, "BackgroundTransparency", 1)
+
+        elseif object:IsA("UIStroke") then
+            addFade(object, "Transparency", 1)
+        end
+    end
+
+    local fadeDuration = 0.85
+    local fadeStart = os.clock()
+
+    while shockerModel.Parent do
+        local alpha = math.clamp(
+            (os.clock() - fadeStart) / fadeDuration,
+            0,
+            1
+        )
+
+        for _, item in ipairs(fadeItems) do
+            if item.instance.Parent then
+                local value
+
+                if item.kind == "sequence" then
+                    value = fadeNumberSequence(item.startValue, alpha)
+                else
+                    value =
+                        item.startValue
+                        + (item.target - item.startValue) * alpha
+                end
+
+                pcall(function()
+                    item.instance[item.property] = value
+                end)
+            end
+        end
+
+        if alpha >= 1 then
+            break
+        end
+
+        RunService.RenderStepped:Wait()
+    end
+
+    if not shockerModel.Parent then
+        return
+    end
+
+    for _, object in ipairs(shockerModel:GetDescendants()) do
+        if object:IsA("Sound") then
+            object:Stop()
+
+        elseif object:IsA("ParticleEmitter")
+            or object:IsA("Beam")
+            or object:IsA("Trail")
+            or object:IsA("Fire")
+            or object:IsA("Smoke")
+            or object:IsA("Sparkles")
+            or object:IsA("Highlight")
+            or object:IsA("PointLight")
+            or object:IsA("SpotLight")
+            or object:IsA("SurfaceLight")
+            or object:IsA("BillboardGui")
+            or object:IsA("SurfaceGui")
+            or object:IsA("ScreenGui") then
+
+            object.Enabled = false
+        end
+    end
+
+    shockerModel:Destroy()
 end
+
 spawnShocker()
+
 end
 
 function entityBehaviors.MLcur()

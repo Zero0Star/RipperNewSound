@@ -10371,7 +10371,6 @@ function entityBehaviors.CL()
 end
 
 function entityBehaviors.Shok()
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -10436,6 +10435,220 @@ local function spawnShocker()
         horrorScream = shockerModel:FindFirstChild("HORROR SCREAM 15", true)
     end
 
+    local ceaseFreezeActive = false
+    local ceaseSpeedScale = 1
+    local ceaseFreezeSerial = 0
+    local ceaseSavedEffects = {}
+    local ceaseDescendantConnection = nil
+    local ceaseHandledModels = setmetatable({}, { __mode = "k" })
+    local shockerMoving = false
+    local shockerFinished = false
+
+    local function ceaseEase(alpha)
+        alpha = math.clamp(alpha, 0, 1)
+        return alpha * alpha * (3 - 2 * alpha)
+    end
+
+    local function applyCeaseSpeed(scale)
+        ceaseSpeedScale = math.clamp(scale, 0, 1)
+
+        for object, saved in pairs(ceaseSavedEffects) do
+            if object.Parent then
+                if saved.Type == "Particle" then
+                    pcall(function()
+                        object.TimeScale = saved.TimeScale * ceaseSpeedScale
+                    end)
+                else
+                    pcall(function()
+                        object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                        object.Volume = saved.Volume * ceaseSpeedScale
+                    end)
+                end
+            end
+        end
+    end
+
+    local function trackCeaseEffect(object)
+        if ceaseSavedEffects[object] then
+            return
+        end
+
+        if object:IsA("ParticleEmitter") then
+            ceaseSavedEffects[object] = {
+                Type = "Particle",
+                TimeScale = object.TimeScale
+            }
+        elseif object:IsA("Sound") then
+            ceaseSavedEffects[object] = {
+                Type = "Sound",
+                PlaybackSpeed = object.PlaybackSpeed,
+                Volume = object.Volume
+            }
+        else
+            return
+        end
+
+        if ceaseFreezeActive then
+            local saved = ceaseSavedEffects[object]
+            if saved.Type == "Particle" then
+                pcall(function()
+                    object.TimeScale = saved.TimeScale * ceaseSpeedScale
+                end)
+            else
+                pcall(function()
+                    object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                    object.Volume = saved.Volume * ceaseSpeedScale
+                end)
+            end
+        end
+    end
+
+    local function setShockerSoundSpeed(sound, speed)
+        if not sound or not sound.Parent then
+            return
+        end
+
+        local saved = ceaseSavedEffects[sound]
+        if saved and saved.Type == "Sound" then
+            saved.PlaybackSpeed = speed
+            sound.PlaybackSpeed = speed * ceaseSpeedScale
+        else
+            sound.PlaybackSpeed = speed
+        end
+    end
+
+    local function cancelCeaseFreeze()
+        ceaseFreezeSerial = ceaseFreezeSerial + 1
+
+        if ceaseDescendantConnection then
+            ceaseDescendantConnection:Disconnect()
+            ceaseDescendantConnection = nil
+        end
+
+        for object, saved in pairs(ceaseSavedEffects) do
+            if object.Parent then
+                if saved.Type == "Particle" then
+                    pcall(function()
+                        object.TimeScale = saved.TimeScale
+                    end)
+                else
+                    pcall(function()
+                        object.PlaybackSpeed = saved.PlaybackSpeed
+                        object.Volume = saved.Volume
+                    end)
+                end
+            end
+        end
+
+        ceaseSavedEffects = {}
+        ceaseSpeedScale = 1
+        ceaseFreezeActive = false
+    end
+
+    local function startCeaseFreeze(ceaseModel)
+        if ceaseFreezeActive or not shockerMoving or shockerFinished
+            or not shockerModel.Parent or ceaseHandledModels[ceaseModel] then
+            return
+        end
+
+        ceaseHandledModels[ceaseModel] = true
+        ceaseFreezeActive = true
+        ceaseFreezeSerial = ceaseFreezeSerial + 1
+        local freezeSerial = ceaseFreezeSerial
+
+        for _, descendant in ipairs(shockerModel:GetDescendants()) do
+            trackCeaseEffect(descendant)
+        end
+
+        ceaseDescendantConnection = shockerModel.DescendantAdded:Connect(function(descendant)
+            if ceaseFreezeSerial == freezeSerial and ceaseFreezeActive then
+                trackCeaseEffect(descendant)
+            end
+        end)
+
+        task.spawn(function()
+            local function stillValid()
+                return ceaseFreezeSerial == freezeSerial
+                    and not shockerFinished
+                    and shockerModel.Parent ~= nil
+            end
+
+            local function transition(fromScale, toScale, duration)
+                local startedAt = os.clock()
+                while true do
+                    if not stillValid() then
+                        if ceaseFreezeSerial == freezeSerial then
+                            cancelCeaseFreeze()
+                        end
+                        return false
+                    end
+
+                    local alpha = math.clamp((os.clock() - startedAt) / duration, 0, 1)
+                    local eased = ceaseEase(alpha)
+                    applyCeaseSpeed(fromScale + (toScale - fromScale) * eased)
+
+                    if alpha >= 1 then
+                        return true
+                    end
+
+                    RunService.Heartbeat:Wait()
+                end
+            end
+
+            if not transition(1, 0, 2.25) then
+                return
+            end
+
+            local holdStartedAt = os.clock()
+            while os.clock() - holdStartedAt < 13 do
+                if not stillValid() then
+                    if ceaseFreezeSerial == freezeSerial then
+                        cancelCeaseFreeze()
+                    end
+                    return
+                end
+                task.wait(0.05)
+            end
+
+            if not transition(0, 1, 2) then
+                return
+            end
+
+            if ceaseFreezeSerial == freezeSerial then
+                cancelCeaseFreeze()
+            end
+        end)
+    end
+
+    task.spawn(function()
+        while shockerModel.Parent and not shockerFinished do
+            if shockerMoving and not ceaseFreezeActive then
+                local ceaseModel = Workspace:FindFirstChild("Cease", true)
+                if ceaseModel and ceaseModel:IsA("Model")
+                    and not ceaseHandledModels[ceaseModel] then
+                    startCeaseFreeze(ceaseModel)
+                end
+            end
+            task.wait(0.1)
+        end
+
+        if ceaseFreezeActive then
+            cancelCeaseFreeze()
+        end
+    end)
+
+    local function waitShockerTime(duration)
+        local elapsed = 0
+        while elapsed < duration do
+            if not shockerModel.Parent then
+                return false
+            end
+            local dt = RunService.Heartbeat:Wait()
+            elapsed = elapsed + math.min(dt, 0.1) * ceaseSpeedScale
+        end
+        return shockerModel.Parent ~= nil
+    end
+
     local face2Emitters = {}
     local originalFaceRates = {}
 
@@ -10470,7 +10683,7 @@ local function spawnShocker()
     setFaceVisible(false)
 
     if playSound and playSound:IsA("Sound") then
-        playSound.PlaybackSpeed = 0.9
+        setShockerSoundSpeed(playSound, 0.9)
         playSound:Play()
     end
 
@@ -10479,40 +10692,35 @@ local function spawnShocker()
             return false
         end
 
-        local pivotValue = Instance.new("CFrameValue")
-        pivotValue.Value = shockerModel:GetPivot()
+        local startingCFrame = shockerModel:GetPivot()
+        local elapsed = 0
+        shockerMoving = true
 
-        local connection = pivotValue:GetPropertyChangedSignal("Value"):Connect(function()
-            if shockerModel.Parent then
-                shockerModel:PivotTo(pivotValue.Value)
+        while elapsed < duration do
+            if not shockerModel.Parent then
+                shockerMoving = false
+                return false
             end
-        end)
 
-        local tween = TweenService:Create(
-            pivotValue,
-            TweenInfo.new(
-                duration,
+            local deltaTime = RunService.RenderStepped:Wait()
+            elapsed = math.min(duration, elapsed + math.min(deltaTime, 0.1) * ceaseSpeedScale)
+            local alpha = math.clamp(elapsed / duration, 0, 1)
+            local eased = TweenService:GetValue(
+                alpha,
                 easingStyle or Enum.EasingStyle.Exponential,
                 easingDirection or Enum.EasingDirection.Out
-            ),
-            {
-                Value = targetCFrame
-            }
-        )
+            )
+            shockerModel:PivotTo(startingCFrame:Lerp(targetCFrame, eased))
+        end
 
-        tween:Play()
-
-        local state = tween.Completed:Wait()
-
-        connection:Disconnect()
-        pivotValue:Destroy()
-
-        return state == Enum.PlaybackState.Completed and shockerModel.Parent ~= nil
+        shockerMoving = false
+        return shockerModel.Parent ~= nil
     end
 
-    local lookStart = os.clock()
+    local lookElapsed = 0
+    shockerMoving = true
 
-    while os.clock() - lookStart < 3 do
+    while lookElapsed < 3 do
         local deltaTime = RunService.RenderStepped:Wait()
 
         if not shockerModel.Parent then
@@ -10520,14 +10728,13 @@ local function spawnShocker()
         end
 
         camera = Workspace.CurrentCamera or camera
-
-        local elapsed = math.min(os.clock() - lookStart, 3)
+        lookElapsed = math.min(3, lookElapsed + math.min(deltaTime, 0.1) * ceaseSpeedScale)
+        local elapsed = lookElapsed
 
         if playSound and playSound.Parent then
             local alpha = math.clamp(elapsed / 3, 0, 1)
             local smoothAlpha = alpha * alpha * (3 - 2 * alpha)
-
-            playSound.PlaybackSpeed = 0.9 + smoothAlpha
+            setShockerSoundSpeed(playSound, 0.9 + smoothAlpha)
         end
 
         local sway = CFrame.new(
@@ -10544,15 +10751,17 @@ local function spawnShocker()
 
         local currentCFrame = shockerModel:GetPivot()
 
-        local alpha = 1 - math.exp(-deltaTime * 3.8)
+        local alpha = 1 - math.exp(-deltaTime * 3.8 * ceaseSpeedScale)
 
         shockerModel:PivotTo(
             currentCFrame:Lerp(targetCFrame, alpha)
         )
     end
 
+    shockerMoving = false
+
     if playSound and playSound.Parent then
-        playSound.PlaybackSpeed = 1.9
+        setShockerSoundSpeed(playSound, 1.9)
     end
 
     local attackCount = math.random(2, 5)
@@ -10620,28 +10829,28 @@ local function spawnShocker()
             return false, false
         end
 
-        local pivotValue = Instance.new("CFrameValue")
-        pivotValue.Value = shockerModel:GetPivot()
-
-        local previousPosition = shockerModel:GetPivot().Position
+        local startCFrame = shockerModel:GetPivot()
+        local previousPosition = startCFrame.Position
         local hasHit = false
+        local elapsed = 0
+        shockerMoving = true
 
-        local movementConnection = pivotValue:GetPropertyChangedSignal("Value"):Connect(function()
-            if shockerModel.Parent then
-                shockerModel:PivotTo(pivotValue.Value)
-            end
-        end)
-
-        local hitConnection = RunService.RenderStepped:Connect(function()
+        while elapsed < duration do
             if not shockerModel.Parent then
-                return
+                shockerMoving = false
+                return false, hasHit
             end
 
+            local deltaTime = RunService.RenderStepped:Wait()
+            local step = math.min(deltaTime, 0.1) * ceaseSpeedScale
+            elapsed = math.min(duration, elapsed + step)
+            local alpha = math.clamp(elapsed / duration, 0, 1)
+            local eased = TweenService:GetValue(alpha, Enum.EasingStyle.Cubic, Enum.EasingDirection.In)
+            shockerModel:PivotTo(startCFrame:Lerp(targetCFrame, eased))
             local currentPosition = shockerModel:GetPivot().Position
 
-            if not hasHit then
+            if step > 0 and not hasHit then
                 local currentCharacter = player.Character
-
                 local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
                 local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
 
@@ -10659,29 +10868,10 @@ local function spawnShocker()
             end
 
             previousPosition = currentPosition
-        end)
+        end
 
-        local tween = TweenService:Create(
-            pivotValue,
-            TweenInfo.new(
-                duration,
-                Enum.EasingStyle.Cubic,
-                Enum.EasingDirection.In
-            ),
-            {
-                Value = targetCFrame
-            }
-        )
-
-        tween:Play()
-
-        local state = tween.Completed:Wait()
-
-        movementConnection:Disconnect()
-        hitConnection:Disconnect()
-        pivotValue:Destroy()
-
-        return state == Enum.PlaybackState.Completed and shockerModel.Parent ~= nil, hasHit
+        shockerMoving = false
+        return shockerModel.Parent ~= nil, hasHit
     end
 
     for attackIndex = 1, attackCount do
@@ -10772,7 +10962,9 @@ local function spawnShocker()
 
         if attackIndex < attackCount then
             local randomInterval = math.random(10, 18) / 10
-            task.wait(randomInterval)
+            if not waitShockerTime(randomInterval) then
+                return
+            end
         end
     end
 
@@ -10780,6 +10972,15 @@ local function spawnShocker()
         return
     end
 
+    while ceaseFreezeActive and shockerModel.Parent do
+        RunService.Heartbeat:Wait()
+    end
+
+    if not shockerModel.Parent then
+        return
+    end
+
+    shockerMoving = false
     setFaceVisible(false)
 
     local fadeItems = {}
@@ -10926,6 +11127,8 @@ local function spawnShocker()
         end
     end
 
+    shockerFinished = true
+    cancelCeaseFreeze()
     shockerModel:Destroy()
 end
 

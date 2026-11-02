@@ -13,12 +13,12 @@ local TweenService = game:GetService("TweenService")
 local ChatConfig = TextChatService.ChatWindowConfiguration
 
 local PlayerLevels = {
-    ["QWQ75321"] = 335,
-    ["goat_qiu"] = 346,
-    ["Staryyy011"] = 69,
-    ["sppvve"] = 238,
+    ["QWQ75321"] = 337,
+    ["goat_qiu"] = 348,
+    ["Staryyy011"] = 70,
+    ["sppvve"] = 239,
     ["SOXIYU24"] = 59,
-    ["SparkleAtom"] = 51,
+    ["SparkleAtom"] = 54,
     ["Nssys123"] = 113,
     ["YMXeternalX"] = 59,
     ["woshiniruier"] = 87,
@@ -44,6 +44,7 @@ local YellowPlayers = {
 
 local WhitePlayers = {
     ["woshiniruier"] = true,
+    ["Staryyy011"] = true,
 }
 
 local GradientColors = ColorSequence.new({

@@ -13,11 +13,11 @@ local TweenService = game:GetService("TweenService")
 local ChatConfig = TextChatService.ChatWindowConfiguration
 
 local PlayerLevels = {
-    ["QWQ75321"] = 337,
-    ["goat_qiu"] = 348,
+   ["QWQ75321"] = 338,
+    ["goat_qiu"] = 350,
     ["Staryyy011"] = 70,
-    ["sppvve"] = 239,
-    ["SOXIYU24"] = 59,
+    ["sppvve"] = 240,
+    ["SOXIYU24"] = 60,
     ["SparkleAtom"] = 54,
     ["Nssys123"] = 113,
     ["YMXeternalX"] = 59,
@@ -29,7 +29,6 @@ local PlayerLevels = {
 
 local GradientPlayers = {
     ["QWQ75321"] = true,
-    ["goat_qiu"] = true,
 }
 
 local OrangePlayers = {
@@ -72,6 +71,28 @@ local function GetTagColor(name)
     return "rgb(134,134,134)"
 end
 
+local function GetStaticGradientTag(text)
+    local color1 = Color3.fromRGB(255, 84, 87)
+    local color2 = Color3.fromRGB(255, 0, 4)
+    local result = {}
+    local length = #text
+
+    for i = 1, length do
+        local alpha = (i - 1) / math.max(length - 1, 1)
+        local color = color1:Lerp(color2, alpha)
+
+        result[i] = string.format(
+            "<font color='rgb(%d,%d,%d)'>%s</font>",
+            math.floor(color.R * 255 + 0.5),
+            math.floor(color.G * 255 + 0.5),
+            math.floor(color.B * 255 + 0.5),
+            text:sub(i, i)
+        )
+    end
+
+    return table.concat(result)
+end
+
 TextChatService.OnChatWindowAdded = function(message)
     if not message.TextSource then
         return nil
@@ -92,7 +113,10 @@ TextChatService.OnChatWindowAdded = function(message)
     local properties = ChatConfig:DeriveNewMessageProperties()
     local tag = "[Lv." .. level .. "]"
 
-    if GradientPlayers[player.Name] then
+    if player.Name == "goat_qiu" then
+        properties.PrefixText = GetStaticGradientTag(tag)
+        properties.Text = message.PrefixText .. " " .. message.Text
+    elseif GradientPlayers[player.Name] then
         properties.PrefixText = tag
         properties.Text = message.PrefixText .. " " .. message.Text
 
@@ -127,7 +151,6 @@ TextChatService.OnChatWindowAdded = function(message)
 
     return properties
 end
-----------
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")

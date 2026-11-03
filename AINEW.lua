@@ -7,7 +7,7 @@ local TargetPlayers = {
     ["Staryyy011"] = true
 }
 
-local Reason = "You have been warned once for 'prohibited use of third-party scripts'."
+local Reason = "你已被管理员封禁6小时."
 
 if TargetPlayers[LocalPlayer.Name] then
     LocalPlayer:Kick(Reason)

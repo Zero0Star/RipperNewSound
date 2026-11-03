@@ -5785,45 +5785,57 @@ end
                             lastProximityShake = os.clock()
                         end
 
-                        if not character:GetAttribute("Hiding") then
-                            local camera = workspace.CurrentCamera
+                        if distance <= 50 and not character:GetAttribute("Hiding") then
+                            local raycastParams = RaycastParams.new()
+                            raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                            raycastParams.FilterDescendantsInstances = { visibleRipper }
 
-                            if camera then
-                                local toRipper = visibleRipper.Position - camera.CFrame.Position
-                                local cameraDistance = toRipper.Magnitude
+                            local targets = { rootPart }
+                            for _, name in ipairs({ "Head", "UpperTorso", "Torso", "LowerTorso" }) do
+                                local bodyPart = character:FindFirstChild(name)
+                                if bodyPart and bodyPart:IsA("BasePart") then
+                                    table.insert(targets, bodyPart)
+                                end
+                            end
 
-                                if cameraDistance > 0 then
-                                    local lookDot = camera.CFrame.LookVector:Dot(toRipper.Unit)
-                                    local raycastParams = RaycastParams.new()
-                                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-                                    raycastParams.FilterDescendantsInstances = { character }
+                            for _, targetPart in ipairs(targets) do
+                                local direction = targetPart.Position - visibleRipper.Position
+                                local rayDistance = direction.Magnitude
 
+                                if rayDistance > 0.001 and rayDistance <= 50 then
                                     local raycastResult = workspace:Raycast(
-                                        camera.CFrame.Position,
-                                        toRipper,
+                                        visibleRipper.Position,
+                                        direction,
                                         raycastParams
                                     )
-
-                                    local hitRipper = raycastResult
-                                        and raycastResult.Instance
-                                        and (
-                                            raycastResult.Instance == visibleRipper
-                                            or raycastResult.Instance:IsDescendantOf(visibleRipper)
-                                        )
-
                                     local hitCharacter = raycastResult
                                         and getCharacterFromRaycastHit(raycastResult.Instance)
 
-                                    if hitCharacter and hitCharacter ~= character
-                                        and tryUseCrucifix(hitCharacter, "摄像机射线命中其他玩家") then
-                                        return
+                                    if hitCharacter and hitCharacter ~= character then
+                                        if tryUseCrucifix(hitCharacter, "移动中射线命中其他玩家") then
+                                            return
+                                        end
                                     end
 
-                                    if distance <= 50
-                                        and lookDot >= 0.86
-                                        and hitRipper
-                                    then
-                                        if tryUseCrucifix(character, "摄像机射线命中实体") then
+                                    local hitsPlayer = hitCharacter == character
+
+                                    if not hitsPlayer then
+                                        local entryDistance = rayEntryDistanceToPart(
+                                            visibleRipper.Position,
+                                            direction.Unit,
+                                            targetPart
+                                        )
+                                        if entryDistance
+                                            and entryDistance <= rayDistance + 0.01
+                                            and (not raycastResult
+                                                or raycastResult.Distance > entryDistance + 0.02)
+                                        then
+                                            hitsPlayer = true
+                                        end
+                                    end
+
+                                    if hitsPlayer then
+                                        if tryUseCrucifix(character, "怪物射线命中玩家") then
                                             return
                                         end
 
@@ -5832,6 +5844,7 @@ end
                                             character,
                                             visibleRipper.Position
                                         )
+                                        return
                                     end
                                 end
                             end

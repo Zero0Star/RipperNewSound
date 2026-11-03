@@ -6563,46 +6563,79 @@ local function startPlayerDetection()
     end)
 
     task.spawn(function()
-        local player = Players.LocalPlayer
+        local localPlayer = Players.LocalPlayer
         while isActive() and not hasJumpScared do
-            RunService.RenderStepped:Wait()
+            RunService.Heartbeat:Wait()
             if not isActive() then
                 return
             end
 
-            local character = player and player.Character
-            if character and not character:GetAttribute("Hiding") then
+            local character = localPlayer and localPlayer.Character
+            if character and character:IsDescendantOf(workspace)
+                and not character:GetAttribute("Hiding") then
                 local humanoid = character:FindFirstChildWhichIsA("Humanoid")
-                local rootPart = character:FindFirstChild("HumanoidRootPart")
-                local camera = workspace.CurrentCamera
-                if humanoid and humanoid.Health > 0 and rootPart and camera then
-                    local entityPosition = getSilencePosition()
-                    local distance = (entityPosition - rootPart.Position).Magnitude
-                    if distance <= DETECTION_DISTANCE then
-                        local direction = entityPosition - camera.CFrame.Position
-                        if direction.Magnitude > 0.001
-                            and direction.Magnitude <= DETECTION_DISTANCE
-                            and camera.CFrame.LookVector:Dot(direction.Unit) >= 0.86 then
-                            local params = RaycastParams.new()
-                            params.FilterType = Enum.RaycastFilterType.Exclude
-                            params.FilterDescendantsInstances = { character }
-                            local result = workspace:Raycast(camera.CFrame.Position, direction, params)
-                            local hit = result and result.Instance
-                            local hitSilence = hit and (hit == silence or hit:IsDescendantOf(silence))
-                            local hitCharacter = hit and getCharacterFromHit(hit)
+                local currentSilence = silence
 
-                            if hitCharacter and hitCharacter ~= character then
-                                if tryUseCrucifix(hitCharacter) then
-                                    return
+                if humanoid and humanoid.Health > 0
+                    and currentSilence and currentSilence.Parent then
+                    local entityPosition = currentSilence:GetPivot().Position
+                    local raycastParams = RaycastParams.new()
+                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                    raycastParams.FilterDescendantsInstances = { currentSilence }
+
+                    local targetParts = {}
+                    local rootPart = character:FindFirstChild("HumanoidRootPart")
+                    if rootPart and rootPart:IsA("BasePart") then
+                        table.insert(targetParts, rootPart)
+                    end
+
+                    for _, partName in ipairs({ "Head", "UpperTorso", "Torso", "LowerTorso" }) do
+                        local targetPart = character:FindFirstChild(partName)
+                        if targetPart and targetPart:IsA("BasePart") then
+                            table.insert(targetParts, targetPart)
+                        end
+                    end
+
+                    for _, targetPart in ipairs(targetParts) do
+                        if not isActive() or currentSilence ~= silence then
+                            return
+                        end
+
+                        local direction = targetPart.Position - entityPosition
+                        local distance = direction.Magnitude
+
+                        if distance > 0.001 and distance <= DETECTION_DISTANCE then
+                            local result = workspace:Raycast(
+                                entityPosition,
+                                direction,
+                                raycastParams
+                            )
+                            local hitCharacter = result and getCharacterFromHit(result.Instance)
+                            local reachedCharacter = hitCharacter == character
+
+                            if not reachedCharacter then
+                                local entryDistance = rayEntryDistanceToPart(
+                                    entityPosition,
+                                    direction.Unit,
+                                    targetPart
+                                )
+
+                                if entryDistance and entryDistance <= distance + 0.01
+                                    and (not result or result.Distance > entryDistance + 0.02) then
+                                    reachedCharacter = true
                                 end
                             end
 
-                            if hitSilence then
+                            if reachedCharacter then
                                 if tryUseCrucifix(character) then
                                     return
                                 end
                                 triggerSilenceJumpScare(character)
                                 return
+                            elseif hitCharacter and hitCharacter ~= character then
+                                if tryUseCrucifix(hitCharacter) then
+                                    return
+                                end
                             end
                         end
                     end

@@ -13,15 +13,15 @@ local TweenService = game:GetService("TweenService")
 local ChatConfig = TextChatService.ChatWindowConfiguration
 
 local PlayerLevels = {
-   ["QWQ75321"] = 349,
+   ["QWQ75321"] = 351,
     ["goat_qiu"] = 357,
-    ["Staryyy011"] = 84,
+    ["Staryyy011"] = 85,
     ["sppvve"] = 257,
-    ["SOXIYU24"] = 73,
+    ["SOXIYU24"] = 76,
     ["SparkleAtom"] = 54,
-    ["Nssys123"] = 113,
+    ["Nssys123"] = 116,
     ["YMXeternalX"] = 59,
-    ["woshiniruier"] = 97,
+    ["woshiniruier"] = 100,
     ["Yxi_na"] = 59,
     ["cgdwml"] = 189,
     ["A_Yun66"] = 108,
@@ -29,7 +29,6 @@ local PlayerLevels = {
 
 local GradientPlayers = {
     ["sppvve"] = true,
-    ["QWQ75321"] = true,
 }
 
 local OrangePlayers = {
@@ -39,10 +38,10 @@ local OrangePlayers = {
 local YellowPlayers = {
     ["Nssys123"] = true,
     ["A_Yun66"] = true,
+    ["woshiniruier"] = true,
 }
 
 local WhitePlayers = {
-    ["woshiniruier"] = true,
     ["Staryyy011"] = true,
     ["SOXIYU24"] = true,
 }
@@ -114,9 +113,9 @@ TextChatService.OnChatWindowAdded = function(message)
     local properties = ChatConfig:DeriveNewMessageProperties()
     local tag = "[Lv." .. level .. "]"
 
-    if player.Name == "goat_qiu" then
-        properties.PrefixText = GetStaticGradientTag(tag)
-        properties.Text = message.PrefixText .. " " .. message.Text
+  if player.Name == "goat_qiu" or player.Name == "QWQ75321" then
+    properties.PrefixText = GetStaticGradientTag(tag)
+    properties.Text = message.PrefixText .. " " .. message.Text
     elseif GradientPlayers[player.Name] then
         properties.PrefixText = tag
         properties.Text = message.PrefixText .. " " .. message.Text

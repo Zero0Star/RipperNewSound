@@ -3,14 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"胆量挑战 区域情况:大量实体",
 	"愤怒 区域情况:实体横行",
-	"无效楼层 区域情况:暂无信息",
-	"无效楼层 区域情况:暂无信息",
-	"餐厅 区域情况:暂无信息",
-	"随机楼层 区域情况:暂无信息",
-	"指引之光 区域情况:实体绝迹",
-	"鹿神的房间 区域情况:暂无信息"
+	"吱吱的跑酷 区域情况:实体横行",
+	"愤怒 区域情况:实体横行",
+	"愤怒 区域情况:实体横行",
+	"愤怒 区域情况:实体横行",
+	"愤怒 区域情况:实体横行",
+	"愤怒 区域情况:实体横行",
+	"愤怒 区域情况:实体横行"
 }
 
 local stopped = false

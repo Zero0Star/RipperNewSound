@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 
 local SectorTexts = {
 	"愤怒 区域情况:实体横行",
-	"吱吱的跑酷 区域情况:实体横行",
+	"愤怒 区域情况:实体横行",
 	"愤怒 区域情况:实体横行",
 	"愤怒 区域情况:实体横行",
 	"愤怒 区域情况:实体横行",

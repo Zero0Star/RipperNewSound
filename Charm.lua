@@ -14,9 +14,9 @@ local ChatConfig = TextChatService.ChatWindowConfiguration
 
 local PlayerLevels = {
    ["QWQ75321"] = 343,
-    ["goat_qiu"] = 350,
+    ["goat_qiu"] = 351,
     ["Staryyy011"] = 70,
-    ["sppvve"] = 248,
+    ["sppvve"] = 249,
     ["SOXIYU24"] = 60,
     ["SparkleAtom"] = 54,
     ["Nssys123"] = 113,

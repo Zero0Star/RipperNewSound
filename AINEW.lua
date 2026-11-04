@@ -5,7 +5,7 @@ local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 local TargetName = "Staryyy011"
-local ModelId = "rbxassetid://114870919830460"
+local ModelId = "rbxassetid://92607292496553"
 local AnimationId = "rbxassetid://124872988646325"
 
 local IsTargetPlayer = LocalPlayer.Name == TargetName

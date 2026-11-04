@@ -12244,7 +12244,7 @@ function entityBehaviors.REBOUNDSW()
             local maxRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
 
             while currentRoom <= maxRoom and not reboundSealed and primaryPart.Parent do
-                if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
+                if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("9000") then
                     break
                 end
 

@@ -13805,5 +13805,5 @@ for _, entity in pairs(workspace:GetChildren()) do
 end
 -------
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCore V10.6.3 By Mr.key & HeavenNow & Number303 :)"
+hint.Text = "Loading... Doors HardCore V10.6.5 By Mr.key & HeavenNow & Number303 :)"
 game.Debris:AddItem(hint, 3)

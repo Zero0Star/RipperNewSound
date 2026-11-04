@@ -7,6 +7,7 @@ marker.Value = true
 marker.Parent = workspace
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entityBehaviors = {}
+
 function entityBehaviors.ATCHRipper()
  local hardCoreSound = workspace:FindFirstChild("HardCoreSound")
     local backgroundSound = hardCoreSound and hardCoreSound:FindFirstChild("RipperBackgroundSound")
@@ -308,6 +309,11 @@ function entityBehaviors.ATCHRipper()
 
                 jumpScareCamShake:Start()
                 jumpScareCamShake:ShakeOnce(8, 26, 0.03, 0.28, 0.3, 0.35)
+                task.delay(1, function()
+                    pcall(function()
+                        jumpScareCamShake:Stop()
+                    end)
+                end)
             end
         end
 
@@ -402,8 +408,18 @@ function entityBehaviors.ATCHRipper()
             rootPart.Anchored = false
         end
 
-        if humanoid and humanoid.Parent then
-            humanoid:TakeDamage(125)
+        if humanoid and humanoid.Parent and humanoid.Health > 0 then
+            local damage = 125
+            if humanoid.Health <= damage then
+                local gameStats = game.ReplicatedStorage:FindFirstChild("GameStats")
+                local playerStat = gameStats and gameStats:FindFirstChild("Player_" .. player.Name)
+                local total = playerStat and playerStat:FindFirstChild("Total")
+                local deathCause = total and total:FindFirstChild("DeathCause")
+                if deathCause then
+                    deathCause.Value = "Ripper"
+                end
+            end
+            humanoid:TakeDamage(damage)
         end
 
         TweenService:Create(
@@ -466,41 +482,6 @@ function entityBehaviors.ATCHRipper()
         ripperAsset = nil
         isRipperDespawning = true
 
-        local remotesFolder = game.ReplicatedStorage:FindFirstChild("RemotesFolder")
-
-        if remotesFolder then
-            local deathHint = remotesFolder:FindFirstChild("DeathHint")
-
-            if deathHint then
-                firesignal(
-                    deathHint.OnClientEvent,
-                    {
-                        "你死于所谓的开膛手...",
-                        "伴随极大的吼叫声后他就会出现.",
-                        "它这么做时躲起来,他会检查所有的躲藏点!"
-                    },
-                    "Blue"
-                )
-            end
-        end
-
-        local gameStats = game.ReplicatedStorage:FindFirstChild("GameStats")
-
-        if gameStats then
-            local playerStat = gameStats:FindFirstChild("Player_" .. player.Name)
-
-            if playerStat then
-                local total = playerStat:FindFirstChild("Total")
-
-                if total then
-                    local deathCause = total:FindFirstChild("DeathCause")
-
-                    if deathCause then
-                        deathCause.Value = "Ripper"
-                    end
-                end
-            end
-        end
     end
 
     local function getOrderedRooms()
@@ -736,6 +717,9 @@ function entityBehaviors.ATCHRipper()
                 and not isRipperDespawning
             do
                 RunService.RenderStepped:Wait()
+                if not ripper or not ripper.Parent or isJumpScaring or isRipperDespawning then
+                    break
+                end
 
                 local player = Players.LocalPlayer
 
@@ -810,6 +794,11 @@ function entityBehaviors.ATCHRipper()
                         end
                     end
                 end
+            end
+            if cameraShaker then
+                pcall(function()
+                    cameraShaker:Stop()
+                end)
             end
         end)
 
@@ -1144,6 +1133,11 @@ function entityBehaviors.ATCHRipper()
                 0.25,
                 0.35
             )
+            task.delay(1, function()
+                pcall(function()
+                    endExplosionCamShake:Stop()
+                end)
+            end)
         end
 
         task.wait(1)
@@ -1248,6 +1242,11 @@ function entityBehaviors.ATCHRipper()
             2,
             0.5
         )
+        task.delay(7, function()
+            pcall(function()
+                camShake:Stop()
+            end)
+        end)
     end
     runFinalCameraShake()
 end
@@ -3285,93 +3284,768 @@ Event:FireServer(
 end
 function entityBehaviors.Shok()
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
 
 local function spawnShocker()
-    local shockerModel = game:GetObjects("rbxassetid://129658537539698")[1]
+    local character = player.Character or player.CharacterAdded:Wait()
     local camera = Workspace.CurrentCamera
 
-    local rootPart = shockerModel:FindFirstChild("HumanoidRootPart") or shockerModel:FindFirstChildWhichIsA("Part")
+    while not camera do
+        task.wait()
+        camera = Workspace.CurrentCamera
+    end
+
+    local success, objects = pcall(function()
+        return game:GetObjects("rbxassetid://140037062004703")
+    end)
+
+    if not success or not objects or not objects[1] then
+        return
+    end
+
+    local shockerModel = objects[1]
+
+    local rootPart = shockerModel:FindFirstChild("HumanoidRootPart", true)
+
+    if not rootPart or not rootPart:IsA("BasePart") then
+        rootPart = shockerModel:FindFirstChildWhichIsA("BasePart", true)
+    end
+
+    if not rootPart then
+        shockerModel:Destroy()
+        return
+    end
+
     shockerModel.PrimaryPart = rootPart
-    shockerModel:SetPrimaryPartCFrame(camera.CFrame * CFrame.new(0, 0, -7))
+
+    for _, object in ipairs(shockerModel:GetDescendants()) do
+        if object:IsA("BasePart") then
+            object.Anchored = true
+            object.CanCollide = false
+        end
+    end
+
     shockerModel.Parent = Workspace
 
-    local oogaBoogaaPart = shockerModel:WaitForChild("OOGA BOOGAAAA")
-    local horrorScream = oogaBoogaaPart:WaitForChild("HORROR SCREAM 15")
-    local boneSound = oogaBoogaaPart:FindFirstChild("Bone")
+    local followOffset = CFrame.new(0, -0.7, -18)
 
-    local lookDuration = 2
-    local lookStart = nil
-    local hasTriggered = false
-    local hasFallen = false
+    shockerModel:PivotTo(camera.CFrame * followOffset)
 
-    local function fallToGround()
-        if hasFallen then return end
-        hasFallen = true
+    local base = shockerModel:FindFirstChild("Base", true) or rootPart
+    local playSound = base:FindFirstChild("PlaySound", true)
 
-        oogaBoogaaPart.Anchored = false
-        oogaBoogaaPart.CanCollide = false
+    local oogaBoogaaPart = shockerModel:FindFirstChild("OOGA BOOGAAAA", true) or base
 
-        task.delay(2, function()
-            if shockerModel then
-                shockerModel:Destroy()
+    local horrorScream = oogaBoogaaPart:FindFirstChild("HORROR SCREAM 15", true)
+
+    if not horrorScream then
+        horrorScream = shockerModel:FindFirstChild("HORROR SCREAM 15", true)
+    end
+
+    local ceaseFreezeActive = false
+    local ceaseSpeedScale = 1
+    local ceaseFreezeSerial = 0
+    local ceaseSavedEffects = {}
+    local ceaseDescendantConnection = nil
+    local ceaseHandledModels = setmetatable({}, { __mode = "k" })
+    local shockerMoving = false
+    local shockerFinished = false
+
+    local function ceaseEase(alpha)
+        alpha = math.clamp(alpha, 0, 1)
+        return alpha * alpha * (3 - 2 * alpha)
+    end
+
+    local function applyCeaseSpeed(scale)
+        ceaseSpeedScale = math.clamp(scale, 0, 1)
+
+        for object, saved in pairs(ceaseSavedEffects) do
+            if object.Parent then
+                if saved.Type == "Particle" then
+                    pcall(function()
+                        object.TimeScale = saved.TimeScale * ceaseSpeedScale
+                    end)
+                else
+                    pcall(function()
+                        object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                        object.Volume = saved.Volume * ceaseSpeedScale
+                    end)
+                end
+            end
+        end
+    end
+
+    local function trackCeaseEffect(object)
+        if ceaseSavedEffects[object] then
+            return
+        end
+
+        if object:IsA("ParticleEmitter") then
+            ceaseSavedEffects[object] = {
+                Type = "Particle",
+                TimeScale = object.TimeScale
+            }
+        elseif object:IsA("Sound") then
+            ceaseSavedEffects[object] = {
+                Type = "Sound",
+                PlaybackSpeed = object.PlaybackSpeed,
+                Volume = object.Volume
+            }
+        else
+            return
+        end
+
+        if ceaseFreezeActive then
+            local saved = ceaseSavedEffects[object]
+            if saved.Type == "Particle" then
+                pcall(function()
+                    object.TimeScale = saved.TimeScale * ceaseSpeedScale
+                end)
+            else
+                pcall(function()
+                    object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                    object.Volume = saved.Volume * ceaseSpeedScale
+                end)
+            end
+        end
+    end
+
+    local function setShockerSoundSpeed(sound, speed)
+        if not sound or not sound.Parent then
+            return
+        end
+
+        local saved = ceaseSavedEffects[sound]
+        if saved and saved.Type == "Sound" then
+            saved.PlaybackSpeed = speed
+            sound.PlaybackSpeed = speed * ceaseSpeedScale
+        else
+            sound.PlaybackSpeed = speed
+        end
+    end
+
+    local function cancelCeaseFreeze()
+        ceaseFreezeSerial = ceaseFreezeSerial + 1
+
+        if ceaseDescendantConnection then
+            ceaseDescendantConnection:Disconnect()
+            ceaseDescendantConnection = nil
+        end
+
+        for object, saved in pairs(ceaseSavedEffects) do
+            if object.Parent then
+                if saved.Type == "Particle" then
+                    pcall(function()
+                        object.TimeScale = saved.TimeScale
+                    end)
+                else
+                    pcall(function()
+                        object.PlaybackSpeed = saved.PlaybackSpeed
+                        object.Volume = saved.Volume
+                    end)
+                end
+            end
+        end
+
+        ceaseSavedEffects = {}
+        ceaseSpeedScale = 1
+        ceaseFreezeActive = false
+    end
+
+    local function startCeaseFreeze(ceaseModel)
+        if ceaseFreezeActive or not shockerMoving or shockerFinished
+            or not shockerModel.Parent or ceaseHandledModels[ceaseModel] then
+            return
+        end
+
+        ceaseHandledModels[ceaseModel] = true
+        ceaseFreezeActive = true
+        ceaseFreezeSerial = ceaseFreezeSerial + 1
+        local freezeSerial = ceaseFreezeSerial
+
+        for _, descendant in ipairs(shockerModel:GetDescendants()) do
+            trackCeaseEffect(descendant)
+        end
+
+        ceaseDescendantConnection = shockerModel.DescendantAdded:Connect(function(descendant)
+            if ceaseFreezeSerial == freezeSerial and ceaseFreezeActive then
+                trackCeaseEffect(descendant)
+            end
+        end)
+
+        task.spawn(function()
+            local function stillValid()
+                return ceaseFreezeSerial == freezeSerial
+                    and not shockerFinished
+                    and shockerModel.Parent ~= nil
+            end
+
+            local function transition(fromScale, toScale, duration)
+                local startedAt = os.clock()
+                while true do
+                    if not stillValid() then
+                        if ceaseFreezeSerial == freezeSerial then
+                            cancelCeaseFreeze()
+                        end
+                        return false
+                    end
+
+                    local alpha = math.clamp((os.clock() - startedAt) / duration, 0, 1)
+                    local eased = ceaseEase(alpha)
+                    applyCeaseSpeed(fromScale + (toScale - fromScale) * eased)
+
+                    if alpha >= 1 then
+                        return true
+                    end
+
+                    RunService.Heartbeat:Wait()
+                end
+            end
+
+            if not transition(1, 0, 2.25) then
+                return
+            end
+
+            local holdStartedAt = os.clock()
+            while os.clock() - holdStartedAt < 13 do
+                if not stillValid() then
+                    if ceaseFreezeSerial == freezeSerial then
+                        cancelCeaseFreeze()
+                    end
+                    return
+                end
+                task.wait(0.05)
+            end
+
+            if not transition(0, 1, 2) then
+                return
+            end
+
+            if ceaseFreezeSerial == freezeSerial then
+                cancelCeaseFreeze()
             end
         end)
     end
 
-    local connection
-    connection = game:GetService("RunService").RenderStepped:Connect(function()
-        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-        if hasTriggered then connection:Disconnect() return end
-
-        local directionToShocker = (oogaBoogaaPart.Position - camera.CFrame.Position).Unit
-        local playerLookVector = camera.CFrame.LookVector
-        local dot = directionToShocker:Dot(playerLookVector)
-
-        if dot > 0.85 then
-            if not lookStart then
-                lookStart = tick()
-            elseif tick() - lookStart >= lookDuration then
-                hasTriggered = true
-                connection:Disconnect()
-
-                horrorScream:Play()
-                if boneSound then boneSound:Play() end
-                humanoid:TakeDamage(30)
-                local targetPos = character.HumanoidRootPart.Position + Vector3.new(0, 2, 0)
-                local tweenInfo = TweenInfo.new(1.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-                local tween = TweenService:Create(oogaBoogaaPart, tweenInfo, {Position = targetPos})
-                tween:Play()
-
-                tween.Completed:Connect(function()
-                    fallToGround()
-                end)
-
-                ReplicatedStorage.GameStats["Player_".. player.Name].Total.DeathCause.Value = "Shocker"
-                firesignal(ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
-                    "You died to who you call Shocker...",
-                    "Don't look at it or it stuns you!"
-                }, "Blue")
+    task.spawn(function()
+        while shockerModel.Parent and not shockerFinished do
+            if shockerMoving and not ceaseFreezeActive then
+                local ceaseModel = Workspace:FindFirstChild("Cease", true)
+                if ceaseModel and ceaseModel:IsA("Model")
+                    and not ceaseHandledModels[ceaseModel] then
+                    startCeaseFreeze(ceaseModel)
+                end
             end
-        else
-            connection:Disconnect()
-            fallToGround()
+            task.wait(0.1)
+        end
+
+        if ceaseFreezeActive then
+            cancelCeaseFreeze()
         end
     end)
 
-    task.delay(5, function()
-        if not hasTriggered and not hasFallen then
-            fallToGround()
+    local function waitShockerTime(duration)
+        local elapsed = 0
+        while elapsed < duration do
+            if not shockerModel.Parent then
+                return false
+            end
+            local dt = RunService.Heartbeat:Wait()
+            elapsed = elapsed + math.min(dt, 0.1) * ceaseSpeedScale
         end
-    end)
+        return shockerModel.Parent ~= nil
+    end
+
+    local face2Emitters = {}
+    local originalFaceRates = {}
+
+    for _, object in ipairs(shockerModel:GetDescendants()) do
+        if object.Name == "FACE2" and object:IsA("ParticleEmitter") then
+            table.insert(face2Emitters, object)
+            originalFaceRates[object] = object.Rate
+            object.Enabled = false
+            object:Clear()
+        end
+    end
+
+    local function setFaceVisible(enabled)
+        for _, emitter in ipairs(face2Emitters) do
+            if emitter.Parent and emitter:IsDescendantOf(shockerModel) then
+                if enabled then
+                    if emitter.Rate <= 0 then
+                        emitter.Rate = 18
+                    end
+
+                    emitter.Enabled = true
+                    emitter:Emit(20)
+                else
+                    emitter.Enabled = false
+                    emitter.Rate = originalFaceRates[emitter] or 0
+                    emitter:Clear()
+                end
+            end
+        end
+    end
+
+    setFaceVisible(false)
+
+    if playSound and playSound:IsA("Sound") then
+        setShockerSoundSpeed(playSound, 0.9)
+        playSound:Play()
+    end
+
+    local function tweenModelTo(targetCFrame, duration, easingStyle, easingDirection)
+        if not shockerModel.Parent then
+            return false
+        end
+
+        local startingCFrame = shockerModel:GetPivot()
+        local elapsed = 0
+        shockerMoving = true
+
+        while elapsed < duration do
+            if not shockerModel.Parent then
+                shockerMoving = false
+                return false
+            end
+
+            local deltaTime = RunService.RenderStepped:Wait()
+            elapsed = math.min(duration, elapsed + math.min(deltaTime, 0.1) * ceaseSpeedScale)
+            local alpha = math.clamp(elapsed / duration, 0, 1)
+            local eased = TweenService:GetValue(
+                alpha,
+                easingStyle or Enum.EasingStyle.Exponential,
+                easingDirection or Enum.EasingDirection.Out
+            )
+            shockerModel:PivotTo(startingCFrame:Lerp(targetCFrame, eased))
+        end
+
+        shockerMoving = false
+        return shockerModel.Parent ~= nil
+    end
+
+    local lookElapsed = 0
+    shockerMoving = true
+
+    while lookElapsed < 3 do
+        local deltaTime = RunService.RenderStepped:Wait()
+
+        if not shockerModel.Parent then
+            return
+        end
+
+        camera = Workspace.CurrentCamera or camera
+        lookElapsed = math.min(3, lookElapsed + math.min(deltaTime, 0.1) * ceaseSpeedScale)
+        local elapsed = lookElapsed
+
+        if playSound and playSound.Parent then
+            local alpha = math.clamp(elapsed / 3, 0, 1)
+            local smoothAlpha = alpha * alpha * (3 - 2 * alpha)
+            setShockerSoundSpeed(playSound, 0.9 + smoothAlpha)
+        end
+
+        local sway = CFrame.new(
+            math.sin(elapsed * 2.7) * 0.18,
+            math.sin(elapsed * 2.1) * 0.12,
+            0
+        ) * CFrame.Angles(
+            math.rad(math.sin(elapsed * 1.8) * 2),
+            math.rad(math.sin(elapsed * 2.4) * 3),
+            math.rad(math.sin(elapsed * 2.1) * 1.5)
+        )
+
+        local targetCFrame = camera.CFrame * followOffset * sway
+
+        local currentCFrame = shockerModel:GetPivot()
+
+        local alpha = 1 - math.exp(-deltaTime * 3.8 * ceaseSpeedScale)
+
+        shockerModel:PivotTo(
+            currentCFrame:Lerp(targetCFrame, alpha)
+        )
+    end
+
+    shockerMoving = false
+
+    if playSound and playSound.Parent then
+        setShockerSoundSpeed(playSound, 1.9)
+    end
+
+    local attackCount = math.random(2, 5)
+
+    local retreatDistance = 2.8
+    local retreatDuration = 0.35
+    local dashDuration = 0.7
+    local hitRadius = 4.2
+    local damageAmount = 30
+
+    local hintSent = false
+
+    local function damagePlayer()
+        local currentCharacter = player.Character
+
+        if not currentCharacter then
+            return false
+        end
+
+        local currentHumanoid = currentCharacter:FindFirstChildOfClass("Humanoid")
+
+        if not currentHumanoid or currentHumanoid.Health <= 0 then
+            return false
+        end
+
+        local willDie = currentHumanoid.Health <= damageAmount
+
+        if willDie then
+            local gameStats = ReplicatedStorage:FindFirstChild("GameStats")
+            local playerStats = gameStats and gameStats:FindFirstChild("Player_" .. player.Name)
+            local totalStats = playerStats and playerStats:FindFirstChild("Total")
+            local deathCause = totalStats and totalStats:FindFirstChild("DeathCause")
+
+            if deathCause then
+                deathCause.Value = "Shocker"
+            end
+        end
+
+        currentHumanoid:TakeDamage(damageAmount)
+
+        return true
+    end
+
+    local function getSegmentDistance(point, startPosition, endPosition)
+        local segment = endPosition - startPosition
+        local lengthSquared = segment:Dot(segment)
+
+        if lengthSquared <= 0.0001 then
+            return (point - startPosition).Magnitude
+        end
+
+        local alpha = math.clamp(
+            (point - startPosition):Dot(segment) / lengthSquared,
+            0,
+            1
+        )
+
+        local closestPoint = startPosition + segment * alpha
+
+        return (point - closestPoint).Magnitude
+    end
+
+    local function dashTo(targetCFrame, duration)
+        if not shockerModel.Parent then
+            return false, false
+        end
+
+        local startCFrame = shockerModel:GetPivot()
+        local previousPosition = startCFrame.Position
+        local hasHit = false
+        local elapsed = 0
+        shockerMoving = true
+
+        while elapsed < duration do
+            if not shockerModel.Parent then
+                shockerMoving = false
+                return false, hasHit
+            end
+
+            local deltaTime = RunService.RenderStepped:Wait()
+            local step = math.min(deltaTime, 0.1) * ceaseSpeedScale
+            elapsed = math.min(duration, elapsed + step)
+            local alpha = math.clamp(elapsed / duration, 0, 1)
+            local eased = TweenService:GetValue(alpha, Enum.EasingStyle.Cubic, Enum.EasingDirection.In)
+            shockerModel:PivotTo(startCFrame:Lerp(targetCFrame, eased))
+            local currentPosition = shockerModel:GetPivot().Position
+
+            if step > 0 and not hasHit then
+                local currentCharacter = player.Character
+                local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
+                local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
+
+                if currentRoot and currentHumanoid and currentHumanoid.Health > 0 then
+                    local distance = getSegmentDistance(
+                        currentRoot.Position,
+                        previousPosition,
+                        currentPosition
+                    )
+
+                    if distance <= hitRadius then
+                        hasHit = damagePlayer()
+                    end
+                end
+            end
+
+            previousPosition = currentPosition
+        end
+
+        shockerMoving = false
+        return shockerModel.Parent ~= nil, hasHit
+    end
+
+    for attackIndex = 1, attackCount do
+        if not shockerModel.Parent then
+            return
+        end
+
+        setFaceVisible(false)
+
+        local currentCharacter = player.Character or character
+        local currentRoot = currentCharacter:FindFirstChild("HumanoidRootPart")
+
+        if not currentRoot then
+            break
+        end
+
+        local currentPivot = shockerModel:GetPivot()
+
+        local awayVector = currentPivot.Position - currentRoot.Position
+
+        if awayVector.Magnitude < 0.001 then
+            awayVector = camera.CFrame.LookVector
+        end
+
+        local awayDirection = awayVector.Unit
+
+        local retreatPosition =
+            currentPivot.Position + awayDirection * retreatDistance
+
+        local retreatCFrame =
+            CFrame.new(retreatPosition) * currentPivot.Rotation
+
+        local retreatSuccess = tweenModelTo(
+            retreatCFrame,
+            retreatDuration,
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out
+        )
+
+        if not retreatSuccess then
+            return
+        end
+
+        currentCharacter = player.Character or character
+        currentRoot = currentCharacter:FindFirstChild("HumanoidRootPart")
+
+        if not currentRoot then
+            break
+        end
+
+        local dashStartPosition = shockerModel:GetPivot().Position
+        local targetPlayerPosition = currentRoot.Position
+
+        local dashVector = targetPlayerPosition - dashStartPosition
+
+        if dashVector.Magnitude < 0.001 then
+            dashVector = -camera.CFrame.LookVector
+        end
+
+        local dashDirection = dashVector.Unit
+
+        local dashEndPosition =
+            targetPlayerPosition + dashDirection * 5.5
+
+        local dashCFrame =
+            CFrame.new(dashEndPosition) * shockerModel:GetPivot().Rotation
+
+        setFaceVisible(true)
+
+        if horrorScream and horrorScream.Parent then
+            pcall(function()
+                horrorScream:Stop()
+                horrorScream.TimePosition = 0
+                horrorScream:Play()
+            end)
+        end
+
+        local dashSuccess = dashTo(
+            dashCFrame,
+            dashDuration
+        )
+
+        setFaceVisible(false)
+
+        if not dashSuccess then
+            return
+        end
+
+        if attackIndex < attackCount then
+            local randomInterval = math.random(10, 18) / 10
+            if not waitShockerTime(randomInterval) then
+                return
+            end
+        end
+    end
+
+    if not shockerModel.Parent then
+        return
+    end
+
+    while ceaseFreezeActive and shockerModel.Parent do
+        RunService.Heartbeat:Wait()
+    end
+
+    if not shockerModel.Parent then
+        return
+    end
+
+    shockerMoving = false
+    setFaceVisible(false)
+
+    local fadeItems = {}
+
+    local function addFade(instance, property, target, kind)
+        local success, startValue = pcall(function()
+            return instance[property]
+        end)
+
+        if success then
+            table.insert(fadeItems, {
+                instance = instance,
+                property = property,
+                startValue = startValue,
+                target = target,
+                kind = kind or "number"
+            })
+        end
+    end
+
+    local function fadeNumberSequence(sequence, alpha)
+        local keypoints = {}
+
+        for _, keypoint in ipairs(sequence.Keypoints) do
+            local newValue =
+                keypoint.Value + (1 - keypoint.Value) * alpha
+
+            local newEnvelope =
+                keypoint.Envelope * (1 - alpha)
+
+            table.insert(
+                keypoints,
+                NumberSequenceKeypoint.new(
+                    keypoint.Time,
+                    newValue,
+                    newEnvelope
+                )
+            )
+        end
+
+        return NumberSequence.new(keypoints)
+    end
+
+    for _, object in ipairs(shockerModel:GetDescendants()) do
+        if object:IsA("BasePart") then
+            addFade(object, "Transparency", 1)
+
+        elseif object:IsA("Decal") or object:IsA("Texture") then
+            addFade(object, "Transparency", 1)
+
+        elseif object:IsA("ParticleEmitter") or object:IsA("Beam") or object:IsA("Trail") then
+            addFade(object, "Transparency", 1, "sequence")
+
+        elseif object:IsA("Highlight") then
+            addFade(object, "FillTransparency", 1)
+            addFade(object, "OutlineTransparency", 1)
+
+        elseif object:IsA("Sound") then
+            addFade(object, "Volume", 0)
+
+        elseif object:IsA("PointLight") or object:IsA("SpotLight") or object:IsA("SurfaceLight") then
+            addFade(object, "Brightness", 0)
+
+        elseif object:IsA("Fire") then
+            addFade(object, "Size", 0)
+            addFade(object, "Heat", 0)
+
+        elseif object:IsA("Smoke") then
+            addFade(object, "Opacity", 0)
+            addFade(object, "Size", 0)
+
+        elseif object:IsA("ImageLabel") or object:IsA("ImageButton") then
+            addFade(object, "ImageTransparency", 1)
+            addFade(object, "BackgroundTransparency", 1)
+
+        elseif object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox") then
+            addFade(object, "TextTransparency", 1)
+            addFade(object, "TextStrokeTransparency", 1)
+            addFade(object, "BackgroundTransparency", 1)
+
+        elseif object:IsA("UIStroke") then
+            addFade(object, "Transparency", 1)
+        end
+    end
+
+    local fadeDuration = 0.85
+    local fadeStart = os.clock()
+
+    while shockerModel.Parent do
+        local alpha = math.clamp(
+            (os.clock() - fadeStart) / fadeDuration,
+            0,
+            1
+        )
+
+        for _, item in ipairs(fadeItems) do
+            if item.instance.Parent then
+                local value
+
+                if item.kind == "sequence" then
+                    value = fadeNumberSequence(item.startValue, alpha)
+                else
+                    value =
+                        item.startValue
+                        + (item.target - item.startValue) * alpha
+                end
+
+                pcall(function()
+                    item.instance[item.property] = value
+                end)
+            end
+        end
+
+        if alpha >= 1 then
+            break
+        end
+
+        RunService.RenderStepped:Wait()
+    end
+
+    if not shockerModel.Parent then
+        return
+    end
+
+    for _, object in ipairs(shockerModel:GetDescendants()) do
+        if object:IsA("Sound") then
+            object:Stop()
+
+        elseif object:IsA("ParticleEmitter")
+            or object:IsA("Beam")
+            or object:IsA("Trail")
+            or object:IsA("Fire")
+            or object:IsA("Smoke")
+            or object:IsA("Sparkles")
+            or object:IsA("Highlight")
+            or object:IsA("PointLight")
+            or object:IsA("SpotLight")
+            or object:IsA("SurfaceLight")
+            or object:IsA("BillboardGui")
+            or object:IsA("SurfaceGui")
+            or object:IsA("ScreenGui") then
+
+            object.Enabled = false
+        end
+    end
+
+    shockerFinished = true
+    cancelCeaseFreeze()
+    shockerModel:Destroy()
 end
+
 spawnShocker()
+
 end
 function entityBehaviors.LightOSs()
  function GetRoom()
@@ -3542,202 +4216,441 @@ end)
 end
 
 function entityBehaviors.SuperDread()
-function GetRoom()
-    local gruh = workspace.CurrentRooms
-    return gruh:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local function GetRoom()
+    local gruh = workspace:WaitForChild("CurrentRooms")
+    return gruh:FindFirstChild(tostring(ReplicatedStorage.GameData.LatestRoom.Value))
 end
 
-local plr = game.Players.LocalPlayer
-local chr = plr.Character or plr.CharacterAdded:Wait()
-local tweenservice = game:GetService("TweenService")
-
-function LoadCustomInstance(source, parent)
+local function LoadCustomInstance(source, parent)
     local model
 
-    local function NormalizeGitHubURL(url)
-        if url:match("^https://github.com/.+%.rbxm$") and not url:find("?raw=true") then
-            return url .. "?raw=true"
-        end
-        return url
-    end
-
-    while task.wait() and not model do
-        if tonumber(source) then
-            local success, result = pcall(function()
-                return game:GetObjects("rbxassetid://" .. tostring(source))[1]
-            end)
-            if success and result then
-                model = result
-            end
-        elseif typeof(source) == "string" and source:match("^https?://") and source:match("%.rbxm") then
-            local url = NormalizeGitHubURL(source)
-            local success, result = pcall(function()
-                local filename = "temp_" .. math.random(100000, 999999) .. ".rbxm"
-                local content = game:HttpGet(url)
-                if writefile and (getcustomasset or getsynasset) and isfile and delfile then
-                    writefile(filename, content)
-                    local assetFunc = getcustomasset or getsynasset
-                    local obj = game:GetObjects(assetFunc(filename))[1]
-                    delfile(filename)
-                    return obj
-                else
-                    return nil
-                end
-            end)
-            if success and result then
-                model = result
-            end
-        else
+    for attempt = 1, 3 do
+        local success, result = pcall(function()
+            return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+        end)
+        if success and result then
+            model = result
             break
         end
+        task.wait(0.2)
+    end
 
-        if model then
-            model.Parent = parent or workspace
-            for _, obj in ipairs(model:GetDescendants()) do
-                if obj:IsA("Script") or obj:IsA("LocalScript") then
-                    obj:Destroy()
-                end
-            end
-            pcall(function()
-                model:SetAttribute("LoadedByExecutor", true)
-            end)
+    if not model then
+        warn("Dread model failed to load: " .. tostring(source))
+        return nil
+    end
+
+    for _, obj in ipairs(model:GetDescendants()) do
+        if obj:IsA("Script") or obj:IsA("LocalScript") then
+            obj:Destroy()
         end
     end
 
+    pcall(function()
+        model:SetAttribute("LoadedByExecutor", true)
+    end)
+    model.Parent = parent or workspace
     return model
 end
 
-local s = LoadCustomInstance(140017686556165, workspace) 
-if not s then
+if not Lighting:FindFirstChild("Ambience_Dread") then
+    Instance.new("ColorCorrectionEffect", Lighting).Name = "Ambience_Dread"
+end
+
+local dreadLighting = Lighting
+local dreadMainCorrection = dreadLighting:FindFirstChild("MainColorCorrection")
+local dreadOriginalCorrection = dreadMainCorrection and {
+    Brightness = dreadMainCorrection.Brightness,
+    Contrast = dreadMainCorrection.Contrast,
+    Saturation = dreadMainCorrection.Saturation,
+    TintColor = dreadMainCorrection.TintColor,
+    Enabled = dreadMainCorrection.Enabled
+}
+local dreadOriginalCameraType = workspace.CurrentCamera and workspace.CurrentCamera.CameraType
+local dreadShake = nil
+local dreadDeadConnection = nil
+local dreadCharacterConnection = nil
+local dreadVisualsRestored = false
+local dreadHeadFollowName = "DreadHeadFollow_" .. tostring(LocalPlayer.UserId)
+    .. "_" .. tostring(math.random(100000, 999999))
+local dreadHeadFollowActive = false
+local dreadLockedRoot = nil
+local dreadRootWasAnchored = nil
+local dreadAnimationTrack = nil
+local dreadAnimationObject = nil
+
+local function stopDreadHeadFollow()
+    if dreadHeadFollowActive then
+        dreadHeadFollowActive = false
+        RunService:UnbindFromRenderStep(dreadHeadFollowName)
+    end
+
+    if dreadLockedRoot and dreadLockedRoot.Parent and dreadRootWasAnchored ~= nil then
+        dreadLockedRoot.Anchored = dreadRootWasAnchored
+    end
+    dreadLockedRoot = nil
+    dreadRootWasAnchored = nil
+
+    if dreadAnimationTrack then
+        pcall(function()
+            dreadAnimationTrack:Stop(0)
+        end)
+        dreadAnimationTrack = nil
+    end
+    if dreadAnimationObject then
+        dreadAnimationObject:Destroy()
+        dreadAnimationObject = nil
+    end
+end
+
+local function restoreDreadVisuals()
+    if dreadVisualsRestored then
+        return
+    end
+    dreadVisualsRestored = true
+    stopDreadHeadFollow()
+
+    if dreadMainCorrection and dreadMainCorrection.Parent and dreadOriginalCorrection then
+        for property, value in pairs(dreadOriginalCorrection) do
+            dreadMainCorrection[property] = value
+        end
+    end
+
+    local dreadAmbience = dreadLighting:FindFirstChild("Ambience_Dread")
+    if dreadAmbience then
+        dreadAmbience.Enabled = false
+    end
+
+    if dreadShake then
+        pcall(function()
+            dreadShake:Stop()
+        end)
+    end
+
+    local dreadCamera = workspace.CurrentCamera
+    if dreadCamera then
+        dreadCamera.CameraType = dreadOriginalCameraType or Enum.CameraType.Custom
+        local aliveCharacter = LocalPlayer.Character
+        local aliveHumanoid = aliveCharacter and aliveCharacter:FindFirstChildOfClass("Humanoid")
+        if aliveHumanoid then
+            dreadCamera.CameraSubject = aliveHumanoid
+        end
+    end
+
+    pcall(function()
+        local mainGame = require(LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
+        mainGame.stopcam = false
+        mainGame.freemouse = false
+    end)
+
+    if dreadDeadConnection then
+        dreadDeadConnection:Disconnect()
+        dreadDeadConnection = nil
+    end
+    if dreadCharacterConnection then
+        dreadCharacterConnection:Disconnect()
+        dreadCharacterConnection = nil
+    end
+end
+
+local dreadCharacter = LocalPlayer.Character
+local dreadHumanoid = dreadCharacter and dreadCharacter:FindFirstChildOfClass("Humanoid")
+if dreadHumanoid then
+    dreadDeadConnection = dreadHumanoid.Died:Connect(restoreDreadVisuals)
+end
+dreadCharacterConnection = LocalPlayer.CharacterAdded:Connect(restoreDreadVisuals)
+
+local function vu535(p530)
+    local v531, v532 = workspace.CurrentCamera:WorldToViewportPoint(p530.Position)
+    if v532 then
+        v532 = v531.Z > 0
+    end
+
+    local v533 = RaycastParams.new()
+    v533.FilterType = Enum.RaycastFilterType.Blacklist
+    v533.FilterDescendantsInstances = {p530}
+
+    local v534 = workspace:Raycast(
+        p530.Position,
+        LocalPlayer.Character.UpperTorso.Position - p530.Position,
+        v533
+    )
+
+    if v532 then
+        if v534 then
+            v534 = v534.Instance
+        end
+
+        v532 = v534 ~= nil and v534.Parent == LocalPlayer.Character
+    end
+    return v532
+end
+
+local v536 = require(ReplicatedStorage.CameraShaker)
+local vu537 = workspace.CurrentCamera
+local vu539 = v536.new(Enum.RenderPriority.Camera.Value, function(p538)
+    vu537.CFrame = vu537.CFrame * p538
+end)
+vu539:Start()
+dreadShake = vu539
+vu539:ShakeOnce(2, 10, 1, 1)
+
+local vu540 = LoadCustomInstance(140017686556165, workspace)
+if not vu540 then
+    restoreDreadVisuals()
     return
 end
 
-local entity = s:FindFirstChildWhichIsA("BasePart")
-entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, 1, -15)
-entity.Part.CFrame = entity.CFrame
+local v541 = GetRoom()
+local roomEntrance = v541 and v541:FindFirstChild("RoomEntrance")
+local vu542 = vu540:IsA("BasePart") and vu540
+    or vu540:FindFirstChildWhichIsA("BasePart", true)
 
-pcall(function()
-local room = workspace.CurrentRooms:FindFirstChild(
-    tostring(game.ReplicatedStorage.GameData.LatestRoom.Value)
-)
-if room then
-    for _, obj in ipairs(room:GetDescendants()) do
-        if obj.Name == "PlaySound" and obj:IsA("Sound") then
-            obj:Stop()
-            obj.Playing = false
-            obj.TimePosition = 0
-            obj.Looped = false
-        end
+if not roomEntrance or not roomEntrance:IsA("BasePart") or not vu542 then
+    warn("Dread spawn failed: current room, RoomEntrance or entity BasePart is missing")
+    vu540:Destroy()
+    restoreDreadVisuals()
+    return
+end
+
+local spawnCFrame = roomEntrance.CFrame * CFrame.new(0, 1, -15)
+
+if vu540:IsA("Model") then
+
+    local offset = spawnCFrame * vu542.CFrame:Inverse()
+    vu540:PivotTo(offset * vu540:GetPivot())
+else
+    vu542.CFrame = spawnCFrame
+end
+
+local entityPart = vu542:FindFirstChild("Part")
+if entityPart and entityPart:IsA("BasePart") then
+    entityPart.CFrame = vu542.CFrame
+end
+
+Lighting.Ambience_Dread.Enabled = true
+Lighting.Ambience_Dread.Brightness = 0
+Lighting.Ambience_Dread.Contrast = 0
+Lighting.Ambience_Dread.Saturation = 0
+TweenService:Create(Lighting.Ambience_Dread, TweenInfo.new(2), {
+    Brightness = 0.1,
+    Contrast = 0.2,
+    Saturation = -0.7
+}):Play()
+
+coroutine.wrap(function()
+    while not dreadVisualsRestored and vu540.Parent and not vu535(vu542) do
+        task.wait(0.5)
     end
-end
-end)
-end
-function entityBehaviors.DreadJump()
-    local BLACK = Color3.new(0, 0, 0)
-    local WHITE = Color3.new(255, 255, 255)
+    if dreadVisualsRestored or not vu540.Parent then
+        return
+    end
+    task.wait(1.5)
+    if dreadVisualsRestored or not vu540.Parent then
+        return
+    end
 
-    local part = Instance.new("Part")
-    part.Name = "Bound_" .. tick()
-    part.Parent = workspace
-    part.Size = Vector3.new(5, 5, 5)
-    part.Position = Vector3.new(0, 5, 0)
-    part.Anchored = true
-    part.Color = Color3.new(1, 0, 0)
+    Lighting.Ambience_Dread.Enabled = false
+    require(LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).stopcam = true
 
-    local dreadJumpSound = workspace:FindFirstChild("HardCoreSound") and workspace:FindFirstChild("HardCoreSound"):FindFirstChild("DreadJump")
-    if dreadJumpSound and dreadJumpSound:IsA("Sound") then
+    local v544 = workspace.CurrentCamera
+    local v545 = v544.CFrame
+    v544.CameraType = Enum.CameraType.Scriptable
+
+    local v546 = TweenService:Create(
+        v544,
+        TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+        {CFrame = CFrame.lookAt(v545.p, vu542.Position)}
+    )
+    v546:Play()
+    wait(0.15)
+
+    local dreadSoundsFolder = workspace:FindFirstChild("HardCoreSound")
+    local dreadJumpSource = dreadSoundsFolder and dreadSoundsFolder:FindFirstChild("DreadJump")
+    if dreadJumpSource and dreadJumpSource:IsA("Sound") then
+        local dreadJumpSound = dreadJumpSource:Clone()
+        dreadJumpSound.Looped = false
+        dreadJumpSound.TimePosition = 0
+        dreadJumpSound.Parent = SoundService
+        dreadJumpSound.Ended:Once(function()
+            dreadJumpSound:Destroy()
+        end)
         dreadJumpSound:Play()
+        Debris:AddItem(dreadJumpSound, 30)
+    else
+
     end
 
-    task.wait(3)
+    v546:Pause()
 
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local SHAKE_INTENSITY = 1
-    local SHAKE_DURATION = 15
-    local SHAKE_SPEED = 70
-
-    local player = Players.LocalPlayer
-    if not player then return end
-
-    local camera = workspace.CurrentCamera
-    local startTime = tick()
-    local originalPosition = camera.CFrame.Position
-    local connection
-
-    connection = RunService.RenderStepped:Connect(function()
-        local elapsed = tick() - startTime
-        
-        if elapsed < SHAKE_DURATION then
-            local decay = 1 - (elapsed / SHAKE_DURATION)
-            local intensity = SHAKE_INTENSITY * decay
-            local time = elapsed * SHAKE_SPEED
-            local offset = Vector3.new(
-                math.sin(time * 1.1) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
-                math.cos(time * 0.9) * intensity * 0.5 + math.random(-intensity, intensity) * 0.3,
-                math.sin(time * 1.0) * intensity * 0.3
-            )
-            local lookVector = camera.CFrame.LookVector
-            local upVector = camera.CFrame.UpVector
-            local rightVector = camera.CFrame.RightVector
-            local currentPos = camera.CFrame.Position
-            local newPos = currentPos + offset
-            camera.CFrame = CFrame.new(newPos, newPos + lookVector) * CFrame.Angles(0, 0, 0)
-        else
-            if connection then
-                connection:Disconnect()
-            end
+    local v547, v548, v549 = pairs(workspace:GetDescendants())
+    while true do
+        local v550
+        v549, v550 = v547(v548, v549)
+        if v549 == nil then
+            break
         end
-    end)
+        if v550.ClassName == "ParticleEmitter" then
+            v550.TimeScale = 0
+        end
+    end
 
-    local function getAllParts()
-        local parts = {}
-        local function collectParts(object)
-            for _, child in ipairs(object:GetChildren()) do
-                if child:IsA("BasePart") then
-                    table.insert(parts, child)
+    task.wait(2)
+    if dreadVisualsRestored then return end
+    if dreadMainCorrection and dreadMainCorrection.Parent then
+        dreadMainCorrection.Brightness = -1
+        dreadMainCorrection.Contrast = -4
+        dreadMainCorrection.Saturation = -1
+    end
+
+    local v551 = vu542
+    local v552, v553, v554 = pairs(v551:GetDescendants())
+    while true do
+        local v555
+        v554, v555 = v552(v553, v554)
+        if v554 == nil then
+            break
+        end
+        if v555.Name == "PointLight" then
+            v555:Destroy()
+        end
+    end
+
+    vu539:ShakeOnce(10, 100, 0.1, 2)
+    task.wait(1)
+    if dreadVisualsRestored then return end
+
+    local v556 = require(LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
+    v556.stopcam = false
+    v556.freemouse = false
+    task.wait(0.4)
+    if dreadVisualsRestored then return end
+
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local humrootpart = character and character:FindFirstChild("HumanoidRootPart")
+    local head = character and character:FindFirstChild("Head")
+    if not (humanoid and humrootpart and head) or humanoid.Health <= 0 then
+        warn("Dread death animation skipped: character parts are missing")
+        return
+    end
+
+    local HotSex = Instance.new("Animation")
+    HotSex.AnimationId = "rbxassetid://10096088747"
+    dreadAnimationObject = HotSex
+
+    local ok, animationError = pcall(function()
+        local animator = humanoid:FindFirstChildOfClass("Animator")
+        if not animator then
+            animator = Instance.new("Animator")
+            animator.Parent = humanoid
+        end
+        local HotSexOnHumanoid = animator:LoadAnimation(HotSex)
+        dreadAnimationTrack = HotSexOnHumanoid
+        HotSexOnHumanoid:Play()
+
+        dreadLockedRoot = humrootpart
+        dreadRootWasAnchored = humrootpart.Anchored
+        humrootpart.Anchored = true
+
+        v556.stopcam = true
+        local camera = workspace.CurrentCamera
+        camera.CameraType = Enum.CameraType.Scriptable
+
+        dreadHeadFollowActive = true
+        RunService:BindToRenderStep(
+            dreadHeadFollowName,
+            Enum.RenderPriority.Camera.Value - 1,
+            function()
+                if not dreadHeadFollowActive or dreadVisualsRestored or not head.Parent then
+                    return
                 end
-                collectParts(child)
+                local currentCamera = workspace.CurrentCamera
+                if currentCamera then
+                    currentCamera.CFrame = currentCamera.CFrame:Lerp(head.CFrame, 0.3)
+                end
             end
-        end
-        collectParts(workspace)
-        return parts
-    end
+        )
 
-    local allParts = getAllParts()
-    local isPlaying = true
-    local isBlack = true
-    local lastSwitchTime = tick()
-    local switchInterval = 0.08
-    local heartbeatConnection
+        vu539:ShakeOnce(10, 100, 0.1, 2)
 
-    heartbeatConnection = RunService.Heartbeat:Connect(function()
-        if not isPlaying then
-            heartbeatConnection:Disconnect()
-            return
+        vu539:ShakeOnce(2, 12, 0.2, 10)
+
+        humrootpart.CFrame = humrootpart.CFrame + Vector3.new(0, 1, 0)
+
+        local function nextAnimationStep(seconds)
+            task.wait(seconds)
+            return not dreadVisualsRestored and humanoid.Health > 0
+                and character == LocalPlayer.Character
         end
-        local now = tick()
-        if now - lastSwitchTime >= switchInterval then
-            lastSwitchTime = now
-            local targetColor = isBlack and BLACK or WHITE
-            isBlack = not isBlack
-            for _, part in ipairs(allParts) do
-                part.Color = targetColor
-            end
-        end
+
+        HotSexOnHumanoid:AdjustSpeed(0.8)
+        if not nextAnimationStep(0.5) then return end
+        HotSexOnHumanoid:AdjustSpeed(0.25)
+        if not nextAnimationStep(3.5) then return end
+        HotSexOnHumanoid:AdjustSpeed(-0.2)
+        if not nextAnimationStep(0.1) then return end
+        HotSexOnHumanoid:AdjustSpeed(-0.4)
+        if not nextAnimationStep(0.2) then return end
+        HotSexOnHumanoid:AdjustSpeed(0.1)
+        if not nextAnimationStep(0.2) then return end
+        HotSexOnHumanoid:AdjustSpeed(-0.25)
+        if not nextAnimationStep(1.5) then return end
+        HotSexOnHumanoid:AdjustSpeed(-0.15)
+        if not nextAnimationStep(2) then return end
+        HotSexOnHumanoid:AdjustSpeed(0)
+        nextAnimationStep(2)
     end)
 
-    if dreadJumpSound then
-        dreadJumpSound.Ended:Connect(function()
-            isPlaying = false
-            dreadJumpSound:Destroy()
-        end)
-        dreadJumpSound.Stopped:Connect(function()
-            isPlaying = false
-            dreadJumpSound:Destroy()
-        end)
+    if not ok then
+        warn("Dread death animation failed: " .. tostring(animationError))
     end
+
+    stopDreadHeadFollow()
+    if dreadVisualsRestored then return end
+
+    v556.stopcam = false
+    v556.freemouse = false
+
+    local damage = 999
+    if humanoid.Health <= damage then
+        local gameStats = ReplicatedStorage:FindFirstChild("GameStats")
+        local playerStats = gameStats and gameStats:FindFirstChild("Player_" .. LocalPlayer.Name)
+        local total = playerStats and playerStats:FindFirstChild("Total")
+        local deathCause = total and total:FindFirstChild("DeathCause")
+        if deathCause then
+            deathCause.Value = "Dread"
+        end
+    end
+
+    humanoid:TakeDamage(damage)
+end)()
+
+coroutine.wrap(function()
+    ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+    task.wait()
+    ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+    task.wait()
+    ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+    vu540:Destroy()
+    Lighting.Ambience_Dread.Enabled = false
+    if not dreadVisualsRestored then
+        restoreDreadVisuals()
+    end
+end)()
 end
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
@@ -9681,7 +10594,45 @@ sound1:Destroy()
 sound2:Destroy()
 end
 function entityBehaviors.REBOUNDSW()
+    local RunService = game:GetService("RunService")
+    local ceaseHandledModels = setmetatable({}, { __mode = "k" })
+
     local testModelId = 129306212463084
+    local reboundTemplate = nil
+    local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
+
+    if _G.__ReboundMainCameraShake then
+        pcall(function()
+            _G.__ReboundMainCameraShake:Stop()
+        end)
+        _G.__ReboundMainCameraShake = nil
+    end
+
+    local reboundCameraShake = CameraShaker.new(
+        Enum.RenderPriority.Camera.Value + 30,
+        function(shakeCFrame)
+            local activeCamera = workspace.CurrentCamera
+            if activeCamera then
+                activeCamera.CFrame = activeCamera.CFrame * shakeCFrame
+            end
+        end
+    )
+    reboundCameraShake:Start()
+    _G.__ReboundMainCameraShake = reboundCameraShake
+
+    local reboundCameraShakeStopped = false
+    local function stopReboundCameraShake()
+        if reboundCameraShakeStopped then
+            return
+        end
+        reboundCameraShakeStopped = true
+        pcall(function()
+            reboundCameraShake:Stop()
+        end)
+        if _G.__ReboundMainCameraShake == reboundCameraShake then
+            _G.__ReboundMainCameraShake = nil
+        end
+    end
 
     local function PlayPreloadedSound(soundName, volume)
         volume = volume or 1
@@ -9712,35 +10663,841 @@ function entityBehaviors.REBOUNDSW()
         return maxNum
     end
 
-    function SpawnReboundEntity(startRoomType)
-        for _, obj in pairs(workspace:GetChildren()) do
-            if obj.Name == "Rebound" then
-                pcall(function() obj:Destroy() end)
+    local Players = game:GetService("Players")
+    local reboundSealed = false
+    local doorSignal = nil
+    local movingSoundForWave = nil
+
+    local function easeCrucifix(alpha)
+        alpha = math.clamp(alpha, 0, 1)
+        return alpha * alpha * (3 - 2 * alpha)
+    end
+
+    local function getCrucifixTool(character)
+        if not character or not character:IsA("Model") then
+            return nil
+        end
+
+        local directTool = character:FindFirstChild("Crucifix")
+        if directTool and directTool:IsA("Tool") then
+            return directTool
+        end
+
+        for _, descendant in ipairs(character:GetDescendants()) do
+            if descendant.Name == "Crucifix" and descendant:IsA("Tool") then
+                return descendant
             end
         end
 
-        local success, modelResult = pcall(function()
-            return game:GetObjects("rbxassetid://" .. testModelId)[1]
-        end)
+        return nil
+    end
 
-        if not success or not modelResult then
+    local function getCharacterFromRaycastHit(hitInstance)
+        local current = hitInstance
+
+        while current and current ~= workspace do
+            if current:IsA("Model") and Players:GetPlayerFromCharacter(current) then
+                return current
+            end
+
+            current = current.Parent
+        end
+
+        return nil
+    end
+
+    local function rayEntryDistanceToPart(origin, directionUnit, part)
+        if not part or not part.Parent or not part:IsA("BasePart") then
+            return nil
+        end
+
+        local localOrigin = part.CFrame:PointToObjectSpace(origin)
+        local localDirection = part.CFrame:VectorToObjectSpace(directionUnit)
+        local half = part.Size * 0.5
+        local entry, exit = 0, math.huge
+
+        for _, axis in ipairs({ "X", "Y", "Z" }) do
+            local position = localOrigin[axis]
+            local velocity = localDirection[axis]
+            local extent = half[axis]
+            if math.abs(velocity) < 0.00001 then
+                if position < -extent or position > extent then
+                    return nil
+                end
+            else
+                local near = (-extent - position) / velocity
+                local far = (extent - position) / velocity
+                if near > far then
+                    near, far = far, near
+                end
+                entry = math.max(entry, near)
+                exit = math.min(exit, far)
+                if exit < entry then
+                    return nil
+                end
+            end
+        end
+
+        return entry
+    end
+
+    local function getCrucifixVisualStates(root, shouldInclude, onlyRoot)
+        local states = {}
+
+        local function capture(object)
+            if shouldInclude and not shouldInclude(object) then
+                return
+            end
+
+            if object:IsA("BasePart") or object:IsA("Decal")
+                or object:IsA("Texture") then
+                table.insert(states, {
+                    Object = object,
+                    Kind = "Transparency",
+                    Original = object.Transparency
+                })
+            elseif object:IsA("ParticleEmitter") or object:IsA("Beam")
+                or object:IsA("Trail") then
+                table.insert(states, {
+                    Object = object,
+                    Kind = "Sequence",
+                    Original = object.Transparency
+                })
+            elseif object:IsA("Light") then
+                table.insert(states, {
+                    Object = object,
+                    Kind = "Brightness",
+                    Original = object.Brightness
+                })
+            elseif object:IsA("Highlight") then
+                table.insert(states, {
+                    Object = object,
+                    Kind = "Highlight",
+                    Fill = object.FillTransparency,
+                    Outline = object.OutlineTransparency
+                })
+            elseif object:IsA("Smoke") then
+                table.insert(states, {
+                    Object = object,
+                    Kind = "Smoke",
+                    Original = object.Opacity
+                })
+            elseif object:IsA("Fire") then
+                table.insert(states, {
+                    Object = object,
+                    Kind = "Fire",
+                    Size = object.Size,
+                    Heat = object.Heat
+                })
+            elseif object:IsA("Sound") then
+                table.insert(states, {
+                    Object = object,
+                    Kind = "Sound",
+                    Original = object.Volume
+                })
+            elseif object:IsA("GuiObject") then
+                local state = {
+                    Object = object,
+                    Kind = "GuiObject",
+                    Background = object.BackgroundTransparency
+                }
+
+                if object:IsA("ImageLabel") or object:IsA("ImageButton") then
+                    state.Image = object.ImageTransparency
+                end
+
+                if object:IsA("TextLabel") or object:IsA("TextButton")
+                    or object:IsA("TextBox") then
+                    state.Text = object.TextTransparency
+                end
+
+                table.insert(states, state)
+            end
+        end
+
+        capture(root)
+        if not onlyRoot then
+            for _, descendant in ipairs(root:GetDescendants()) do
+                capture(descendant)
+            end
+        end
+
+        return states
+    end
+
+    local function crucifixFadedSequence(original, factor)
+        local keypoints = {}
+
+        for _, keypoint in ipairs(original.Keypoints) do
+            local nextTransparency = 1 - (1 - keypoint.Value) * factor
+            table.insert(keypoints, NumberSequenceKeypoint.new(
+                keypoint.Time,
+                math.clamp(nextTransparency, 0, 1),
+                keypoint.Envelope * factor
+            ))
+        end
+
+        return NumberSequence.new(keypoints)
+    end
+
+    local function setCrucifixVisualFactor(states, factor)
+        factor = math.clamp(factor, 0, 1)
+
+        for _, state in ipairs(states) do
+            local object = state.Object
+
+            if object and object.Parent then
+                if state.Kind == "Transparency" then
+                    object.Transparency = 1 - (1 - state.Original) * factor
+                elseif state.Kind == "Sequence" then
+                    object.Transparency = crucifixFadedSequence(state.Original, factor)
+                elseif state.Kind == "Brightness" then
+                    object.Brightness = state.Original * factor
+                elseif state.Kind == "Highlight" then
+                    object.FillTransparency = 1 - (1 - state.Fill) * factor
+                    object.OutlineTransparency = 1 - (1 - state.Outline) * factor
+                elseif state.Kind == "Smoke" then
+                    object.Opacity = state.Original * factor
+                elseif state.Kind == "Fire" then
+                    object.Size = state.Size * factor
+                    object.Heat = state.Heat * factor
+                elseif state.Kind == "Sound" then
+                    object.Volume = state.Original * factor
+                elseif state.Kind == "GuiObject" then
+                    object.BackgroundTransparency = 1 - (1 - state.Background) * factor
+
+                    if state.Image ~= nil then
+                        object.ImageTransparency = 1 - (1 - state.Image) * factor
+                    end
+
+                    if state.Text ~= nil then
+                        object.TextTransparency = 1 - (1 - state.Text) * factor
+                    end
+                end
+            end
+        end
+    end
+
+    local function fadeCrucifixVisuals(states, initialFactor, endFactor, duration)
+        if duration <= 0 then
+            setCrucifixVisualFactor(states, endFactor)
             return
         end
 
-        local testEntity = modelResult:Clone()
-        testEntity.Parent = workspace
-        testEntity.Name = "Rebound"
+        local startTime = os.clock()
 
-        local primaryPart = testEntity.PrimaryPart or testEntity:FindFirstChildWhichIsA("BasePart")
+        while true do
+            local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+            local eased = easeCrucifix(alpha)
+            setCrucifixVisualFactor(
+                states,
+                initialFactor + (endFactor - initialFactor) * eased
+            )
+
+            if alpha >= 1 then
+                break
+            end
+
+            RunService.Heartbeat:Wait()
+        end
+    end
+
+    local function findCrucifixBeams(rushNew)
+        local preferred = {}
+        local fallback = {}
+
+        for _, descendant in ipairs(rushNew:GetDescendants()) do
+            if descendant:IsA("Beam") then
+                table.insert(fallback, descendant)
+
+                local ancestor = descendant.Parent
+                while ancestor and ancestor ~= rushNew do
+                    if string.lower(ancestor.Name) == "particlesin" then
+                        table.insert(preferred, descendant)
+                        break
+                    end
+                    ancestor = ancestor.Parent
+                end
+
+                if string.lower(descendant.Name) == "particlesin" then
+                    local exists = false
+                    for _, selected in ipairs(preferred) do
+                        if selected == descendant then
+                            exists = true
+                            break
+                        end
+                    end
+                    if not exists then
+                        table.insert(preferred, descendant)
+                    end
+                end
+            end
+        end
+
+        local beams = #preferred > 0 and preferred or fallback
+        table.sort(beams, function(a, b)
+            return a:GetFullName() < b:GetFullName()
+        end)
+
+        return beams
+    end
+
+    local function prepareCrucifixBeams(beams, rushNew, movingAttachment)
+        for index, beam in ipairs(beams) do
+            if beam.Parent then
+                if not beam.Attachment0 then
+                    beam.Attachment0 = movingAttachment
+                end
+
+                if not beam.Attachment1 or beam.Attachment1 == beam.Attachment0 then
+                    local endpoint = Instance.new("Attachment")
+                    endpoint.Name = "CrucifixBeamEndpoint" .. tostring(index)
+                    local angle = (index - 1) * (math.pi / 2)
+                    local offset = Vector3.new(
+                        math.cos(angle) * 3,
+                        2,
+                        math.sin(angle) * 3
+                    )
+                    endpoint.Position = movingAttachment.Position
+                        + rushNew.CFrame:VectorToObjectSpace(offset)
+                    endpoint.Parent = rushNew
+                    beam.Attachment1 = endpoint
+                end
+
+                if beam.Width0 <= 0 and beam.Width1 <= 0 then
+                    beam.Width0 = 0.3
+                    beam.Width1 = 0.3
+                end
+
+                beam.Enabled = true
+                beam.Transparency = NumberSequence.new(1)
+            end
+        end
+    end
+
+    local crucifixBeamSoundIds = {
+        "124444290902740",
+        "100133789671771",
+        "133850299035625",
+        "120232105146350"
+    }
+
+    local function createCrucifixBeamFeedback()
+        local beamCameraShaker = nil
+        local shakeCleanupScheduled = false
+
+        local function trigger(index)
+            local soundId = crucifixBeamSoundIds[index]
+            if not soundId then
+                return
+            end
+
+            local sound = Instance.new("Sound")
+            sound.Name = "CrucifixBeamSound" .. tostring(index)
+            sound.SoundId = "rbxassetid://" .. soundId
+            sound.Volume = 7
+            sound.Looped = false
+            sound.Parent = game:GetService("SoundService")
+            sound.Ended:Connect(function()
+                if sound.Parent then
+                    sound:Destroy()
+                end
+            end)
+            task.delay(60, function()
+                if sound.Parent then
+                    sound:Destroy()
+                end
+            end)
+            sound:Play()
+
+            if not beamCameraShaker then
+                local module = game.ReplicatedStorage:FindFirstChild("CameraShaker")
+                if module then
+                    local loaded, CameraShaker = pcall(require, module)
+                    if loaded and CameraShaker then
+                        local created, shaker = pcall(function()
+                            local currentShaker = CameraShaker.new(
+                                Enum.RenderPriority.Camera.Value,
+                                function(shakeCf)
+                                    local camera = workspace.CurrentCamera
+                                    if camera then
+                                        camera.CFrame = camera.CFrame * shakeCf
+                                    end
+                                end
+                            )
+                            currentShaker:Start()
+                            return currentShaker
+                        end)
+                        if created then
+                            beamCameraShaker = shaker
+                        end
+                    end
+                end
+            end
+
+            if beamCameraShaker then
+                local started, shakeInstance = pcall(function()
+                    return beamCameraShaker:StartShake(10, 28, 0.1, 0.25, 0.35)
+                end)
+                if started and shakeInstance then
+                    task.delay(0.3, function()
+                        pcall(function()
+                            shakeInstance:StartFadeOut(3)
+                        end)
+                    end)
+                else
+                    pcall(function()
+                        beamCameraShaker:ShakeOnce(10, 28, 0.1, 3, 0.25, 0.35)
+                    end)
+                end
+
+                if not shakeCleanupScheduled then
+                    shakeCleanupScheduled = true
+                    task.delay(4.5, function()
+                        if beamCameraShaker then
+                            pcall(function()
+                                beamCameraShaker:Stop()
+                            end)
+                        end
+                    end)
+                end
+            end
+        end
+
+        return trigger
+    end
+
+    local function revealCrucifixBeams(beams, onBeamBegin)
+        local startTime = os.clock()
+        local perBeamDuration = 0.5
+        local staggerDelay = 0.25
+        local totalDuration = perBeamDuration + math.max(0, #beams - 1) * staggerDelay
+        local begun = {}
+
+        while true do
+            local elapsed = os.clock() - startTime
+
+            for index, beam in ipairs(beams) do
+                if beam and beam.Parent then
+                    local beamStartTime = (index - 1) * staggerDelay
+                    if elapsed >= beamStartTime and not begun[index] then
+                        begun[index] = true
+                        if onBeamBegin then
+                            onBeamBegin(index)
+                        end
+                    end
+
+                    local beamAlpha = math.clamp(
+                        (elapsed - beamStartTime) / perBeamDuration,
+                        0,
+                        1
+                    )
+                    beam.Enabled = true
+                    beam.Transparency = NumberSequence.new(1 - easeCrucifix(beamAlpha))
+                end
+            end
+
+            if elapsed >= totalDuration then
+                break
+            end
+            RunService.Heartbeat:Wait()
+        end
+
+        for _, beam in ipairs(beams) do
+            if beam and beam.Parent then
+                beam.Enabled = true
+                beam.Transparency = NumberSequence.new(0)
+            end
+        end
+    end
+
+    local function fadeCrucifixBeamsOut(beams, duration)
+        local startTime = os.clock()
+
+        while true do
+            local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+            local transparency = easeCrucifix(alpha)
+
+            for _, beam in ipairs(beams) do
+                if beam and beam.Parent then
+                    beam.Transparency = NumberSequence.new(transparency)
+                end
+            end
+
+            if alpha >= 1 then
+                break
+            end
+            RunService.Heartbeat:Wait()
+        end
+
+        for _, beam in ipairs(beams) do
+            if beam and beam.Parent then
+                beam.Transparency = NumberSequence.new(1)
+                beam.Enabled = false
+            end
+        end
+    end
+
+    local function moveCrucifixAttachment(attachment, targetPosition, duration)
+        local origin = attachment.Position
+        local startTime = os.clock()
+
+        while true do
+            if not attachment.Parent then
+                return false
+            end
+
+            local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+            local progress = easeCrucifix(alpha)
+            attachment.Position = origin:Lerp(targetPosition, progress)
+
+            if alpha >= 1 then
+                attachment.Position = targetPosition
+                return true
+            end
+            RunService.Heartbeat:Wait()
+        end
+    end
+
+    local function fadeCrucifixDescendantsRecursively(root, duration)
+        local found = {}
+        local allStates = {}
+        local stateCount = 0
+
+        local function findChildren(object)
+            if not object or found[object] then
+                return
+            end
+            found[object] = true
+
+            local states = getCrucifixVisualStates(object, nil, true)
+            for _, state in ipairs(states) do
+                table.insert(allStates, state)
+                stateCount = stateCount + 1
+            end
+
+            for _, child in ipairs(object:GetChildren()) do
+                findChildren(child)
+            end
+        end
+
+        local startTime = os.clock()
+        while true do
+            if not root.Parent then
+                return
+            end
+
+            findChildren(root)
+            local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+            setCrucifixVisualFactor(allStates, 1 - easeCrucifix(alpha))
+
+            if alpha >= 1 then
+                break
+            end
+
+            for _, object in ipairs(root:GetDescendants()) do
+                if not found[object] then
+                    findChildren(object)
+                end
+            end
+            RunService.Heartbeat:Wait()
+        end
+    end
+
+    local function startCrucifixAmbientShake(replacement)
+        local stepName = "ReboundCrucifixAmbient_"
+            .. game:GetService("HttpService"):GenerateGUID(false)
+        local startedAt = os.clock()
+        local active = true
+        local lastOffset = CFrame.new()
+        local lastCamera = nil
+
+        local function stop()
+            if not active then
+                return
+            end
+            active = false
+            RunService:UnbindFromRenderStep(stepName)
+        end
+
+        RunService:BindToRenderStep(
+            stepName,
+            Enum.RenderPriority.Camera.Value + 3,
+            function()
+                if not replacement.Parent then
+                    stop()
+                    return
+                end
+
+                local camera = workspace.CurrentCamera
+                if not camera then
+                    return
+                end
+
+                if lastCamera ~= camera then
+                    lastCamera = camera
+                    lastOffset = CFrame.new()
+                end
+
+                local elapsed = os.clock() - startedAt
+                local strength = easeCrucifix(math.clamp(elapsed / 0.5, 0, 1))
+                local offset = CFrame.new(
+                    math.sin(elapsed * 13) * 0.055 * strength,
+                    math.sin(elapsed * 16 + 0.7) * 0.04 * strength,
+                    0
+                ) * CFrame.Angles(
+                    math.sin(elapsed * 12) * math.rad(0.085) * strength,
+                    math.sin(elapsed * 10 + 1.1) * math.rad(0.065) * strength,
+                    0
+                )
+
+                camera.CFrame = camera.CFrame * lastOffset:Inverse() * offset
+                lastOffset = offset
+            end
+        )
+
+        return stop
+    end
+
+    local function runCrucifixReplacement(originalCFrame)
+
+        local loadedSuccessfully, replacement = pcall(function()
+            return game:GetObjects("rbxassetid://86848040233512")[1]
+        end)
+
+        if not loadedSuccessfully or not replacement then
+
+            return
+        end
+
+        local targetCFrame = originalCFrame + Vector3.new(0, 0, 0)
+        local bro = replacement.Name == "BRO" and replacement
+            or replacement:FindFirstChild("BRO", true)
+
+        local placed, placementError = pcall(function()
+            if replacement:IsA("Model") then
+                if bro and bro:IsA("Model") then
+                    local pivotShift = targetCFrame * bro:GetPivot():Inverse()
+                    replacement:PivotTo(pivotShift * replacement:GetPivot())
+                else
+                    replacement:PivotTo(targetCFrame)
+                end
+            elseif bro and bro:IsA("Model") then
+                bro:PivotTo(targetCFrame)
+            elseif replacement:IsA("BasePart") then
+                replacement.CFrame = targetCFrame
+            end
+
+            for _, descendant in ipairs(replacement:GetDescendants()) do
+                if descendant:IsA("BasePart") then
+                    descendant.Anchored = true
+                    descendant.CanCollide = false
+                    descendant.CanTouch = false
+                end
+            end
+
+            if replacement:IsA("BasePart") then
+                replacement.Anchored = true
+                replacement.CanCollide = false
+                replacement.CanTouch = false
+            end
+
+            replacement.Parent = workspace
+        end)
+
+        if not placed then
+
+            replacement:Destroy()
+            return
+        end
+
+        local stopAmbientShake = startCrucifixAmbientShake(replacement)
+        task.delay(30, function()
+            stopAmbientShake()
+            if replacement and replacement.Parent then
+                replacement:Destroy()
+            end
+        end)
+
+        local animationOK, animationError = xpcall(function()
+            local rushNew = (bro and bro:FindFirstChild("RushNew", true))
+                or replacement:FindFirstChild("RushNew", true)
+            if replacement.Name == "RushNew" and replacement:IsA("BasePart") then
+                rushNew = replacement
+            end
+            local attachment = rushNew and rushNew:FindFirstChild("Attachment", true)
+            if attachment and not attachment:IsA("Attachment") then
+                attachment = nil
+            end
+            if not rushNew then
+
+            elseif not attachment then
+
+            else
+
+            end
+
+            task.wait(2.3)
+            if not replacement.Parent then
+                return
+            end
+
+            if rushNew and rushNew:IsA("BasePart") and attachment then
+                local beams = findCrucifixBeams(rushNew)
+                local introStates = getCrucifixVisualStates(attachment, function(object)
+                    if not object:IsA("Beam") then
+                        return true
+                    end
+                    for _, beam in ipairs(beams) do
+                        if object == beam then
+                            return false
+                        end
+                    end
+                    return true
+                end)
+
+                setCrucifixVisualFactor(introStates, 0)
+                prepareCrucifixBeams(beams, rushNew, attachment)
+
+                local originalPosition = attachment.Position
+                local upOffset = rushNew.CFrame:VectorToObjectSpace(Vector3.new(0, 3, 0))
+                local downOffset = rushNew.CFrame:VectorToObjectSpace(Vector3.new(0, -20, 0))
+                local upPosition = originalPosition + upOffset
+                local downPosition = upPosition + downOffset
+
+                task.spawn(function()
+                    if attachment.Parent then
+                        fadeCrucifixVisuals(introStates, 0, 1, 0.6)
+                    end
+                end)
+
+                local beamsRevealFinished = #beams == 0
+                if not beamsRevealFinished then
+                    local playBeamFeedback = createCrucifixBeamFeedback()
+                    task.spawn(function()
+                        task.wait(0.8)
+                        if replacement.Parent and attachment.Parent then
+                            pcall(revealCrucifixBeams, beams, playBeamFeedback)
+                        end
+                        beamsRevealFinished = true
+                    end)
+                end
+
+                if not moveCrucifixAttachment(attachment, upPosition, 1.8) then
+                    return
+                end
+
+                while not beamsRevealFinished and replacement.Parent and attachment.Parent do
+                    RunService.Heartbeat:Wait()
+                end
+
+                if not moveCrucifixAttachment(attachment, downPosition, 1.2) then
+                    return
+                end
+                task.wait(2)
+                fadeCrucifixBeamsOut(beams, 0.5)
+            end
+        end, function(err)
+            return tostring(err) .. "\n" .. debug.traceback()
+        end)
+
+        if not animationOK then
+
+        end
+        local fadeOK, fadeError = pcall(function()
+            fadeCrucifixDescendantsRecursively(replacement, 1)
+        end)
+        if not fadeOK then
+
+        end
+        if replacement.Parent then
+            for _, descendant in ipairs(replacement:GetDescendants()) do
+                if descendant:IsA("ParticleEmitter") or descendant:IsA("Beam")
+                    or descendant:IsA("Trail") or descendant:IsA("Sparkles")
+                    or descendant:IsA("Smoke") or descendant:IsA("Fire") then
+                    pcall(function()
+                        descendant.Enabled = false
+                    end)
+                end
+            end
+        end
+        task.wait(3)
+        stopAmbientShake()
+        if replacement then
+
+            replacement:Destroy()
+        end
+    end
+
+
+    function SpawnReboundEntity(startRoomType)
+        if reboundSealed then
+            return false
+        end
+        if not reboundTemplate then
+            for attempt = 1, 6 do
+                if reboundSealed then
+                    return false
+                end
+                local success, loaded = pcall(function()
+                    return game:GetObjects("rbxassetid://" .. testModelId)[1]
+                end)
+                if success and loaded then
+                    reboundTemplate = loaded
+                    break
+                end
+                if attempt < 6 then
+                    task.wait(0.4)
+                end
+            end
+        end
+
+        if reboundSealed then
+            return false
+        end
+        if not reboundTemplate then
+
+            return false
+        end
+
+        local testEntity = reboundTemplate:Clone()
+        if reboundSealed then
+            if testEntity then
+                testEntity:Destroy()
+            end
+            return false
+        end
+        if not testEntity then
+            return false
+        end
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if obj.Name == "Rebound" then
+                pcall(function()
+                    obj:Destroy()
+                end)
+            end
+        end
+        testEntity.Name = "Rebound"
+        testEntity.Parent = workspace
+
+        local primaryPart
+        if testEntity:IsA("Model") then
+            primaryPart = testEntity.PrimaryPart or testEntity:FindFirstChildWhichIsA("BasePart", true)
+        elseif testEntity:IsA("BasePart") then
+            primaryPart = testEntity
+        end
         if not primaryPart then
             testEntity:Destroy()
-            return
+            return false
         end
 
         primaryPart.Anchored = true
         primaryPart.CanCollide = false
 
-        spawn(function()
+        task.spawn(function()
+            if reboundSealed or not primaryPart.Parent then
+                return
+            end
             local targetRoom
             if startRoomType == "start" then
                 targetRoom = workspace.CurrentRooms:FindFirstChild("0")
@@ -9748,47 +11505,45 @@ function entityBehaviors.REBOUNDSW()
                 local maxRoom = GetMaxExistingRoom()
                 targetRoom = workspace.CurrentRooms:FindFirstChild(tostring(maxRoom))
             end
-            
+
             if targetRoom then
-                local targetCFrame
+                local targetPart
                 if targetRoom:FindFirstChild("Nodes") then
-                    targetCFrame = (targetRoom:FindFirstChild("RoomEntrance") or targetRoom:FindFirstChild("RoomExit")).CFrame
+                    targetPart = targetRoom:FindFirstChild("RoomEntrance")
+                        or targetRoom:FindFirstChild("RoomExit")
                 else
-                    targetCFrame = targetRoom.RoomExit.CFrame
+                    targetPart = targetRoom:FindFirstChild("RoomExit")
+                        or targetRoom:FindFirstChild("RoomEntrance")
                 end
-                primaryPart.CFrame = targetCFrame + Vector3.new(0, 1, 0)
+                if not reboundSealed and primaryPart.Parent
+                    and targetPart and targetPart:IsA("BasePart") then
+                    primaryPart.CFrame = targetPart.CFrame + Vector3.new(0, 1, 0)
+                end
             end
-            
-            wait(2)
-            StartEntityLogic(primaryPart, startRoomType)
+
+            task.wait(2)
+            if not reboundSealed and primaryPart.Parent then
+                StartEntityLogic(primaryPart, startRoomType)
+            end
         end)
+        return true
     end
 
     function StartEntityLogic(primaryPart, startRoomType)
-        local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
-        local camera = workspace.CurrentCamera
-        local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(cf)
-            camera.CFrame = camera.CFrame * cf
-        end)
-        camShake:Start()
-        local proximityCamShake = CameraShaker.new(
-            Enum.RenderPriority.Camera.Value + 1,
-            function(shakeCf)
-                local currentCamera = workspace.CurrentCamera
-                if currentCamera then
-                    currentCamera.CFrame = currentCamera.CFrame * shakeCf
-                end
-            end
-        )
-        proximityCamShake:Start()
+        if reboundSealed or not primaryPart or not primaryPart.Parent then
+            return
+        end
 
         local lastProximityShake = 0
         task.spawn(function()
             local RunService = game:GetService("RunService")
             local player = game.Players.LocalPlayer
 
-            while primaryPart and primaryPart.Parent do
+            while not reboundSealed and primaryPart and primaryPart.Parent do
                 RunService.RenderStepped:Wait()
+                if reboundSealed or not primaryPart or not primaryPart.Parent then
+                    break
+                end
 
                 local character = player and player.Character
                 local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
@@ -9804,7 +11559,7 @@ function entityBehaviors.REBOUNDSW()
                         local positionInfluence = 0.35 + 0.4 * alpha
                         local rotationInfluence = 0.3 + 0.4 * alpha
 
-                        proximityCamShake:ShakeOnce(
+                        reboundCameraShake:ShakeOnce(
                             amplitude,
                             roughness,
                             0.01,
@@ -9818,17 +11573,413 @@ function entityBehaviors.REBOUNDSW()
                 end
             end
 
-            proximityCamShake:Stop()
         end)
 
-        local v305 = 2
-        local v306 = 1.2
+        local v305 = 1.4
+        local v306 = 0.4
         local v307 = Vector3.new(0, 1, 0)
         local v310 = workspace.CurrentRooms
 
         local detectedPlayer = false
-        local shakeCooldown = 0
-        
+        local ceaseSpeedScale = 1
+        local ceaseFreezeActive = false
+        local ceaseFreezeToken = 0
+        local ceaseStoredEffects = {}
+        local ceaseDescendantConnection = nil
+        local ceaseSoundConnection = nil
+        local reboundMoving = false
+        local activeMovementTween = nil
+        local activeMovementTarget = nil
+        local activeMovementOrigin = nil
+        local ceaseStopMotionTween = nil
+        local ceaseResumeMotionTween = nil
+        local reboundMovementEnded = false
+        local reboundModel = primaryPart:FindFirstAncestor("Rebound")
+        if not reboundModel and primaryPart.Name == "Rebound" then
+            reboundModel = primaryPart
+        end
+
+        local function easeCease(alpha)
+            alpha = math.clamp(alpha, 0, 1)
+            return alpha * alpha * (3 - 2 * alpha)
+        end
+
+        local function applyCeaseScale(scale)
+            ceaseSpeedScale = math.clamp(scale, 0, 1)
+            for obj, state in pairs(ceaseStoredEffects) do
+                if obj.Parent then
+                    if state.IsParticle then
+                        pcall(function()
+                            obj.TimeScale = state.TimeScale * ceaseSpeedScale
+                        end)
+                    else
+                        pcall(function()
+                            obj.PlaybackSpeed = state.PlaybackSpeed * ceaseSpeedScale
+                        end)
+                        pcall(function()
+                            obj.Volume = state.Volume * ceaseSpeedScale
+                        end)
+                        if ceaseSpeedScale <= 0 then
+                            if not state.PausedByCease and obj.IsPlaying then
+                                pcall(function()
+                                    obj:Pause()
+                                    state.PausedByCease = true
+                                end)
+                            end
+                        elseif state.PausedByCease then
+                            pcall(function()
+                                obj:Resume()
+                                state.PausedByCease = false
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+
+        local function trackCeaseEffect(obj)
+            if ceaseStoredEffects[obj] then
+                return
+            end
+            if obj:IsA("ParticleEmitter") then
+                ceaseStoredEffects[obj] = {
+                    IsParticle = true,
+                    TimeScale = obj.TimeScale
+                }
+            elseif obj:IsA("Sound") then
+                ceaseStoredEffects[obj] = {
+                    IsParticle = false,
+                    PlaybackSpeed = obj.PlaybackSpeed,
+                    Volume = obj.Volume,
+                    PausedByCease = false
+                }
+            else
+                return
+            end
+
+            if ceaseFreezeActive then
+                local state = ceaseStoredEffects[obj]
+                if state.IsParticle then
+                    pcall(function()
+                        obj.TimeScale = state.TimeScale * ceaseSpeedScale
+                    end)
+                else
+                    pcall(function()
+                        obj.PlaybackSpeed = state.PlaybackSpeed * ceaseSpeedScale
+                    end)
+                    pcall(function()
+                        obj.Volume = state.Volume * ceaseSpeedScale
+                    end)
+                end
+            end
+        end
+
+        local function restoreCeaseEffects(resumeMovement)
+            ceaseFreezeToken = ceaseFreezeToken + 1
+            if ceaseStopMotionTween then
+                ceaseStopMotionTween:Cancel()
+                ceaseStopMotionTween = nil
+            end
+            if ceaseResumeMotionTween then
+                ceaseResumeMotionTween:Cancel()
+                ceaseResumeMotionTween = nil
+            end
+            if ceaseDescendantConnection then
+                ceaseDescendantConnection:Disconnect()
+                ceaseDescendantConnection = nil
+            end
+            if ceaseSoundConnection then
+                ceaseSoundConnection:Disconnect()
+                ceaseSoundConnection = nil
+            end
+            for obj, state in pairs(ceaseStoredEffects) do
+                if obj.Parent then
+                    if state.IsParticle then
+                        pcall(function()
+                            obj.TimeScale = state.TimeScale
+                        end)
+                    else
+                        pcall(function()
+                            obj.PlaybackSpeed = state.PlaybackSpeed
+                        end)
+                        pcall(function()
+                            obj.Volume = state.Volume
+                        end)
+                        if state.PausedByCease then
+                            pcall(function()
+                                obj:Resume()
+                            end)
+                        end
+                    end
+                end
+            end
+            ceaseStoredEffects = {}
+            ceaseSpeedScale = 1
+            ceaseFreezeActive = false
+            if resumeMovement and not detectedPlayer and primaryPart.Parent and activeMovementTarget then
+                local remainingDistance = (activeMovementTarget.Position - primaryPart.Position).Magnitude
+                local originalDistance = activeMovementOrigin
+                    and (activeMovementTarget.Position - activeMovementOrigin.Position).Magnitude or 0
+                local originalSpeed = originalDistance > 0 and originalDistance / v305 or 0
+                if remainingDistance > 0.01 then
+                    local remainingDuration = originalSpeed > 0
+                        and math.max(remainingDistance / originalSpeed, 0.01) or v305
+                    activeMovementTween = game.TweenService:Create(
+                        primaryPart,
+                        TweenInfo.new(remainingDuration, Enum.EasingStyle.Linear),
+                        { CFrame = activeMovementTarget }
+                    )
+                    activeMovementTween:Play()
+                end
+            end
+        end
+
+        local function trySealRebound(character)
+            if reboundSealed or not primaryPart.Parent
+                or not character or character:GetAttribute("Hiding") then
+
+                return false
+            end
+            local tool = getCrucifixTool(character)
+            if not tool then
+
+                return false
+            end
+
+
+            local sealCFrame = primaryPart.CFrame
+            reboundSealed = true
+            detectedPlayer = true
+            reboundMovementEnded = true
+            reboundMoving = false
+            stopReboundCameraShake()
+
+            if activeMovementTween then
+                activeMovementTween:Cancel()
+                activeMovementTween = nil
+            end
+            if ceaseFreezeActive then
+                restoreCeaseEffects(false)
+            end
+            if movingSoundForWave and movingSoundForWave.Parent then
+                movingSoundForWave:Stop()
+            end
+
+            tool:Destroy()
+            if reboundModel and reboundModel.Parent then
+                reboundModel:Destroy()
+            elseif primaryPart.Parent then
+                primaryPart:Destroy()
+            end
+
+            if doorSignal then
+                doorSignal:Fire()
+            end
+            task.spawn(runCrucifixReplacement, sealCFrame)
+            return true
+        end
+
+        local function triggerCeaseFreeze(ceaseModel)
+            if ceaseFreezeActive or not reboundMoving or reboundMovementEnded
+                or not primaryPart.Parent or ceaseHandledModels[ceaseModel]
+                or not activeMovementTween
+                or activeMovementTween.PlaybackState ~= Enum.PlaybackState.Playing then
+                return
+            end
+
+            ceaseHandledModels[ceaseModel] = true
+            ceaseFreezeActive = true
+            ceaseFreezeToken = ceaseFreezeToken + 1
+            local token = ceaseFreezeToken
+
+            activeMovementTween:Cancel()
+            activeMovementTween = nil
+            local startCFrame = primaryPart.CFrame
+            local destination = activeMovementTarget
+            local remainingDistance = (destination.Position - startCFrame.Position).Magnitude
+            local originalDistance = activeMovementOrigin
+                and (destination.Position - activeMovementOrigin.Position).Magnitude or remainingDistance
+            local initialSpeed = originalDistance / v305
+            local stopDistance = math.min(remainingDistance, initialSpeed * 2.25 / 5)
+            local stopFraction = remainingDistance > 0.001 and stopDistance / remainingDistance or 0
+            local stoppingCFrame = startCFrame:Lerp(destination, math.clamp(stopFraction, 0, 1))
+            ceaseStopMotionTween = game.TweenService:Create(
+                primaryPart,
+                TweenInfo.new(2.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                { CFrame = stoppingCFrame }
+            )
+            ceaseStopMotionTween:Play()
+
+            if reboundModel then
+                trackCeaseEffect(reboundModel)
+                for _, obj in ipairs(reboundModel:GetDescendants()) do
+                    trackCeaseEffect(obj)
+                end
+                ceaseDescendantConnection = reboundModel.DescendantAdded:Connect(function(obj)
+                    if ceaseFreezeToken == token and ceaseFreezeActive then
+                        trackCeaseEffect(obj)
+                    end
+                end)
+            end
+
+            local soundFolder = workspace:FindFirstChild("HardCoreSound")
+            if soundFolder then
+                for _, obj in ipairs(soundFolder:GetDescendants()) do
+                    if obj:IsA("Sound") and obj.Name:lower():find("rebound", 1, true) then
+                        trackCeaseEffect(obj)
+                    end
+                end
+                ceaseSoundConnection = soundFolder.DescendantAdded:Connect(function(obj)
+                    if ceaseFreezeToken == token and ceaseFreezeActive
+                        and obj:IsA("Sound") and obj.Name:lower():find("rebound", 1, true) then
+                        trackCeaseEffect(obj)
+                    end
+                end)
+            end
+
+            task.spawn(function()
+                local function isValid()
+                    return ceaseFreezeToken == token
+                        and primaryPart.Parent ~= nil
+                        and not reboundMovementEnded
+                end
+
+                local function transition(fromScale, toScale, duration)
+                    local startedAt = os.clock()
+                    while true do
+                        if not isValid() then
+                            if ceaseFreezeToken == token then
+                                restoreCeaseEffects()
+                            end
+                            return false
+                        end
+                        local alpha = math.clamp((os.clock() - startedAt) / duration, 0, 1)
+                        applyCeaseScale(fromScale + (toScale - fromScale) * easeCease(alpha))
+                        if alpha >= 1 then
+                            return true
+                        end
+                        RunService.Heartbeat:Wait()
+                    end
+                end
+
+                if not transition(1, 0, 2.25) then
+                    return
+                end
+                if ceaseStopMotionTween then
+                    ceaseStopMotionTween:Cancel()
+                    ceaseStopMotionTween = nil
+                end
+                local holdStartedAt = os.clock()
+                while os.clock() - holdStartedAt < 13 do
+                    if not isValid() then
+                        if ceaseFreezeToken == token then
+                            restoreCeaseEffects()
+                        end
+                        return
+                    end
+                    task.wait(0.05)
+                end
+                local remainingDistance = (destination.Position - primaryPart.Position).Magnitude
+                local recoverDistance = math.min(remainingDistance, initialSpeed * 2 / 5)
+                local recoverFraction = remainingDistance > 0.001
+                    and recoverDistance / remainingDistance or 0
+                local recoveringCFrame = primaryPart.CFrame:Lerp(
+                    destination, math.clamp(recoverFraction, 0, 1)
+                )
+                ceaseResumeMotionTween = game.TweenService:Create(
+                    primaryPart,
+                    TweenInfo.new(2, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+                    { CFrame = recoveringCFrame }
+                )
+                ceaseResumeMotionTween:Play()
+                if not transition(0, 1, 2) then
+                    return
+                end
+                if ceaseFreezeToken == token then
+                    restoreCeaseEffects(true)
+                end
+            end)
+        end
+
+        task.spawn(function()
+            while primaryPart.Parent and not reboundMovementEnded and not reboundSealed do
+                if reboundMoving and not ceaseFreezeActive then
+                    local ceaseModel = workspace:FindFirstChild("Cease", true)
+                    if ceaseModel and ceaseModel:IsA("Model")
+                        and not ceaseHandledModels[ceaseModel] then
+                        triggerCeaseFreeze(ceaseModel)
+                    end
+                end
+                task.wait(0.1)
+            end
+            if ceaseFreezeActive then
+                restoreCeaseEffects()
+            end
+        end)
+
+        local function startReboundTween(targetCFrame)
+            if reboundSealed or not primaryPart.Parent then
+                return false
+            end
+            activeMovementOrigin = primaryPart.CFrame
+            activeMovementTarget = targetCFrame
+            activeMovementTween = game.TweenService:Create(
+                primaryPart,
+                TweenInfo.new(v305),
+                { CFrame = targetCFrame }
+            )
+            reboundMoving = true
+            activeMovementTween:Play()
+            return true
+        end
+
+        local function waitReboundStep(duration)
+            local elapsed = 0
+            while not reboundSealed and elapsed < duration and primaryPart.Parent do
+                local dt = RunService.Heartbeat:Wait()
+                if not ceaseFreezeActive then
+                    elapsed = elapsed + dt
+                end
+            end
+            while not reboundSealed and ceaseFreezeActive and primaryPart.Parent do
+                RunService.Heartbeat:Wait()
+            end
+            return not reboundSealed and primaryPart.Parent ~= nil
+        end
+
+        local function waitForReboundArrival()
+            local destination = activeMovementTarget
+            if not destination then
+                return false
+            end
+            while not reboundSealed and primaryPart.Parent do
+                if not ceaseFreezeActive then
+                    local remaining = (destination.Position - primaryPart.Position).Magnitude
+                    if remaining <= 0.05 then
+                        return true
+                    end
+                    local state = activeMovementTween and activeMovementTween.PlaybackState
+                    if not activeMovementTween
+                        or state == Enum.PlaybackState.Cancelled
+                        or state == Enum.PlaybackState.Completed then
+                        local fullDistance = activeMovementOrigin
+                            and (destination.Position - activeMovementOrigin.Position).Magnitude or remaining
+                        local segmentSpeed = fullDistance > 0 and fullDistance / v305 or 0
+                        local duration = segmentSpeed > 0
+                            and math.max(remaining / segmentSpeed, 0.01) or v305
+                        activeMovementTween = game.TweenService:Create(
+                            primaryPart,
+                            TweenInfo.new(duration, Enum.EasingStyle.Linear),
+                            { CFrame = destination }
+                        )
+                        activeMovementTween:Play()
+                    end
+                end
+                RunService.Heartbeat:Wait()
+            end
+            return false
+        end
+
         local function CheckLineOfSight(entityPart, player, maxDistance)
             if not entityPart or not player or not player.Character then
                 return false
@@ -9849,6 +12000,9 @@ function entityBehaviors.REBOUNDSW()
             local targetPos = hrp.Position
             local distance = (targetPos - origin).Magnitude
             
+            if distance <= 0.001 or distance > maxDistance then
+                return false
+            end
             local direction = (targetPos - origin).Unit * maxDistance
             local ray = Ray.new(origin, direction)
             local hitPart, _ = workspace:FindPartOnRay(ray, entityPart)
@@ -9856,9 +12010,89 @@ function entityBehaviors.REBOUNDSW()
             return hitPart and hitPart:IsDescendantOf(player.Character)
         end
 
+        local function CheckCrucifixRaycast(entityPart, player, maxDistance)
+            if reboundSealed or not entityPart or not entityPart.Parent or not player then
+                return nil
+            end
+            local character = player.Character
+            if not character then
+
+                return nil
+            end
+            if not character:IsDescendantOf(workspace) then
+
+                return nil
+            end
+            if character:GetAttribute("Hiding") then
+
+                return nil
+            end
+
+            local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if not humanoid or humanoid.Health <= 0 then
+
+                return nil
+            end
+            if not rootPart or not rootPart:IsA("BasePart") then
+
+                return nil
+            end
+
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+            raycastParams.FilterDescendantsInstances = { reboundModel or entityPart }
+
+            local targets = { rootPart }
+            for _, partName in ipairs({ "Head", "UpperTorso", "Torso", "LowerTorso" }) do
+                local part = character:FindFirstChild(partName)
+                if part and part:IsA("BasePart") then
+                    table.insert(targets, part)
+                end
+            end
+
+            for _, part in ipairs(targets) do
+                if reboundSealed or not entityPart.Parent then
+                    return nil
+                end
+                local direction = part.Position - entityPart.Position
+                local distance = direction.Magnitude
+                if distance > 0.001 and distance <= maxDistance then
+                    local result = workspace:Raycast(entityPart.Position, direction, raycastParams)
+                    local hitPart = result and result.Instance
+                    local hitCharacter = hitPart and getCharacterFromRaycastHit(hitPart) or nil
+
+                    if not hitCharacter then
+                        local partEntry = rayEntryDistanceToPart(
+                            entityPart.Position, direction.Unit, part)
+                        if partEntry and partEntry <= distance + 0.01 then
+                            if not result or result.Distance > partEntry + 0.02 then
+                                hitCharacter = character
+                            end
+                        end
+                    end
+
+                    if hitCharacter and not hitCharacter:GetAttribute("Hiding") then
+                        local hitHumanoid = hitCharacter:FindFirstChildWhichIsA("Humanoid")
+                        if hitHumanoid and hitHumanoid.Health > 0 then
+                            local tool = getCrucifixTool(hitCharacter)
+                            if tool then
+                                return hitCharacter
+                            end
+                        end
+                    end
+                end
+            end
+
+            return nil
+        end
+
         local function ExecutePlayer()
-            if detectedPlayer then return end
+            if reboundSealed or detectedPlayer then return end
             detectedPlayer = true
+            if ceaseFreezeActive then
+                restoreCeaseEffects()
+            end
 
             local vu321 = Instance.new("ScreenGui")
             local vu322 = Instance.new("ImageLabel")
@@ -9897,17 +12131,17 @@ function entityBehaviors.REBOUNDSW()
                 local v325 = Instance.new("LocalScript", vu322)
                 while v325.Parent and v325.Parent.Parent do
                     v325.Parent.Image = "rbxassetid://236543215"
-                    wait(0.002)
+                    task.wait(0.015)
                     v325.Parent.Rotation = 0
-                    wait(0.002)
+                    task.wait(0.015)
                     v325.Parent.Rotation = 180
-                    wait(0.002)
+                    task.wait(0.015)
                     v325.Parent.Image = "rbxassetid://236777652"
-                    wait(0.002)
+                    task.wait(0.015)
                     v325.Parent.Rotation = 0
-                    wait(0.002)
+                    task.wait(0.015)
                     v325.Parent.Rotation = 180
-                    wait(0.002)
+                    task.wait(0.015)
                 end
             end
             coroutine.wrap(v326)()
@@ -9939,20 +12173,24 @@ function entityBehaviors.REBOUNDSW()
                 
                 spawn(function()
                     wait(0.3)
+                    if reboundSealed then
+                        return
+                    end
                     local char = vu329.Character
                     if char then
                         local hum = char:FindFirstChildWhichIsA("Humanoid")
-                        if hum then
-                            hum:TakeDamage(100)
-                            if vu328.GameStats["Player_" .. vu329.Name] then
-                                vu328.GameStats["Player_" .. vu329.Name].Total.DeathCause.Value = "Rebound"
+                        if hum and hum.Health > 0 then
+                            local damage = 100
+                            local willDie = hum.Health <= damage
+                            if willDie then
+                                local playerStats = vu328.GameStats:FindFirstChild("Player_" .. vu329.Name)
+                                local total = playerStats and playerStats:FindFirstChild("Total")
+                                local deathCause = total and total:FindFirstChild("DeathCause")
+                                if deathCause then
+                                    deathCause.Value = "Rebound"
+                                end
                             end
-
-firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
-    "你死于Rebound...",
-    "巨大的噪音震耳欲聋...",
-    "每当开启一次门时注意雷声..."
-}, "Blue")
+                            hum:TakeDamage(damage)
                         end
                     end
                 end)
@@ -9972,13 +12210,29 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
         end
 
         spawn(function()
-            local player = game.Players.LocalPlayer
-            while primaryPart and primaryPart.Parent do
-                wait(0.5)
-                if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
+            local player = Players.LocalPlayer
+
+            while not reboundSealed and primaryPart and primaryPart.Parent do
+                task.wait(0.05)
+                if reboundSealed or not primaryPart or not primaryPart.Parent then
+                    break
+                end
+                if workspace:FindFirstChild("SeekMov") or workspace.CurrentRooms:FindFirstChild("50") then
                     break
                 end
 
+                for _, candidate in ipairs(Players:GetPlayers()) do
+                    local hitCharacter = CheckCrucifixRaycast(primaryPart, candidate, 100)
+                    if hitCharacter and getCrucifixTool(hitCharacter) then
+                        if trySealRebound(hitCharacter) then
+                            break
+                        end
+                    end
+                end
+
+                if reboundSealed then
+                    break
+                end
                 if CheckLineOfSight(primaryPart, player, 100) then
                     ExecutePlayer()
                 end
@@ -9989,12 +12243,12 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
             local currentRoom = 0
             local maxRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
 
-            while currentRoom <= maxRoom do
+            while currentRoom <= maxRoom and not reboundSealed and primaryPart.Parent do
                 if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
                     break
                 end
 
-                local targetRoom = v310:FindFirstChild(currentRoom)
+                local targetRoom = v310:FindFirstChild(tostring(currentRoom))
                 if targetRoom then
                     local targetCFrame
                     if targetRoom:FindFirstChild("Nodes") then
@@ -10003,11 +12257,16 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
                         targetCFrame = targetRoom.RoomExit.CFrame
                     end
 
-                    game.TweenService:Create(primaryPart, TweenInfo.new(v305), {
-                        CFrame = targetCFrame + v307
-                    }):Play()
-                    
-                    wait(v306)
+                    if not startReboundTween(targetCFrame + v307) then
+                        break
+                    end
+
+                    if not waitReboundStep(v306) then
+                        break
+                    end
+                    if not waitForReboundArrival() then
+                        break
+                    end
                 end
 
                 maxRoom = game.ReplicatedStorage.GameData.LatestRoom.Value
@@ -10017,12 +12276,12 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
             local currentRoom = GetMaxExistingRoom()
             local minRoom = math.max(0, currentRoom - 7)
 
-            while currentRoom >= minRoom do
+            while currentRoom >= minRoom and not reboundSealed and primaryPart.Parent do
                 if workspace:FindFirstChild("SeekMovingNewClone") or workspace.CurrentRooms:FindFirstChild("50") then
                     break
                 end
 
-                local targetRoom = v310:FindFirstChild(currentRoom)
+                local targetRoom = v310:FindFirstChild(tostring(currentRoom))
                 if targetRoom then
                     local targetCFrame
                     if targetRoom:FindFirstChild("Nodes") then
@@ -10031,19 +12290,33 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
                         targetCFrame = targetRoom.RoomExit.CFrame
                     end
 
-                    game.TweenService:Create(primaryPart, TweenInfo.new(v305), {
-                        CFrame = targetCFrame + v307
-                    }):Play()
-                    
-                    wait(v306)
+                    if not startReboundTween(targetCFrame + v307) then
+                        break
+                    end
+
+                    if not waitReboundStep(v306) then
+                        break
+                    end
+                    if not waitForReboundArrival() then
+                        break
+                    end
                 end
 
                 currentRoom = currentRoom - 1
             end
         end
 
-        primaryPart.Anchored = false
-        primaryPart.CanCollide = false
+        while not reboundSealed and ceaseFreezeActive and primaryPart.Parent do
+            RunService.Heartbeat:Wait()
+        end
+        reboundMovementEnded = true
+        if ceaseFreezeActive then
+            restoreCeaseEffects()
+        end
+        if primaryPart.Parent then
+            primaryPart.Anchored = false
+            primaryPart.CanCollide = false
+        end
     end
 
     for _, obj in pairs(workspace:GetChildren()) do
@@ -10069,77 +12342,84 @@ firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
     local TW = tween:Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {TintColor = Color3.fromRGB(255, 255, 255)})
     TW:Play()
 
-    local CameraShaker = require(game.ReplicatedStorage.CameraShaker)
-    local camara = game.Workspace.CurrentCamera
-    local camShake = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-        camara.CFrame = camara.CFrame * shakeCf
+    reboundCameraShake:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
+
+    task.wait(3)
+
+    local latestRoom = game.ReplicatedStorage.GameData.LatestRoom
+    local doorGateOpen = false
+    local acceptedDoorCount = 0
+    doorSignal = Instance.new("BindableEvent")
+    local doorConnection = latestRoom:GetPropertyChangedSignal("Value"):Connect(function()
+        if doorGateOpen and not reboundSealed then
+            acceptedDoorCount = acceptedDoorCount + 1
+            doorSignal:Fire()
+        end
     end)
-    camShake:Start()
-    camShake:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
 
-    wait(3)
-
-    local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/DOORS-Entity-Spawner-V2/main/init.luau"))()
-
-    SpawnReboundEntity("latest")
-
-    local sound1 = PlayPreloadedSound("ReboundMovings", 3)
-    if sound1 then
-        repeat
-            wait()
-        until sound1.IsPlaying == false
+    local function waitForSoundToFinish(sound)
+        if not sound or not sound.Parent then
+            return
+        end
+        local finished = false
+        local connection = sound.Ended:Connect(function()
+            finished = true
+        end)
+        local startedAt = os.clock()
+        while not reboundSealed and sound.Parent and not finished do
+            if os.clock() - startedAt >= 120 then
+                break
+            end
+            if not sound.IsLoaded and os.clock() - startedAt >= 15 then
+                break
+            end
+            task.wait(0.05)
+        end
+        connection:Disconnect()
     end
-    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 
-    SpawnReboundEntity("start")
-
-    local CameraShaker2 = require(game.ReplicatedStorage.CameraShaker)
-    local camara2 = game.Workspace.CurrentCamera
-    local camShake2 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-        camara2.CFrame = camara2.CFrame * shakeCf
-    end)
-    camShake2:Start()
-    camShake2:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
-    local sound2 = PlayPreloadedSound("ReboundMovings", 3)
-    if sound2 then
-        repeat
-            wait()
-        until sound2.IsPlaying == false
+    local function waitForNextQualifiedDoor()
+        if reboundSealed then
+            return false
+        end
+        local previousAcceptedCount = acceptedDoorCount
+        doorGateOpen = true
+        while not reboundSealed and acceptedDoorCount == previousAcceptedCount do
+            doorSignal.Event:Wait()
+        end
+        doorGateOpen = false
+        return not reboundSealed
     end
-    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
 
-    SpawnReboundEntity("latest")
-
-    local CameraShaker3 = require(game.ReplicatedStorage.CameraShaker)
-    local camara3 = game.Workspace.CurrentCamera
-    local camShake3 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-        camara3.CFrame = camara3.CFrame * shakeCf
-    end)
-    camShake3:Start()
-    camShake3:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
-    local sound3 = PlayPreloadedSound("ReboundMovings", 3)
-    if sound3 then
-        repeat
-            wait()
-        until sound3.IsPlaying == false
+    local directions = { "latest", "start", "latest", "start" }
+    for waveIndex, startRoomType in ipairs(directions) do
+        if reboundSealed then
+            break
+        end
+        SpawnReboundEntity(startRoomType)
+        if reboundSealed then
+            break
+        end
+        movingSoundForWave = PlayPreloadedSound("ReboundMovings", 3)
+        waitForSoundToFinish(movingSoundForWave)
+        movingSoundForWave = nil
+        if reboundSealed then
+            break
+        end
+        if waveIndex < #directions then
+            if not waitForNextQualifiedDoor() then
+                break
+            end
+        end
     end
-    game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-
-    SpawnReboundEntity("start")
-
-    local CameraShaker4 = require(game.ReplicatedStorage.CameraShaker)
-    local camara4 = game.Workspace.CurrentCamera
-    local camShake4 = CameraShaker.new(Enum.RenderPriority.Camera.Value, function(shakeCf)
-        camara4.CFrame = camara4.CFrame * shakeCf
-    end)
-    camShake4:Start()
-    camShake4:ShakeOnce(10, 3, 0.1, 6, 2, 0.5)
-    local sound4 = PlayPreloadedSound("ReboundMovings", 3)
-    if sound4 then
-        repeat
-            wait()
-        until sound4.IsPlaying == false
+    doorGateOpen = false
+    doorConnection:Disconnect()
+    if doorSignal then
+        doorSignal:Destroy()
+        doorSignal = nil
     end
+    stopReboundCameraShake()
+    doorSignal = nil
 
 end
 function entityBehaviors.JEFFGUN2()
@@ -10690,6 +12970,1626 @@ function entityBehaviors.A7()
         A7:Play()
     end
 end
+function entityBehaviors.Silence2()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local InsertService = game:GetService("InsertService")
+
+local SILENCE_ASSET_ID = 131179838362680
+local CRUCIFIX_ASSET_ID = 128235155752478
+local JUMPSCARE_SOUND_ID = "rbxassetid://1592934514"
+local JUMPSCARE_IMAGE_ID = "rbxassetid://139425974297545"
+local JUMPSCARE_IMAGE_ALT_ID = "rbxassetid://71258076152603"
+local SILENCE_SPEED = 20
+local DETECTION_DISTANCE = 200
+local HEIGHT_OFFSET = Vector3.new(0, 0, 0)
+local JUMPSCARE_DAMAGE = 180
+
+local silence = nil
+local isJumpScaring = false
+local hasJumpScared = false
+local isSilenceDespawning = false
+local crucifixActivated = false
+local silenceIsMoving = false
+local silenceMoveCancelled = false
+local ceaseFreezeActive = false
+local ceaseSpeedScale = 1
+local ceaseFreezeSerial = 0
+local ceaseSavedEffects = {}
+local ceaseDescendantConnection = nil
+local ceaseHandledModels = setmetatable({}, { __mode = "k" })
+
+local function ease(alpha)
+    alpha = math.clamp(alpha, 0, 1)
+    return alpha * alpha * (3 - 2 * alpha)
+end
+
+local function loadModel(assetId, fallbackName)
+    local success, objects = pcall(function()
+        return game:GetObjects("rbxassetid://" .. tostring(assetId))
+    end)
+
+    if success and type(objects) == "table" then
+        for _, object in ipairs(objects) do
+            if object:IsA("Model") then
+                return object
+            end
+        end
+    end
+
+    local template = ReplicatedStorage:FindFirstChild(fallbackName, true)
+    if template and template:IsA("Model") then
+        return template:Clone()
+    end
+
+    local loaded, asset = pcall(function()
+        return InsertService:LoadAsset(assetId)
+    end)
+
+    if loaded and asset and asset:IsA("Model") then
+        return asset
+    end
+
+    return nil
+end
+
+local function prepareModel(model, queryable)
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            descendant.Anchored = true
+            descendant.CanCollide = false
+            descendant.CanTouch = false
+            descendant.CanQuery = queryable
+        end
+    end
+end
+
+local function getSilencePosition()
+    if silence and silence.Parent then
+        return silence:GetPivot().Position
+    end
+    return nil
+end
+
+local function isActive()
+    return silence ~= nil
+        and silence.Parent ~= nil
+        and not crucifixActivated
+        and not isSilenceDespawning
+        and not silenceMoveCancelled
+end
+
+local function applyCeaseSpeed(scale)
+    ceaseSpeedScale = math.clamp(scale, 0, 1)
+
+    for object, saved in pairs(ceaseSavedEffects) do
+        if object.Parent then
+            if saved.Type == "Particle" then
+                pcall(function()
+                    object.TimeScale = saved.TimeScale * ceaseSpeedScale
+                end)
+            else
+                pcall(function()
+                    object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                    object.Volume = saved.Volume * ceaseSpeedScale
+                end)
+            end
+        end
+    end
+end
+
+local function trackCeaseEffect(object)
+    if ceaseSavedEffects[object] then
+        return
+    end
+
+    if object:IsA("ParticleEmitter") then
+        ceaseSavedEffects[object] = {
+            Type = "Particle",
+            TimeScale = object.TimeScale
+        }
+    elseif object:IsA("Sound") then
+        ceaseSavedEffects[object] = {
+            Type = "Sound",
+            PlaybackSpeed = object.PlaybackSpeed,
+            Volume = object.Volume
+        }
+    else
+        return
+    end
+
+    if ceaseFreezeActive then
+        local saved = ceaseSavedEffects[object]
+        if saved.Type == "Particle" then
+            pcall(function()
+                object.TimeScale = saved.TimeScale * ceaseSpeedScale
+            end)
+        else
+            pcall(function()
+                object.PlaybackSpeed = saved.PlaybackSpeed * ceaseSpeedScale
+                object.Volume = saved.Volume * ceaseSpeedScale
+            end)
+        end
+    end
+end
+
+local function cancelCeaseFreeze()
+    ceaseFreezeSerial = ceaseFreezeSerial + 1
+
+    if ceaseDescendantConnection then
+        ceaseDescendantConnection:Disconnect()
+        ceaseDescendantConnection = nil
+    end
+
+    for object, saved in pairs(ceaseSavedEffects) do
+        if object.Parent then
+            if saved.Type == "Particle" then
+                pcall(function()
+                    object.TimeScale = saved.TimeScale
+                end)
+            else
+                pcall(function()
+                    object.PlaybackSpeed = saved.PlaybackSpeed
+                    object.Volume = saved.Volume
+                end)
+            end
+        end
+    end
+
+    ceaseSavedEffects = {}
+    ceaseSpeedScale = 1
+    ceaseFreezeActive = false
+end
+
+local function startCeaseFreeze(ceaseModel)
+    if ceaseFreezeActive or not silenceIsMoving or not isActive()
+        or isJumpScaring or ceaseHandledModels[ceaseModel] then
+        return
+    end
+
+    ceaseHandledModels[ceaseModel] = true
+    ceaseFreezeActive = true
+    ceaseFreezeSerial = ceaseFreezeSerial + 1
+    local freezeSerial = ceaseFreezeSerial
+    local currentSilence = silence
+
+    for _, descendant in ipairs(currentSilence:GetDescendants()) do
+        trackCeaseEffect(descendant)
+    end
+
+    ceaseDescendantConnection = currentSilence.DescendantAdded:Connect(function(descendant)
+        if ceaseFreezeActive and ceaseFreezeSerial == freezeSerial then
+            trackCeaseEffect(descendant)
+        end
+    end)
+
+    task.spawn(function()
+        local function stillValid()
+            return ceaseFreezeSerial == freezeSerial
+                and silence == currentSilence
+                and currentSilence.Parent ~= nil
+                and not isJumpScaring
+                and not crucifixActivated
+                and not isSilenceDespawning
+        end
+
+        local function transition(fromScale, toScale, duration)
+            local startedAt = os.clock()
+            while true do
+                if not stillValid() then
+                    if ceaseFreezeSerial == freezeSerial then
+                        cancelCeaseFreeze()
+                    end
+                    return false
+                end
+
+                local alpha = math.clamp((os.clock() - startedAt) / duration, 0, 1)
+                applyCeaseSpeed(fromScale + (toScale - fromScale) * ease(alpha))
+                if alpha >= 1 then
+                    return true
+                end
+                RunService.Heartbeat:Wait()
+            end
+        end
+
+        if not transition(1, 0, 2.25) then
+            return
+        end
+
+        local holdStartedAt = os.clock()
+        while os.clock() - holdStartedAt < 13 do
+            if not stillValid() then
+                if ceaseFreezeSerial == freezeSerial then
+                    cancelCeaseFreeze()
+                end
+                return
+            end
+            task.wait(0.05)
+        end
+
+        if not transition(0, 1, 2) then
+            return
+        end
+
+        if ceaseFreezeSerial == freezeSerial then
+            cancelCeaseFreeze()
+        end
+    end)
+end
+
+local function stopSilenceMovement()
+    silenceMoveCancelled = true
+    silenceIsMoving = false
+    cancelCeaseFreeze()
+end
+
+local function destroySilence()
+    stopSilenceMovement()
+    isSilenceDespawning = true
+    local previousSilence = silence
+    silence = nil
+    if previousSilence then
+        previousSilence:Destroy()
+    end
+end
+
+local function getCrucifixTool(character)
+    if not character or not character:IsA("Model") then
+        return nil
+    end
+
+    local direct = character:FindFirstChild("Crucifix")
+    if direct and direct:IsA("Tool") then
+        return direct
+    end
+
+    for _, descendant in ipairs(character:GetDescendants()) do
+        if descendant.Name == "Crucifix" and descendant:IsA("Tool") then
+            return descendant
+        end
+    end
+
+    return nil
+end
+
+local function getCharacterFromHit(hitInstance)
+    local current = hitInstance
+    while current and current ~= workspace do
+        if current:IsA("Model") and Players:GetPlayerFromCharacter(current) then
+            return current
+        end
+        current = current.Parent
+    end
+    return nil
+end
+
+local function rayEntryDistanceToPart(origin, directionUnit, part)
+    if not part or not part.Parent or not part:IsA("BasePart") then
+        return nil
+    end
+
+    local localOrigin = part.CFrame:PointToObjectSpace(origin)
+    local localDirection = part.CFrame:VectorToObjectSpace(directionUnit)
+    local half = part.Size * 0.5
+    local entry, exitDistance = 0, math.huge
+
+    for _, axis in ipairs({ "X", "Y", "Z" }) do
+        local position = localOrigin[axis]
+        local velocity = localDirection[axis]
+        local extent = half[axis]
+
+        if math.abs(velocity) < 0.00001 then
+            if position < -extent or position > extent then
+                return nil
+            end
+        else
+            local near = (-extent - position) / velocity
+            local far = (extent - position) / velocity
+            if near > far then
+                near, far = far, near
+            end
+            entry = math.max(entry, near)
+            exitDistance = math.min(exitDistance, far)
+            if exitDistance < entry then
+                return nil
+            end
+        end
+    end
+
+    return entry
+end
+
+local easeCease = ease
+
+local function getCrucifixVisualStates(root, shouldInclude, onlyRoot)
+    local states = {}
+
+    local function capture(object)
+        if shouldInclude and not shouldInclude(object) then
+            return
+        end
+
+        if object:IsA("BasePart") or object:IsA("Decal")
+            or object:IsA("Texture") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Transparency",
+                Original = object.Transparency
+            })
+        elseif object:IsA("ParticleEmitter") or object:IsA("Beam")
+            or object:IsA("Trail") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Sequence",
+                Original = object.Transparency
+            })
+        elseif object:IsA("Light") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Brightness",
+                Original = object.Brightness
+            })
+        elseif object:IsA("Highlight") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Highlight",
+                Fill = object.FillTransparency,
+                Outline = object.OutlineTransparency
+            })
+        elseif object:IsA("Smoke") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Smoke",
+                Original = object.Opacity
+            })
+        elseif object:IsA("Fire") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Fire",
+                Size = object.Size,
+                Heat = object.Heat
+            })
+        elseif object:IsA("Sound") then
+            table.insert(states, {
+                Object = object,
+                Kind = "Sound",
+                Original = object.Volume
+            })
+        elseif object:IsA("GuiObject") then
+            local state = {
+                Object = object,
+                Kind = "GuiObject",
+                Background = object.BackgroundTransparency
+            }
+
+            if object:IsA("ImageLabel") or object:IsA("ImageButton") then
+                state.Image = object.ImageTransparency
+            end
+
+            if object:IsA("TextLabel") or object:IsA("TextButton")
+                or object:IsA("TextBox") then
+                state.Text = object.TextTransparency
+            end
+
+            table.insert(states, state)
+        end
+    end
+
+    capture(root)
+    if not onlyRoot then
+        for _, descendant in ipairs(root:GetDescendants()) do
+            capture(descendant)
+        end
+    end
+
+    return states
+end
+
+local function crucifixFadedSequence(original, factor)
+    local keypoints = {}
+
+    for _, keypoint in ipairs(original.Keypoints) do
+        local nextTransparency = 1 - (1 - keypoint.Value) * factor
+        table.insert(keypoints, NumberSequenceKeypoint.new(
+            keypoint.Time,
+            math.clamp(nextTransparency, 0, 1),
+            keypoint.Envelope * factor
+        ))
+    end
+
+    return NumberSequence.new(keypoints)
+end
+
+local function setCrucifixVisualFactor(states, factor)
+    factor = math.clamp(factor, 0, 1)
+
+    for _, state in ipairs(states) do
+        local object = state.Object
+
+        if object and object.Parent then
+            if state.Kind == "Transparency" then
+                object.Transparency = 1 - (1 - state.Original) * factor
+            elseif state.Kind == "Sequence" then
+                object.Transparency = crucifixFadedSequence(state.Original, factor)
+            elseif state.Kind == "Brightness" then
+                object.Brightness = state.Original * factor
+            elseif state.Kind == "Highlight" then
+                object.FillTransparency = 1 - (1 - state.Fill) * factor
+                object.OutlineTransparency = 1 - (1 - state.Outline) * factor
+            elseif state.Kind == "Smoke" then
+                object.Opacity = state.Original * factor
+            elseif state.Kind == "Fire" then
+                object.Size = state.Size * factor
+                object.Heat = state.Heat * factor
+            elseif state.Kind == "Sound" then
+                object.Volume = state.Original * factor
+            elseif state.Kind == "GuiObject" then
+                object.BackgroundTransparency = 1 - (1 - state.Background) * factor
+
+                if state.Image ~= nil then
+                    object.ImageTransparency = 1 - (1 - state.Image) * factor
+                end
+
+                if state.Text ~= nil then
+                    object.TextTransparency = 1 - (1 - state.Text) * factor
+                end
+            end
+        end
+    end
+end
+
+local function fadeCrucifixVisuals(states, initialFactor, endFactor, duration)
+    if duration <= 0 then
+        setCrucifixVisualFactor(states, endFactor)
+        return
+    end
+
+    local startTime = os.clock()
+
+    while true do
+        local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+        local eased = easeCease(alpha)
+        setCrucifixVisualFactor(
+            states,
+            initialFactor + (endFactor - initialFactor) * eased
+        )
+
+        if alpha >= 1 then
+            break
+        end
+
+        RunService.Heartbeat:Wait()
+    end
+end
+
+local function findCrucifixBeams(rushNew)
+    local preferred = {}
+    local fallback = {}
+
+    for _, descendant in ipairs(rushNew:GetDescendants()) do
+        if descendant:IsA("Beam") then
+            table.insert(fallback, descendant)
+
+            local ancestor = descendant.Parent
+            while ancestor and ancestor ~= rushNew do
+                if string.lower(ancestor.Name) == "particlesin" then
+                    table.insert(preferred, descendant)
+                    break
+                end
+                ancestor = ancestor.Parent
+            end
+
+            if string.lower(descendant.Name) == "particlesin" then
+                local exists = false
+                for _, selected in ipairs(preferred) do
+                    if selected == descendant then
+                        exists = true
+                        break
+                    end
+                end
+                if not exists then
+                    table.insert(preferred, descendant)
+                end
+            end
+        end
+    end
+
+    local beams = #preferred > 0 and preferred or fallback
+    table.sort(beams, function(a, b)
+        return a:GetFullName() < b:GetFullName()
+    end)
+
+    return beams
+end
+
+local function prepareCrucifixBeams(beams, rushNew, movingAttachment)
+    for index, beam in ipairs(beams) do
+        if beam.Parent then
+            if not beam.Attachment0 then
+                beam.Attachment0 = movingAttachment
+            end
+
+            if not beam.Attachment1 or beam.Attachment1 == beam.Attachment0 then
+                local endpoint = Instance.new("Attachment")
+                endpoint.Name = "CrucifixBeamEndpoint" .. tostring(index)
+                local angle = (index - 1) * (math.pi / 2)
+                local offset = Vector3.new(
+                    math.cos(angle) * 3,
+                    2,
+                    math.sin(angle) * 3
+                )
+                endpoint.Position = movingAttachment.Position
+                    + rushNew.CFrame:VectorToObjectSpace(offset)
+                endpoint.Parent = rushNew
+                beam.Attachment1 = endpoint
+            end
+
+            if beam.Width0 <= 0 and beam.Width1 <= 0 then
+                beam.Width0 = 0.3
+                beam.Width1 = 0.3
+            end
+
+            beam.Enabled = true
+            beam.Transparency = NumberSequence.new(1)
+        end
+    end
+end
+
+local crucifixBeamSoundIds = {
+    "124444290902740",
+    "100133789671771",
+    "133850299035625",
+    "120232105146350"
+}
+
+local function createCrucifixBeamFeedback()
+    local beamCameraShaker = nil
+    local shakeCleanupScheduled = false
+
+    local function trigger(index)
+        local soundId = crucifixBeamSoundIds[index]
+        if not soundId then
+            return
+        end
+
+        local sound = Instance.new("Sound")
+        sound.Name = "CrucifixBeamSound" .. tostring(index)
+        sound.SoundId = "rbxassetid://" .. soundId
+        sound.Volume = 7
+        sound.Looped = false
+        sound.Parent = game:GetService("SoundService")
+        sound.Ended:Connect(function()
+            if sound.Parent then
+                sound:Destroy()
+            end
+        end)
+        task.delay(60, function()
+            if sound.Parent then
+                sound:Destroy()
+            end
+        end)
+        sound:Play()
+
+        if not beamCameraShaker then
+            local module = game.ReplicatedStorage:FindFirstChild("CameraShaker")
+            if module then
+                local loaded, CameraShaker = pcall(require, module)
+                if loaded and CameraShaker then
+                    local created, shaker = pcall(function()
+                        local currentShaker = CameraShaker.new(
+                            Enum.RenderPriority.Camera.Value,
+                            function(shakeCf)
+                                local camera = workspace.CurrentCamera
+                                if camera then
+                                    camera.CFrame = camera.CFrame * shakeCf
+                                end
+                            end
+                        )
+                        currentShaker:Start()
+                        return currentShaker
+                    end)
+                    if created then
+                        beamCameraShaker = shaker
+                    end
+                end
+            end
+        end
+
+        if beamCameraShaker then
+            local started, shakeInstance = pcall(function()
+                return beamCameraShaker:StartShake(10, 28, 0.1, 0.25, 0.35)
+            end)
+            if started and shakeInstance then
+                task.delay(0.3, function()
+                    pcall(function()
+                        shakeInstance:StartFadeOut(3)
+                    end)
+                end)
+            else
+                pcall(function()
+                    beamCameraShaker:ShakeOnce(10, 28, 0.1, 3, 0.25, 0.35)
+                end)
+            end
+
+            if not shakeCleanupScheduled then
+                shakeCleanupScheduled = true
+                task.delay(4.5, function()
+                    if beamCameraShaker then
+                        pcall(function()
+                            beamCameraShaker:Stop()
+                        end)
+                    end
+                end)
+            end
+        end
+    end
+
+    return trigger
+end
+
+local function revealCrucifixBeams(beams, onBeamBegin)
+    local startTime = os.clock()
+    local perBeamDuration = 0.5
+    local staggerDelay = 0.25
+    local totalDuration = perBeamDuration + math.max(0, #beams - 1) * staggerDelay
+    local begun = {}
+
+    while true do
+        local elapsed = os.clock() - startTime
+
+        for index, beam in ipairs(beams) do
+            if beam and beam.Parent then
+                local beamStartTime = (index - 1) * staggerDelay
+                if elapsed >= beamStartTime and not begun[index] then
+                    begun[index] = true
+                    if onBeamBegin then
+                        onBeamBegin(index)
+                    end
+                end
+
+                local beamAlpha = math.clamp(
+                    (elapsed - beamStartTime) / perBeamDuration,
+                    0,
+                    1
+                )
+                beam.Enabled = true
+                beam.Transparency = NumberSequence.new(1 - easeCease(beamAlpha))
+            end
+        end
+
+        if elapsed >= totalDuration then
+            break
+        end
+        RunService.Heartbeat:Wait()
+    end
+
+    for _, beam in ipairs(beams) do
+        if beam and beam.Parent then
+            beam.Enabled = true
+            beam.Transparency = NumberSequence.new(0)
+        end
+    end
+end
+
+local function fadeCrucifixBeamsOut(beams, duration)
+    local startTime = os.clock()
+
+    while true do
+        local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+        local transparency = easeCease(alpha)
+
+        for _, beam in ipairs(beams) do
+            if beam and beam.Parent then
+                beam.Transparency = NumberSequence.new(transparency)
+            end
+        end
+
+        if alpha >= 1 then
+            break
+        end
+        RunService.Heartbeat:Wait()
+    end
+
+    for _, beam in ipairs(beams) do
+        if beam and beam.Parent then
+            beam.Transparency = NumberSequence.new(1)
+            beam.Enabled = false
+        end
+    end
+end
+
+local function moveCrucifixAttachment(attachment, targetPosition, duration)
+    local origin = attachment.Position
+    local startTime = os.clock()
+
+    while true do
+        if not attachment.Parent then
+            return false
+        end
+
+        local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+        local progress = easeCease(alpha)
+        attachment.Position = origin:Lerp(targetPosition, progress)
+
+        if alpha >= 1 then
+            attachment.Position = targetPosition
+            return true
+        end
+        RunService.Heartbeat:Wait()
+    end
+end
+
+local function fadeCrucifixDescendantsRecursively(root, duration)
+    local found = {}
+    local allStates = {}
+    local stateCount = 0
+
+    local function findChildren(object)
+        if not object or found[object] then
+            return
+        end
+        found[object] = true
+
+        local states = getCrucifixVisualStates(object, nil, true)
+        for _, state in ipairs(states) do
+            table.insert(allStates, state)
+            stateCount = stateCount + 1
+        end
+
+        for _, child in ipairs(object:GetChildren()) do
+            findChildren(child)
+        end
+    end
+
+    local startTime = os.clock()
+    while true do
+        if not root.Parent then
+            return
+        end
+
+        findChildren(root)
+        local alpha = math.clamp((os.clock() - startTime) / duration, 0, 1)
+        setCrucifixVisualFactor(allStates, 1 - easeCease(alpha))
+
+        if alpha >= 1 then
+            break
+        end
+
+        for _, object in ipairs(root:GetDescendants()) do
+            if not found[object] then
+                findChildren(object)
+            end
+        end
+        RunService.Heartbeat:Wait()
+    end
+end
+
+local function startCrucifixAmbientShake(replacement)
+    local stepName = "SilenceCrucifixAmbient_"
+        .. game:GetService("HttpService"):GenerateGUID(false)
+    local startedAt = os.clock()
+    local active = true
+    local lastOffset = CFrame.new()
+    local lastCamera = nil
+
+    local function stop()
+        if not active then
+            return
+        end
+        active = false
+        RunService:UnbindFromRenderStep(stepName)
+    end
+
+    RunService:BindToRenderStep(
+        stepName,
+        Enum.RenderPriority.Camera.Value + 3,
+        function()
+            if not replacement.Parent then
+                stop()
+                return
+            end
+
+            local camera = workspace.CurrentCamera
+            if not camera then
+                return
+            end
+
+            if lastCamera ~= camera then
+                lastCamera = camera
+                lastOffset = CFrame.new()
+            end
+
+            local elapsed = os.clock() - startedAt
+            local strength = easeCease(math.clamp(elapsed / 0.5, 0, 1))
+            local offset = CFrame.new(
+                math.sin(elapsed * 13) * 0.055 * strength,
+                math.sin(elapsed * 16 + 0.7) * 0.04 * strength,
+                0
+            ) * CFrame.Angles(
+                math.sin(elapsed * 12) * math.rad(0.085) * strength,
+                math.sin(elapsed * 10 + 1.1) * math.rad(0.065) * strength,
+                0
+            )
+
+            camera.CFrame = camera.CFrame * lastOffset:Inverse() * offset
+            lastOffset = offset
+        end
+    )
+
+    return stop
+end
+
+local function runCrucifixReplacement(originalCFrame)
+
+    local loadedSuccessfully, replacement = pcall(function()
+        return game:GetObjects("rbxassetid://128235155752478")[1]
+    end)
+
+    if not loadedSuccessfully or not replacement then
+
+        return
+    end
+
+    local targetCFrame = originalCFrame + Vector3.new(0, 1, 0)
+    local bro = replacement.Name == "BRO" and replacement
+        or replacement:FindFirstChild("BRO", true)
+
+    local placed, placementError = pcall(function()
+        if replacement:IsA("Model") then
+            if bro and bro:IsA("Model") then
+                local pivotShift = targetCFrame * bro:GetPivot():Inverse()
+                replacement:PivotTo(pivotShift * replacement:GetPivot())
+            else
+                replacement:PivotTo(targetCFrame)
+            end
+        elseif bro and bro:IsA("Model") then
+            bro:PivotTo(targetCFrame)
+        elseif replacement:IsA("BasePart") then
+            replacement.CFrame = targetCFrame
+        end
+
+        for _, descendant in ipairs(replacement:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.Anchored = true
+                descendant.CanCollide = false
+                descendant.CanTouch = false
+            end
+        end
+
+        if replacement:IsA("BasePart") then
+            replacement.Anchored = true
+            replacement.CanCollide = false
+            replacement.CanTouch = false
+        end
+
+        replacement.Parent = workspace
+    end)
+
+    if not placed then
+
+        replacement:Destroy()
+        return
+    end
+
+    local stopAmbientShake = startCrucifixAmbientShake(replacement)
+    task.delay(30, function()
+        stopAmbientShake()
+        if replacement and replacement.Parent then
+            replacement:Destroy()
+        end
+    end)
+
+    local animationOK, animationError = xpcall(function()
+        local rushNew = bro and bro:FindFirstChild("RushNew", true)
+        local attachment = rushNew and rushNew:FindFirstChild("Attachment", true)
+        if attachment and not attachment:IsA("Attachment") then
+            attachment = nil
+        end
+        if not rushNew then
+
+        elseif not attachment then
+
+        else
+
+        end
+
+        task.wait(2.3)
+        if not replacement.Parent then
+            return
+        end
+
+        if rushNew and rushNew:IsA("BasePart") and attachment then
+            local beams = findCrucifixBeams(rushNew)
+            local introStates = getCrucifixVisualStates(attachment, function(object)
+                if not object:IsA("Beam") then
+                    return true
+                end
+                for _, beam in ipairs(beams) do
+                    if object == beam then
+                        return false
+                    end
+                end
+                return true
+            end)
+
+            setCrucifixVisualFactor(introStates, 0)
+            prepareCrucifixBeams(beams, rushNew, attachment)
+
+            local originalPosition = attachment.Position
+            local upOffset = rushNew.CFrame:VectorToObjectSpace(Vector3.new(0, 3, 0))
+            local downOffset = rushNew.CFrame:VectorToObjectSpace(Vector3.new(0, -20, 0))
+            local upPosition = originalPosition + upOffset
+            local downPosition = upPosition + downOffset
+
+            task.spawn(function()
+                if attachment.Parent then
+                    fadeCrucifixVisuals(introStates, 0, 1, 0.6)
+                end
+            end)
+
+            local beamsRevealFinished = #beams == 0
+            if not beamsRevealFinished then
+                local playBeamFeedback = createCrucifixBeamFeedback()
+                task.spawn(function()
+                    task.wait(0.8)
+                    if replacement.Parent and attachment.Parent then
+                        pcall(revealCrucifixBeams, beams, playBeamFeedback)
+                    end
+                    beamsRevealFinished = true
+                end)
+            end
+
+            if not moveCrucifixAttachment(attachment, upPosition, 1.8) then
+                error("Attachment 上升中被删除")
+            end
+
+            while not beamsRevealFinished and replacement.Parent and attachment.Parent do
+                RunService.Heartbeat:Wait()
+            end
+
+            if not moveCrucifixAttachment(attachment, downPosition, 1.2) then
+                error("Attachment 下降中被删除")
+            end
+            task.wait(2)
+            fadeCrucifixBeamsOut(beams, 0.5)
+        end
+    end, function(err)
+        return tostring(err) .. "\n" .. debug.traceback()
+    end)
+
+    if not animationOK then
+
+    end
+    local fadeOK, fadeError = pcall(function()
+        fadeCrucifixDescendantsRecursively(replacement, 1)
+    end)
+    if not fadeOK then
+
+    end
+    if replacement.Parent then
+        for _, descendant in ipairs(replacement:GetDescendants()) do
+            if descendant:IsA("ParticleEmitter") or descendant:IsA("Beam")
+                or descendant:IsA("Trail") or descendant:IsA("Sparkles")
+                or descendant:IsA("Smoke") or descendant:IsA("Fire") then
+                pcall(function()
+                    descendant.Enabled = false
+                end)
+            end
+        end
+    end
+    task.wait(3)
+    stopAmbientShake()
+    if replacement then
+
+        replacement:Destroy()
+    end
+end
+
+local function tryUseCrucifix(character)
+    if crucifixActivated or isJumpScaring or not isActive()
+        or not character or character:GetAttribute("Hiding") then
+        return false
+    end
+
+    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then
+        return false
+    end
+
+    local tool = getCrucifixTool(character)
+    if not tool then
+        return false
+    end
+
+    crucifixActivated = true
+    local lastCFrame = silence:GetPivot()
+    tool:Destroy()
+    destroySilence()
+    task.spawn(runCrucifixReplacement, lastCFrame)
+    return true
+end
+
+local function scanPlayerCrucifixRaycasts()
+    if not isActive() or isJumpScaring then
+        return false
+    end
+
+    local currentSilence = silence
+    local origin = getSilencePosition()
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.FilterDescendantsInstances = { currentSilence }
+
+    for _, candidatePlayer in ipairs(Players:GetPlayers()) do
+        if not isActive() or currentSilence ~= silence then
+            return crucifixActivated
+        end
+
+        local character = candidatePlayer.Character
+        if character and character:IsDescendantOf(workspace)
+            and not character:GetAttribute("Hiding") then
+            local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if humanoid and humanoid.Health > 0
+                and rootPart and rootPart:IsA("BasePart")
+                and getCrucifixTool(character) then
+                local targets = { rootPart }
+                for _, name in ipairs({ "Head", "UpperTorso", "Torso", "LowerTorso" }) do
+                    local part = character:FindFirstChild(name)
+                    if part and part:IsA("BasePart") then
+                        table.insert(targets, part)
+                    end
+                end
+
+                for _, targetPart in ipairs(targets) do
+                    local direction = targetPart.Position - origin
+                    local distance = direction.Magnitude
+                    if distance > 0.001 and distance <= DETECTION_DISTANCE then
+                        local result = workspace:Raycast(origin, direction, raycastParams)
+                        local hitCharacter = result and getCharacterFromHit(result.Instance)
+
+                        if not hitCharacter then
+                            local entryDistance = rayEntryDistanceToPart(origin, direction.Unit, targetPart)
+                            if entryDistance and entryDistance <= distance + 0.01
+                                and (not result or result.Distance > entryDistance + 0.02) then
+                                hitCharacter = character
+                            end
+                        end
+
+                        if hitCharacter and not hitCharacter:GetAttribute("Hiding") then
+                            if tryUseCrucifix(hitCharacter) then
+                                return true
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return false
+end
+
+local function setDeathCause(player)
+    local gameStats = ReplicatedStorage:FindFirstChild("GameStats")
+    if not gameStats then
+        return
+    end
+
+    local playerStat = gameStats:FindFirstChild("Player_" .. player.Name)
+    if not playerStat then
+        return
+    end
+
+    local total = playerStat:FindFirstChild("Total")
+    if not total then
+        return
+    end
+
+    local deathCause = total:FindFirstChild("DeathCause")
+    if deathCause then
+        deathCause.Value = "Silence"
+    end
+end
+
+local function playJumpscareSound()
+    local sound = Instance.new("Sound")
+    sound.Name = "SilenceJumpscareSound"
+    sound.SoundId = JUMPSCARE_SOUND_ID
+    sound.Volume = 3
+    sound.Looped = false
+    sound.Parent = SoundService
+
+    local cleaned = false
+    local function cleanup()
+        if cleaned then
+            return
+        end
+        cleaned = true
+        if sound.Parent then
+            sound:Destroy()
+        end
+    end
+
+    sound.Ended:Once(cleanup)
+    task.delay(30, cleanup)
+    sound:Play()
+end
+
+local function triggerSilenceJumpScare(character)
+    if not isActive() or isJumpScaring or hasJumpScared or crucifixActivated then
+        return
+    end
+
+    if tryUseCrucifix(character) then
+        return
+    end
+
+    local player = Players:GetPlayerFromCharacter(character)
+    if not player or player ~= Players.LocalPlayer then
+        return
+    end
+
+    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+    if not humanoid or humanoid.Health <= 0 or character:GetAttribute("Hiding") then
+        return
+    end
+
+    isJumpScaring = true
+    playJumpscareSound()
+    cancelCeaseFreeze()
+
+    local playerGui = player:FindFirstChildOfClass("PlayerGui") or player:WaitForChild("PlayerGui", 5)
+    if not playerGui then
+        isJumpScaring = false
+        return
+    end
+    hasJumpScared = true
+
+    local existing = playerGui:FindFirstChild("SilenceJumpscare")
+    if existing then
+        existing:Destroy()
+    end
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "SilenceJumpscare"
+    screenGui.ResetOnSpawn = false
+    screenGui.IgnoreGuiInset = true
+    screenGui.DisplayOrder = 10000
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Parent = playerGui
+
+    local background = Instance.new("Frame")
+    background.Name = "Background"
+    background.Size = UDim2.fromScale(1, 1)
+    background.BorderSizePixel = 0
+    background.BackgroundColor3 = Color3.new(0, 0, 0)
+    background.ZIndex = 1
+    background.Parent = screenGui
+
+    task.wait(0.8)
+    if not screenGui.Parent then
+        isJumpScaring = false
+        return
+    end
+
+    local image = Instance.new("ImageLabel")
+    image.Name = "SilenceImage"
+    image.AnchorPoint = Vector2.new(0.5, 0.5)
+    image.Position = UDim2.fromScale(0.5, 0.5)
+    image.Size = UDim2.fromScale(0.08, 0.08)
+    image.BackgroundTransparency = 1
+    image.Image = JUMPSCARE_IMAGE_ID
+    image.ScaleType = Enum.ScaleType.Fit
+    image.ZIndex = 2
+    image.Parent = screenGui
+
+    local flashActive = true
+    task.spawn(function()
+        local isWhite = false
+        while flashActive and background.Parent do
+            task.wait(0.065)
+            if not flashActive or not background.Parent then
+                break
+            end
+            isWhite = not isWhite
+            background.BackgroundColor3 = isWhite and Color3.new(1, 1, 1) or Color3.new(0, 0, 0)
+        end
+    end)
+
+    task.spawn(function()
+        local useAlternate = false
+        while flashActive and image.Parent do
+            task.wait(0.043)
+            if not flashActive or not image.Parent then
+                break
+            end
+            useAlternate = not useAlternate
+            image.Image = useAlternate and JUMPSCARE_IMAGE_ALT_ID or JUMPSCARE_IMAGE_ID
+        end
+    end)
+
+    local growTween = TweenService:Create(image, TweenInfo.new(
+        0.2,
+        Enum.EasingStyle.Exponential,
+        Enum.EasingDirection.Out
+    ), {
+        Size = UDim2.fromScale(1.65, 1.65)
+    })
+    growTween:Play()
+    growTween.Completed:Wait()
+    flashActive = false
+
+    if humanoid.Parent and humanoid.Health > 0 then
+        if humanoid.Health <= JUMPSCARE_DAMAGE then
+            setDeathCause(player)
+        end
+        humanoid:TakeDamage(JUMPSCARE_DAMAGE)
+    end
+
+    task.wait(0.12)
+    if screenGui.Parent then
+        screenGui:Destroy()
+    end
+    isJumpScaring = false
+end
+
+local function getOrderedRooms()
+    local currentRooms = workspace:FindFirstChild("CurrentRooms")
+    local orderedRooms = {}
+    if not currentRooms then
+        return orderedRooms
+    end
+
+    for _, room in ipairs(currentRooms:GetChildren()) do
+        if room:IsA("Model") then
+            local number = tonumber(room.Name)
+            if number then
+                table.insert(orderedRooms, { Number = number, Room = room })
+            end
+        end
+    end
+
+    table.sort(orderedRooms, function(a, b)
+        return a.Number < b.Number
+    end)
+    return orderedRooms
+end
+
+local function getOrderedNodes(pathfindNodes)
+    local orderedNodes = {}
+    for _, node in ipairs(pathfindNodes:GetChildren()) do
+        if node:IsA("BasePart") then
+            table.insert(orderedNodes, node)
+        end
+    end
+
+    table.sort(orderedNodes, function(a, b)
+        local aNumber = tonumber(a.Name)
+        local bNumber = tonumber(b.Name)
+        if aNumber and bNumber then
+            return aNumber < bNumber
+        elseif aNumber then
+            return true
+        elseif bNumber then
+            return false
+        end
+        return a.Name < b.Name
+    end)
+    return orderedNodes
+end
+
+local function moveSilenceTo(targetGetter)
+    if not isActive() then
+        return false
+    end
+
+    local movingSilence = silence
+    silenceIsMoving = true
+
+    while isActive() and silence == movingSilence do
+        local deltaTime = RunService.Heartbeat:Wait()
+        if not isActive() or silence ~= movingSilence then
+            break
+        end
+
+        if not isJumpScaring then
+            local targetCFrame = targetGetter()
+            if not targetCFrame then
+                silenceIsMoving = false
+                return "refresh"
+            end
+
+            local currentCFrame = movingSilence:GetPivot()
+            local distance = (targetCFrame.Position - currentCFrame.Position).Magnitude
+
+            if distance <= 0.05 then
+                if not ceaseFreezeActive then
+                    movingSilence:PivotTo(targetCFrame)
+                    silenceIsMoving = false
+                    return true
+                end
+            else
+                local step = SILENCE_SPEED * ceaseSpeedScale * math.min(deltaTime, 0.1)
+                if step > 0 then
+                    movingSilence:PivotTo(currentCFrame:Lerp(targetCFrame, math.min(step / distance, 1)))
+                end
+            end
+        end
+    end
+
+    silenceIsMoving = false
+    return false
+end
+
+local function startPlayerDetection()
+    task.spawn(function()
+        while isActive() do
+            if scanPlayerCrucifixRaycasts() then
+                return
+            end
+            task.wait(0.05)
+        end
+    end)
+
+    task.spawn(function()
+        while isActive() do
+            if silenceIsMoving and not ceaseFreezeActive and not isJumpScaring then
+                local ceaseModel = workspace:FindFirstChild("Cease", true)
+                if ceaseModel and ceaseModel:IsA("Model")
+                    and not ceaseHandledModels[ceaseModel] then
+                    startCeaseFreeze(ceaseModel)
+                end
+            end
+            task.wait(0.1)
+        end
+    end)
+
+    task.spawn(function()
+        local localPlayer = Players.LocalPlayer
+        while isActive() and not hasJumpScared do
+            RunService.Heartbeat:Wait()
+            if not isActive() then
+                return
+            end
+
+            local character = localPlayer and localPlayer.Character
+            if character and character:IsDescendantOf(workspace)
+                and not character:GetAttribute("Hiding") then
+                local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+                local currentSilence = silence
+
+                if humanoid and humanoid.Health > 0
+                    and currentSilence and currentSilence.Parent then
+                    local entityPosition = currentSilence:GetPivot().Position
+                    local raycastParams = RaycastParams.new()
+                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                    raycastParams.FilterDescendantsInstances = { currentSilence }
+
+                    local targetParts = {}
+                    local rootPart = character:FindFirstChild("HumanoidRootPart")
+                    if rootPart and rootPart:IsA("BasePart") then
+                        table.insert(targetParts, rootPart)
+                    end
+
+                    for _, partName in ipairs({ "Head", "UpperTorso", "Torso", "LowerTorso" }) do
+                        local targetPart = character:FindFirstChild(partName)
+                        if targetPart and targetPart:IsA("BasePart") then
+                            table.insert(targetParts, targetPart)
+                        end
+                    end
+
+                    for _, targetPart in ipairs(targetParts) do
+                        if not isActive() or currentSilence ~= silence then
+                            return
+                        end
+
+                        local direction = targetPart.Position - entityPosition
+                        local distance = direction.Magnitude
+
+                        if distance > 0.001 and distance <= DETECTION_DISTANCE then
+                            local result = workspace:Raycast(
+                                entityPosition,
+                                direction,
+                                raycastParams
+                            )
+                            local hitCharacter = result and getCharacterFromHit(result.Instance)
+                            local reachedCharacter = hitCharacter == character
+
+                            if not reachedCharacter then
+                                local entryDistance = rayEntryDistanceToPart(
+                                    entityPosition,
+                                    direction.Unit,
+                                    targetPart
+                                )
+
+                                if entryDistance and entryDistance <= distance + 0.01
+                                    and (not result or result.Distance > entryDistance + 0.02) then
+                                    reachedCharacter = true
+                                end
+                            end
+
+                            if reachedCharacter then
+                                if tryUseCrucifix(character) then
+                                    return
+                                end
+                                triggerSilenceJumpScare(character)
+                                return
+                            elseif hitCharacter and hitCharacter ~= character then
+                                if tryUseCrucifix(hitCharacter) then
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function executeSilencePathfinding()
+    local loadedSilence = loadModel(SILENCE_ASSET_ID, "SilenceModel")
+    if not loadedSilence then
+        return
+    end
+
+    local initialRooms = getOrderedRooms()
+    if #initialRooms == 0 then
+        loadedSilence:Destroy()
+        return
+    end
+
+    local MAX_SILENCE_ROOMS = 8
+    local startRoomIndex = math.max(1, #initialRooms - MAX_SILENCE_ROOMS)
+
+    local startRoom = initialRooms[startRoomIndex].Room
+    local pathfindNodes = startRoom:FindFirstChild("PathfindNodes")
+    local startNode = nil
+    if pathfindNodes then
+        local orderedNodes = getOrderedNodes(pathfindNodes)
+        startNode = orderedNodes[1]
+    end
+    if not startNode then
+        startNode = startRoom:FindFirstChild("RoomExit")
+    end
+    if not startNode or not startNode:IsA("BasePart") then
+        loadedSilence:Destroy()
+        return
+    end
+
+    silence = loadedSilence
+    prepareModel(silence, true)
+    silence:PivotTo(startNode.CFrame + HEIGHT_OFFSET)
+    silence.Parent = workspace
+    isSilenceDespawning = false
+    silenceMoveCancelled = false
+    hasJumpScared = false
+    startPlayerDetection()
+
+    local startRoomNumber = initialRooms[startRoomIndex].Number
+    local completedRoomNumber = -math.huge
+    local completedRoomCount = 0
+    local states = {}
+    local missingSince = nil
+
+    while isActive() and completedRoomCount < MAX_SILENCE_ROOMS do
+        if isJumpScaring then
+            task.wait(0.05)
+        else
+            local rooms = getOrderedRooms()
+            if #rooms == 0 then
+                if not missingSince then
+                    missingSince = os.clock()
+                elseif os.clock() - missingSince >= 2 then
+                    break
+                end
+                task.wait(0.1)
+            else
+                local targetRoomNumber = rooms[math.max(1, #rooms - 1)].Number
+                local currentRoom = nil
+
+                for _, data in ipairs(rooms) do
+                    if data.Number >= startRoomNumber
+                        and data.Number > completedRoomNumber
+                        and data.Number <= targetRoomNumber then
+                        currentRoom = data
+                        break
+                    end
+                end
+
+                if not currentRoom then
+                    local latest = getOrderedRooms()
+                    local latestTarget = latest[math.max(1, #latest - 1)]
+                    if latestTarget and completedRoomNumber >= latestTarget.Number then
+                        break
+                    end
+                    if not missingSince then
+                        missingSince = os.clock()
+                    elseif os.clock() - missingSince >= 2 then
+                        break
+                    end
+                    task.wait(0.1)
+                else
+                    missingSince = nil
+                    local number = currentRoom.Number
+                    local room = currentRoom.Room
+                    local state = states[number]
+                    if not state or state.Model ~= room then
+                        state = { Model = room, Visited = {}, UsedExit = false, EmptySince = nil }
+                        states[number] = state
+                    end
+
+                    local nodesFolder = room:FindFirstChild("PathfindNodes")
+                    local nextNode = nil
+                    if nodesFolder then
+                        for _, node in ipairs(getOrderedNodes(nodesFolder)) do
+                            if not state.Visited[node.Name] then
+                                nextNode = node
+                                break
+                            end
+                        end
+                    end
+
+                    if nextNode then
+                        local moved = moveSilenceTo(function()
+                            if not room.Parent or not nextNode:IsDescendantOf(room) then
+                                return nil
+                            end
+                            return nextNode.CFrame + HEIGHT_OFFSET
+                        end)
+
+                        if moved == true then
+                            state.Visited[nextNode.Name] = true
+                        elseif moved == false then
+                            break
+                        else
+                            task.wait(0.05)
+                        end
+                    else
+                        local orderedNodes = nodesFolder and getOrderedNodes(nodesFolder) or {}
+                        local exit = room:FindFirstChild("RoomExit")
+                        if #orderedNodes == 0 and not state.UsedExit
+                            and exit and exit:IsA("BasePart") then
+                            local moved = moveSilenceTo(function()
+                                if not room.Parent or not exit:IsDescendantOf(room) then
+                                    return nil
+                                end
+                                return exit.CFrame + HEIGHT_OFFSET
+                            end)
+                            if moved == true then
+                                state.UsedExit = true
+                            elseif moved == false then
+                                break
+                            end
+                        elseif #orderedNodes > 0 or state.UsedExit then
+                            completedRoomNumber = number
+                            completedRoomCount = completedRoomCount + 1
+                        else
+                            if not state.EmptySince then
+                                state.EmptySince = os.clock()
+                            elseif os.clock() - state.EmptySince >= 2 then
+                                break
+                            end
+                            task.wait(0.1)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if silence and silence.Parent and not isJumpScaring and not crucifixActivated then
+        destroySilence()
+    end
+end
+
+task.spawn(executeSilencePathfinding)
+end
+
 local entityConfig = {
     ["rbxassetid://1"] = entityBehaviors.ATCHRipper,
     ["rbxassetid://3"] = entityBehaviors.AMIN60,
@@ -10704,11 +14604,11 @@ local entityConfig = {
     ["rbxassetid://12"] = entityBehaviors.Shok,
     ["rbxassetid://13"] = entityBehaviors.LightOSs,
     ["rbxassetid://14"] = entityBehaviors.SuperDread,
-    ["rbxassetid://15"] = entityBehaviors.DreadJump,
     ["rbxassetid://16"] = entityBehaviors.MultiMonster,
     ["rbxassetid://17"] = entityBehaviors.CreakHard,
     ["rbxassetid://18"] = entityBehaviors.CreakWhite,
     ["rbxassetid://19"] = entityBehaviors.Silence,
+    ["rbxassetid://195"] = entityBehaviors.Silence2,
     ["rbxassetid://20"] = entityBehaviors.DeerGod,
     ["rbxassetid://21"] = entityBehaviors.FrostBite,
     ["rbxassetid://22"] = entityBehaviors.HATRED,

@@ -9,181 +9,434 @@ marker.Parent = workspace
 local spawner = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Entity%20Spawner/V2/Source.lua"))()
 local entityBehaviors = {}
 function entityBehaviors.SA90()
-    local v557 = require(game.ReplicatedStorage.CameraShaker)
-            local vu558 = workspace.CurrentCamera
-            local v560 = v557.new(Enum.RenderPriority.Camera.Value, function(p559)
-                vu558.CFrame = vu558.CFrame * p559
-            end)
-            v560:Start()
-            local v561 = game:GetService("TweenService")
-            local v562 = game.Players.LocalPlayer
-            local v563 = game.Players.LocalPlayer.PlayerGui.MainUI
-            local vu564 = v563.Jumpscare.Jumpscare_A90
-            local v565 = v563.Initiator.Main_Game.RemoteListener.Modules.A90
-            local vu566 = require(v563.Initiator.Main_Game)
-            local vu567 = true
-            local vu568 = false
-            local vu569 = vu566.cam.CFrame.LookVector
-            local vu570 = 0
-            game.SoundService.Main.Volume = 0
-            vu564.Face.Image = "http://www.roblox.com/asset/?id=12635832722"
-            vu564.FaceAngry.Image = "http://www.roblox.com/asset/?id=12635955412"
-            v565.Spawn.SoundGroup = nil
-            v565.Hit.SoundGroup = nil
-            v565.Spawn:Play()
-            vu564.BackgroundTransparency = 1
-            vu564.Face.Visible = true
-            vu564.FaceAngry.Visible = false
-            vu564.Static.Visible = true
-            vu564.Static2.Visible = true
-            vu564.Static.ImageTransparency = 1
-            vu564.Static2.ImageTransparency = 1
-            vu564.Face.ImageColor3 = Color3.new(0, 0, 0)
-            vu564.Face.Rotation = Random.new():NextNumber(- 5, 5)
-            vu564.Face.Position = UDim2.new(Random.new():NextNumber(10, 90) / 100, 0, Random.new():NextNumber(10, 90) / 100, 0)
-            vu564.Visible = true
-            task.wait(0.03)
-            vu564.Face.ImageColor3 = Color3.new(1, 1, 1)
-            task.wait(0.28)
-            vu564.BackgroundTransparency = 0
-            vu564.Face.Rotation = 0
-            vu564.Face.Position = UDim2.new(0.5, 0, 0.49, 0)
-            task.wait(0.03)
-            vu564.StopIcon.Visible = true
-            vu564.BackgroundColor3 = Color3.new(0, 0, 0)
-            vu564.BackgroundTransparency = 1
-            vu564.Static.ImageTransparency = 0.8
-            vu564.Static2.ImageTransparency = 0.8
-            task.delay(0.2, function()
-                vu564.StopIcon.Visible = false
-                while vu567 do
-                    local v571 = math.random(0, 1)
-                    local v572 = 100 + vu570 * 0.5
-                    vu570 = vu570 + 15
-                    task.wait(0.03)
-                    vu564.Static.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
-                    vu564.Static.Rotation = math.random(0, 1) * 180
-                    vu564.Static2.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
-                    vu564.Static2.Rotation = math.random(0, 1) * 180
-                    vu564.Face.Position = UDim2.new(0.5, 0, 0.49, math.random(- 1, 1))
-                    vu564.FaceAngry.Position = UDim2.new(0.5 + Random.new():NextNumber(- v572, v572) / 50000, 0, 0.49 + Random.new():NextNumber(- v572, v572) / 30000, math.random(- 1, 1))
-                    vu564.FaceAngry.Rotation = Random.new():NextNumber(- 1, 1) * (vu570 * 0.0015)
-                    vu564.FaceAngry.ImageColor3 = Color3.new(1, v571, v571)
-                    if not vu568 then
-                        if (vu569 - vu566.cam.CFrame.LookVector).Magnitude <= 0.4 then
-                            if vu566.hum.MoveDirection.Magnitude > 0.4 then
-                                vu568 = true
-                            end
-                        else
-                            vu568 = true
-                        end
-                    end
-                end
-            end)
-            task.wait(0.3)
-            vu564.BackgroundColor3 = Color3.new(0, 0, 0)
-            vu564.BackgroundTransparency = 0
-            vu564.Static.ImageTransparency = 0
-            vu564.Static2.ImageTransparency = 0.5
-            task.wait(0.03)
-            vu564.Face.ImageColor3 = Color3.new(1, 0, 0)
-            task.wait(0.03)
-            vu564.Visible = false
-            task.wait(0.08)
-            if vu568 then
-                local vu573 = true
-                vu564.Visible = true
-                v565.Hit:Play()
-                task.wait(0.03)
-                vu564.Face.ImageColor3 = Color3.new(1, 1, 1)
-                task.wait(0.03)
-                vu564.BackgroundTransparency = 0
-                vu564.Static.ImageTransparency = 0
-                vu564.Static2.ImageTransparency = 0.5
-                task.wait(0.067)
-                vu564.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
-                vu564.FaceAngry.Rotation = 0
-                vu564.FaceAngry.ImageTransparency = 0
-                vu564.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
-                vu564.FaceAngry.Visible = true
-                task.wait(0.067)
-                vu564.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
-                vu564.Face.Visible = false
-                task.wait(0.75)
-                v562.Character.Humanoid.Health = v562.Character.Humanoid.Health - 70
-                firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
-                    "You died to an entity called A-90...",
-                    "React Fast and Dont Move a Muscle!"
-                }, "Blue")
-                task.wait(0.1)
-                vu564.FaceAngry.Visible = false
-                vu564.BackgroundColor3 = Color3.new(1, 1, 1)
-                vu564.Static.ImageTransparency = 1
-                vu564.Static2.ImageTransparency = 1
-                task.wait(0.067)
-                vu564.BackgroundColor3 = Color3.new(1, 0, 0)
-                task.wait(0.067)
-                vu564.BackgroundColor3 = Color3.new(0, 0, 0)
-                task.wait(0.067)
-                v560:ShakeOnce(25, 8, 0, 4)
-                vu567 = false
-                task.wait(0.03)
-                v565.Spawn:Stop()
-                vu564.BackgroundTransparency = 1
-                vu564.Static.ImageTransparency = 0.5
-                vu564.Static2.ImageTransparency = 0.5
-                v561:Create(vu564.Static, TweenInfo.new(20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    ImageTransparency = 1
-                }):Play()
-                v561:Create(vu564.Static2, TweenInfo.new(5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    ImageTransparency = 1
-                }):Play()
-                local v574 = Random.new():NextNumber(2, 3)
-                vu564.FaceAngry.Rotation = Random.new():NextNumber(- 3, 3)
-                vu564.FaceAngry.Visible = true
-                vu564.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
-                vu564.FaceAngry.Size = UDim2.new(v574, 0, v574, 0)
-                v561:Create(vu564.FaceAngry, TweenInfo.new(5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    ImageTransparency = 1
-                }):Play()
-                game.SoundService.Main.Volume = 0
-                game.SoundService.Main.EqualizerSoundEffect.Enabled = true
-                game.SoundService.Main.EqualizerSoundEffect.HighGain = - 50
-                game.SoundService.Main.EqualizerSoundEffect.LowGain = 10
-                game.SoundService.Main.EqualizerSoundEffect.MidGain = - 50
-                v561:Create(game.SoundService.Main.EqualizerSoundEffect, TweenInfo.new(15, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
-                    LowGain = 0,
-                    HighGain = 0,
-                    MidGain = 0
-                }):Play()
-                v561:Create(game.SoundService.Main, TweenInfo.new(5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-                    Volume = 1
-                }):Play()
-                task.spawn(function()
-                    while vu573 do
-                        local v575 = 100 + 0.1
-                        task.wait()
-                        vu564.Static.Position = UDim2.new(Random.new():NextNumber(0, v575) / 100, 0, Random.new():NextNumber(0, v575) / 100, 0)
-                        vu564.Static.Rotation = math.random(0, 1) * 180
-                        vu564.Static2.Position = UDim2.new(Random.new():NextNumber(0, v575) / 100, 0, Random.new():NextNumber(0, v575) / 100, 0)
-                        vu564.Static2.Rotation = math.random(0, 1) * 180
-                    end
-                end)
-                task.delay(20, function()
-                    vu573 = false
-                    vu564.Visible = false
-                    vu564.BackgroundTransparency = 0
-                    vu564.Static.ImageTransparency = 1
-                    vu564.Static2.ImageTransparency = 1
-                end)
-            else
-                v565.Spawn:Stop()
-                vu564.BackgroundTransparency = 1
-                vu564.Visible = false
-                v560:ShakeOnce(5, 10, 0.1, 1)
-                vu567 = false
-                game.SoundService.Main.Volume = 1
-            end
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local Player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local MainUI = PlayerGui:WaitForChild("MainUI")
+local Jumpscare = MainUI:WaitForChild("Jumpscare")
+local A90Gui = Jumpscare:WaitForChild("Jumpscare_A90")
+local MainGameFolder = MainUI.Initiator.Main_Game
+local A90Module = MainGameFolder.RemoteListener.Modules.A90
+local MainGame = require(MainGameFolder)
+local CameraShaker = require(ReplicatedStorage:WaitForChild("CameraShaker"))
+local RNG = Random.new()
+if A90Gui:GetAttribute("CustomA90Running") then
+	return
+end
+A90Gui:SetAttribute("CustomA90Running", true)
+local Running = true
+local StaticRunning = false
+local Cleaned = false
+local Moved = false
+local Intensity = 0
+local StartLookVector = MainGame.cam.CFrame.LookVector
+local CameraShake = CameraShaker.new(
+	Enum.RenderPriority.Camera.Value,
+	function(shakeCFrame)
+		if Camera then
+			Camera.CFrame = Camera.CFrame * shakeCFrame
+		end
+	end
+)
+CameraShake:Start()
+local function setDeathCause(cause)
+	local gameStats = ReplicatedStorage:FindFirstChild("GameStats")
+
+	if not gameStats then
+		return
+	end
+
+	local playerStats = gameStats:FindFirstChild("Player_" .. Player.Name)
+
+	if not playerStats then
+		return
+	end
+
+	local total = playerStats:FindFirstChild("Total")
+
+	if not total then
+		return
+	end
+
+	local deathCause = total:FindFirstChild("DeathCause")
+
+	if deathCause then
+		deathCause.Value = cause
+	end
+end
+
+local function cleanup()
+	if Cleaned then
+		return
+	end
+
+	Cleaned = true
+	Running = false
+	StaticRunning = false
+
+	pcall(function()
+		A90Module.Spawn:Stop()
+	end)
+
+	pcall(function()
+		CameraShake:Stop()
+	end)
+
+	A90Gui:SetAttribute("CustomA90Running", false)
+end
+
+SoundService.Main.Volume = 0
+
+A90Gui.Face.Image = "http://www.roblox.com/asset/?id=12635832722"
+A90Gui.FaceAngry.Image = "http://www.roblox.com/asset/?id=12635955412"
+
+pcall(function()
+	A90Module.Spawn.SoundGroup = nil
+	A90Module.Hit.SoundGroup = nil
+end)
+
+A90Module.Spawn:Play()
+
+A90Gui.BackgroundTransparency = 1
+A90Gui.Face.Visible = true
+A90Gui.FaceAngry.Visible = false
+A90Gui.Static.Visible = true
+A90Gui.Static2.Visible = true
+A90Gui.Static.ImageTransparency = 1
+A90Gui.Static2.ImageTransparency = 1
+A90Gui.Face.ImageColor3 = Color3.new(0, 0, 0)
+A90Gui.Face.Rotation = RNG:NextNumber(-5, 5)
+
+A90Gui.Face.Position = UDim2.new(
+	RNG:NextNumber(10, 90) / 100,
+	0,
+	RNG:NextNumber(10, 90) / 100,
+	0
+)
+
+A90Gui.Visible = true
+
+task.wait(0.03)
+
+A90Gui.Face.ImageColor3 = Color3.new(1, 1, 1)
+
+task.wait(0.28)
+
+A90Gui.BackgroundTransparency = 0
+A90Gui.Face.Rotation = 0
+A90Gui.Face.Position = UDim2.new(0.5, 0, 0.49, 0)
+
+task.wait(0.03)
+
+A90Gui.StopIcon.Visible = true
+A90Gui.BackgroundColor3 = Color3.new(0, 0, 0)
+A90Gui.BackgroundTransparency = 1
+A90Gui.Static.ImageTransparency = 0.8
+A90Gui.Static2.ImageTransparency = 0.8
+
+task.delay(0.2, function()
+	A90Gui.StopIcon.Visible = false
+
+	while Running do
+		task.wait(0.03)
+
+		if not Running then
+			break
+		end
+
+		Intensity += 15
+
+		local effectIntensity = 100 + Intensity * 0.5
+		local randomColor = math.random(0, 1)
+
+		A90Gui.Static.Position = UDim2.new(
+			math.random(0, 100) / 100,
+			0,
+			math.random(0, 100) / 100,
+			0
+		)
+
+		A90Gui.Static.Rotation = math.random(0, 1) * 180
+
+		A90Gui.Static2.Position = UDim2.new(
+			math.random(0, 100) / 100,
+			0,
+			math.random(0, 100) / 100,
+			0
+		)
+
+		A90Gui.Static2.Rotation = math.random(0, 1) * 180
+
+		A90Gui.Face.Position = UDim2.new(
+			0.5,
+			0,
+			0.49,
+			math.random(-1, 1)
+		)
+
+		A90Gui.FaceAngry.Position = UDim2.new(
+			0.5 + RNG:NextNumber(-effectIntensity, effectIntensity) / 50000,
+			0,
+			0.49 + RNG:NextNumber(-effectIntensity, effectIntensity) / 30000,
+			math.random(-1, 1)
+		)
+
+		A90Gui.FaceAngry.Rotation =
+			RNG:NextNumber(-1, 1) * (Intensity * 0.0015)
+
+		A90Gui.FaceAngry.ImageColor3 =
+			Color3.new(1, randomColor, randomColor)
+
+		if not Moved then
+			local currentCamera = MainGame.cam
+			local humanoid = MainGame.hum
+
+			if currentCamera and humanoid then
+				local currentLookVector = currentCamera.CFrame.LookVector
+
+				local cameraMoved =
+					(StartLookVector - currentLookVector).Magnitude > 0.4
+
+				local playerMoved =
+					humanoid.MoveDirection.Magnitude > 0.4
+
+				if cameraMoved or playerMoved then
+					Moved = true
+				end
+			end
+		end
+	end
+end)
+
+task.wait(0.3)
+
+A90Gui.BackgroundColor3 = Color3.new(0, 0, 0)
+A90Gui.BackgroundTransparency = 0
+A90Gui.Static.ImageTransparency = 0
+A90Gui.Static2.ImageTransparency = 0.5
+
+task.wait(0.03)
+
+A90Gui.Face.ImageColor3 = Color3.new(1, 0, 0)
+
+task.wait(0.03)
+
+A90Gui.Visible = false
+
+task.wait(0.08)
+
+if Moved then
+	A90Gui.Visible = true
+	A90Module.Hit:Play()
+
+	task.wait(0.03)
+
+	A90Gui.Face.ImageColor3 = Color3.new(1, 1, 1)
+
+	task.wait(0.03)
+
+	A90Gui.BackgroundTransparency = 0
+	A90Gui.Static.ImageTransparency = 0
+	A90Gui.Static2.ImageTransparency = 0.5
+
+	task.wait(0.067)
+
+	A90Gui.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
+	A90Gui.FaceAngry.Rotation = 0
+	A90Gui.FaceAngry.ImageTransparency = 0
+	A90Gui.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
+	A90Gui.FaceAngry.Visible = true
+
+	task.wait(0.067)
+
+	A90Gui.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
+	A90Gui.Face.Visible = false
+
+	task.wait(0.75)
+
+	Running = false
+
+	task.wait()
+
+	local Character = Player.Character
+	local Humanoid =
+		Character
+		and Character:FindFirstChildOfClass("Humanoid")
+
+	if Humanoid and Humanoid.Health > 0 then
+		local Damage = 70
+		local WillDie = Humanoid.Health <= Damage
+
+		if WillDie then
+			setDeathCause("A-90")
+		end
+
+		Humanoid:TakeDamage(Damage)
+	end
+
+	task.wait(0.1)
+
+	A90Gui.FaceAngry.Visible = false
+	A90Gui.BackgroundColor3 = Color3.new(1, 1, 1)
+	A90Gui.Static.ImageTransparency = 1
+	A90Gui.Static2.ImageTransparency = 1
+
+	task.wait(0.067)
+
+	A90Gui.BackgroundColor3 = Color3.new(1, 0, 0)
+
+	task.wait(0.067)
+
+	A90Gui.BackgroundColor3 = Color3.new(0, 0, 0)
+
+	task.wait(0.067)
+
+	CameraShake:ShakeOnce(25, 8, 0, 4)
+
+	task.wait(0.03)
+
+	A90Module.Spawn:Stop()
+
+	A90Gui.BackgroundTransparency = 1
+	A90Gui.Static.ImageTransparency = 0.5
+	A90Gui.Static2.ImageTransparency = 0.5
+
+	TweenService:Create(
+		A90Gui.Static,
+		TweenInfo.new(
+			20,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		),
+		{
+			ImageTransparency = 1
+		}
+	):Play()
+
+	TweenService:Create(
+		A90Gui.Static2,
+		TweenInfo.new(
+			5,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		),
+		{
+			ImageTransparency = 1
+		}
+	):Play()
+
+	local FaceSize = RNG:NextNumber(2, 3)
+
+	A90Gui.FaceAngry.Rotation = RNG:NextNumber(-3, 3)
+	A90Gui.FaceAngry.Visible = true
+	A90Gui.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
+	A90Gui.FaceAngry.Size = UDim2.new(FaceSize, 0, FaceSize, 0)
+
+	TweenService:Create(
+		A90Gui.FaceAngry,
+		TweenInfo.new(
+			5,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		),
+		{
+			ImageTransparency = 1
+		}
+	):Play()
+
+	SoundService.Main.Volume = 0
+
+	local Equalizer =
+		SoundService.Main:FindFirstChild("EqualizerSoundEffect")
+
+	if Equalizer then
+		Equalizer.Enabled = true
+		Equalizer.HighGain = -50
+		Equalizer.LowGain = 10
+		Equalizer.MidGain = -50
+
+		TweenService:Create(
+			Equalizer,
+			TweenInfo.new(
+				15,
+				Enum.EasingStyle.Quint,
+				Enum.EasingDirection.InOut
+			),
+			{
+				LowGain = 0,
+				HighGain = 0,
+				MidGain = 0
+			}
+		):Play()
+	end
+
+	TweenService:Create(
+		SoundService.Main,
+		TweenInfo.new(
+			5,
+			Enum.EasingStyle.Quint,
+			Enum.EasingDirection.Out
+		),
+		{
+			Volume = 1
+		}
+	):Play()
+
+	StaticRunning = true
+
+	task.spawn(function()
+		while StaticRunning do
+			task.wait()
+
+			if not StaticRunning then
+				break
+			end
+
+			local MaxPosition = 100.1
+
+			A90Gui.Static.Position = UDim2.new(
+				RNG:NextNumber(0, MaxPosition) / 100,
+				0,
+				RNG:NextNumber(0, MaxPosition) / 100,
+				0
+			)
+
+			A90Gui.Static.Rotation = math.random(0, 1) * 180
+
+			A90Gui.Static2.Position = UDim2.new(
+				RNG:NextNumber(0, MaxPosition) / 100,
+				0,
+				RNG:NextNumber(0, MaxPosition) / 100,
+				0
+			)
+
+			A90Gui.Static2.Rotation = math.random(0, 1) * 180
+		end
+	end)
+
+	task.wait(20)
+
+	StaticRunning = false
+	A90Gui.Visible = false
+	A90Gui.BackgroundTransparency = 0
+	A90Gui.Static.ImageTransparency = 1
+	A90Gui.Static2.ImageTransparency = 1
+
+	cleanup()
+else
+	Running = false
+	A90Module.Spawn:Stop()
+	A90Gui.BackgroundTransparency = 1
+	A90Gui.Visible = false
+	CameraShake:ShakeOnce(5, 10, 0.1, 1)
+	SoundService.Main.Volume = 1
+	task.wait(1.2)
+	cleanup()
+end
 end
 function entityBehaviors.WH1T3()
 local entity = spawner.Create({Entity = {Name = "WH1T3",
@@ -1058,7 +1311,7 @@ s:Destroy()
 end
 function entityBehaviors.dread()
 function GetRoom()
-    return workspace.CurrentRooms:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+    return workspace.CurrentRooms:FindFirstChild(tostring(game.ReplicatedStorage.GameData.LatestRoom.Value))
 end
 
 local function LoadCustomInstance(source)
@@ -1087,21 +1340,34 @@ end
 
 local function Damage(Amount)
     local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
     local Player = Players.LocalPlayer
-    local Character = Player.Character or Player.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
-    
-    local DamageAmount = (Amount / 100) * Humanoid.MaxHealth
-    local NewHealth = Humanoid.Health - DamageAmount
-    
-    if NewHealth <= 0 then
-        Player:SetAttribute("Alive", false)
-        replicatesignal(Player.Kill)
-    else
-        Humanoid.Health = NewHealth
+    local Character = Player.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+    if not Humanoid or Humanoid.Health <= 0 or Character:GetAttribute("Hiding") then
+        return false
     end
+
+    local DamageAmount = (Amount / 100) * Humanoid.MaxHealth
+    local OldHealth = Humanoid.Health
+
+    if OldHealth <= DamageAmount then
+        local GameStats = ReplicatedStorage:FindFirstChild("GameStats")
+        local PlayerStats = GameStats and GameStats:FindFirstChild("Player_" .. Player.Name)
+        local Total = PlayerStats and PlayerStats:FindFirstChild("Total")
+        local DeathCause = Total and Total:FindFirstChild("DeathCause")
+
+        if DeathCause then
+            DeathCause.Value = "ClockDread"
+        end
+    end
+
+    Humanoid.Health = math.max(0, OldHealth - DamageAmount)
+    return true
 end
+
 local s = LoadCustomInstance(128969616828176)
 if not s then
     return
@@ -1126,6 +1392,7 @@ else
         end
     end
 end
+
 local sound1 = Instance.new("Sound")
 sound1.SoundId = "rbxassetid://139804031181000"
 sound1.Parent = workspace
@@ -1133,11 +1400,12 @@ sound1.Looped = false
 sound1.Volume = 1
 local soundCount = math.random(3, 10)
 
-for i = 1, soundCount do 
-    sound1:Play() 
-    sound1.Ended:Wait() 
+for i = 1, soundCount do
+    sound1:Play()
+    sound1.Ended:Wait()
 end
 sound1:Destroy()
+
 local sound2 = Instance.new("Sound")
 sound2.SoundId = "rbxassetid://137004686137325"
 sound2.Parent = workspace
@@ -1145,6 +1413,7 @@ sound2.Looped = false
 sound2.Volume = 1
 sound2.PlaybackSpeed = 0.8
 sound2:Play()
+
 local player = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -1160,15 +1429,16 @@ image.ScaleType = Enum.ScaleType.Fit
 image.BackgroundTransparency = 1
 image.ImageTransparency = 1
 image.ImageColor3 = Color3.fromRGB(255, 255, 255)
+
 local blur = Instance.new("BlurEffect")
 blur.Size = 2
 blur.Parent = game:GetService("Lighting")
+
 for i = 0, 1, 0.05 do
     image.ImageTransparency = 1 - (i * 0.1)
     local offsetX = (math.random() - 0.5) * 2
     local offsetY = (math.random() - 0.5) * 2
     image.Position = UDim2.new(0.5, offsetX, 0.5, offsetY)
-    
     wait(0.05)
 end
 
@@ -1186,22 +1456,11 @@ while tick() - startStay < 2 do
         if humanoid and humanoid.Health > 0 then
             local isHiding = character:GetAttribute("Hiding")
             if not isHiding and not hasTriggered then
-                Damage(100)
-                hasTriggered = true
-
-                if game.ReplicatedStorage.GameStats["Player_" .. player.Name] then
-                    game.ReplicatedStorage.GameStats["Player_" .. player.Name].Total.DeathCause.Value = "ClockDread"
-                end
-                
-                firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {
-                    "你死于ClockDread...",
-                    "时间似乎停止了...",
-                    "在钟声响起时，找个地方躲起来..."
-                }, "Blue")
+                hasTriggered = Damage(100)
             end
         end
     end
-    
+
     wait(0.05)
 end
 
@@ -1211,7 +1470,7 @@ for i = 1, 0, -0.05 do
     local offsetX = (math.random() - 1) * 2
     local offsetY = (math.random() - 1) * 2
     image.Position = UDim2.new(0.5, offsetX, 0.5, offsetY)
-    
+
     wait(0.05)
 end
 
@@ -1226,6 +1485,7 @@ task.wait(20)
 if s and s.Parent then
     s:Destroy()
 end
+
 end
 function entityBehaviors.MOVERS()
 local MainUI = game:GetObjects("rbxassetid://95819908379371")[1]
@@ -1288,32 +1548,50 @@ local stopCheckTime = 0
 local lastMoveTime = 0
 local damageApplied = false
 
+local function setDeathCause(deathCause)
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    local gameStats = replicatedStorage:FindFirstChild("GameStats")
+    local playerStats = gameStats and gameStats:FindFirstChild("Player_" .. plr.Name)
+    local total = playerStats and playerStats:FindFirstChild("Total")
+    local value = total and total:FindFirstChild("DeathCause")
+    if value then
+        value.Value = deathCause
+    end
+end
+
 local function applyDamage()
     if damageApplied then return end
     damageApplied = true
-    
-    plr.Character.Humanoid.Health -= 99
-    
-    local function TriggerDeathHint(DeathMessages, DeathCauseString)
-        spawn(function()
-            for _ = 1, 50 do
-                game:GetService("ReplicatedStorage").GameStats["Player_" .. game.Players.LocalPlayer.Name].Total.DeathCause.Value = DeathCauseString
-                firesignal(game:GetService("ReplicatedStorage").RemotesFolder.DeathHint.OnClientEvent, DeathMessages, "Yellow")
-                wait()
-            end
-        end)
+
+    local character = plr.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then
+        return
     end
 
-    TriggerDeathHint({
-        "嗯,又死了,你死于Mover",
-        "它非常讨厌A-90",
-        "出现时务必保持移动"
-    }, "Mover")
+    local damage = 99
+    if humanoid.Health <= damage then
+        setDeathCause("Mover")
+    end
+
+    humanoid:TakeDamage(damage)
 end
 
 task.delay(0.2, function()
     while isActive do
         task.wait(0.03333333333333333)
+
+        if not isActive or not Jumpscare_Mover.Parent then
+            break
+        end
+
+        local character = plr.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if not humanoid or humanoid.Health <= 0 then
+            isActive = false
+            break
+        end
+
         Jumpscare_Mover.Static.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
         Jumpscare_Mover.Static.Rotation = math.random(0, 1) * 180
         Jumpscare_Mover.Static2.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
@@ -1322,15 +1600,15 @@ task.delay(0.2, function()
         Jumpscare_Mover.FaceAngry.Position = UDim2.new(0.5 + math.random(-100, 100) / 50000, 0, 0.49 + math.random(-100, 100) / 30000, math.random(-1, 1))
         local randint = math.random(0, 1)
         Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, randint, randint)
-        
+
         local currentMoving = false
         if 0.4 < (LookVector - arg1.CFrame.LookVector).Magnitude then
             currentMoving = true
         end
-        if 0.4 < plr.Character.Humanoid.MoveDirection.Magnitude then
+        if 0.4 < humanoid.MoveDirection.Magnitude then
             currentMoving = true
         end
-        
+
         if currentMoving then
             isMoving = true
             wasMoving = true
@@ -1340,41 +1618,41 @@ task.delay(0.2, function()
                 isActive = false
                 Jumpscare_Mover.Face.Image = "rbxassetid://77341058717266"
                 jumpscareSound:Play()
-                
+
                 task.wait(0.03333333333333333)
                 Jumpscare_Mover.Face.ImageColor3 = Color3.new(1, 0, 0)
                 Jumpscare_Mover.Static.ImageTransparency = 0
                 Jumpscare_Mover.Static2.ImageTransparency = 0.5
-                
+
                 task.wait(0.06666666666666667)
                 Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
                 Jumpscare_Mover.FaceAngry.Visible = true
-                
+
                 task.wait(0.06666666666666667)
                 Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
                 Jumpscare_Mover.Face.Visible = false
                 Jumpscare_Mover.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
-                
+
                 task.wait(0.75)
                 applyDamage()
-                
+
                 task.wait(0.1)
                 Jumpscare_Mover.FaceAngry.Visible = false
                 Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 1, 1)
                 Jumpscare_Mover.Static.ImageTransparency = 1
                 Jumpscare_Mover.Static2.ImageTransparency = 1
-                
+
                 task.wait(0.06666666666666667)
                 Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 0, 0)
-                
+
                 task.wait(0.06666666666666667)
                 Jumpscare_Mover.BackgroundColor3 = Color3.new(0, 0, 0)
-                
+
                 task.wait(0.06666666666666667)
                 break
             end
         end
-        
+
         LookVector = arg1.CFrame.LookVector
     end
 end)
@@ -1385,36 +1663,36 @@ if isActive then
     if not wasMoving then
         Jumpscare_Mover.Face.Image = "rbxassetid://77341058717266"
         jumpscareSound:Play()
-        
+
         task.wait(0.03333333333333333)
         Jumpscare_Mover.Face.ImageColor3 = Color3.new(1, 0, 0)
         Jumpscare_Mover.Static.ImageTransparency = 0
         Jumpscare_Mover.Static2.ImageTransparency = 0.5
-        
+
         task.wait(0.06666666666666667)
         Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 0, 0)
         Jumpscare_Mover.FaceAngry.Visible = true
-        
+
         task.wait(0.06666666666666667)
         Jumpscare_Mover.FaceAngry.ImageColor3 = Color3.new(1, 1, 1)
         Jumpscare_Mover.Face.Visible = false
         Jumpscare_Mover.FaceAngry.Size = UDim2.new(0.8, 0, 0.8, 0)
-        
+
         task.wait(0.75)
         applyDamage()
-        
+
         task.wait(0.1)
         Jumpscare_Mover.FaceAngry.Visible = false
         Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 1, 1)
         Jumpscare_Mover.Static.ImageTransparency = 1
         Jumpscare_Mover.Static2.ImageTransparency = 1
-        
+
         task.wait(0.06666666666666667)
         Jumpscare_Mover.BackgroundColor3 = Color3.new(1, 0, 0)
-        
+
         task.wait(0.06666666666666667)
         Jumpscare_Mover.BackgroundColor3 = Color3.new(0, 0, 0)
-        
+
         task.wait(0.06666666666666667)
     else
         spawnSound:Stop()
@@ -6239,5 +6517,5 @@ for _, entity in pairs(workspace:GetChildren()) do
     end
 end
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "Loading... Doors HardCoreTwo V10.6 By HeavenNow :)"
+hint.Text = "Loading... Doors HardCoreTwo V10.6.5 By HeavenNow :)"
 game.Debris:AddItem(hint, 3)

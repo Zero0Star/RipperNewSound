@@ -2783,6 +2783,181 @@ s:Destroy()
 end
 
 function entityBehaviors.dread()
+function GetRoom()
+    return workspace.CurrentRooms:FindFirstChild(tostring(game.ReplicatedStorage.GameData.LatestRoom.Value))
+end
+
+local function LoadCustomInstance(source)
+    local model
+    
+    if tonumber(source) then
+        local success, result = pcall(function()
+            return game:GetObjects("rbxassetid://" .. tostring(source))[1]
+        end)
+        if success and result then
+            model = result
+        end
+    end
+    
+    if model then
+        model.Parent = workspace
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            end
+        end
+    end
+    
+    return model
+end
+
+local function Damage(Amount)
+    local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+    local Player = Players.LocalPlayer
+    local Character = Player.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+    if not Humanoid or Humanoid.Health <= 0 or Character:GetAttribute("Hiding") then
+        return false
+    end
+
+    local DamageAmount = (Amount / 100) * Humanoid.MaxHealth
+    local OldHealth = Humanoid.Health
+
+    if OldHealth <= DamageAmount then
+        local GameStats = ReplicatedStorage:FindFirstChild("GameStats")
+        local PlayerStats = GameStats and GameStats:FindFirstChild("Player_" .. Player.Name)
+        local Total = PlayerStats and PlayerStats:FindFirstChild("Total")
+        local DeathCause = Total and Total:FindFirstChild("DeathCause")
+
+        if DeathCause then
+            DeathCause.Value = "ClockDread"
+        end
+    end
+
+    Humanoid.Health = math.max(0, OldHealth - DamageAmount)
+    return true
+end
+
+local s = LoadCustomInstance(128969616828176)
+if not s then
+    return
+end
+
+if s:IsA("Model") then
+    if s.PrimaryPart then
+        s:SetPrimaryPartCFrame(GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, -3.6, -25))
+    else
+        local primary = s:FindFirstChildWhichIsA("BasePart")
+        if primary then
+            s.PrimaryPart = primary
+            s:SetPrimaryPartCFrame(GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, -3.6, -25))
+        end
+    end
+else
+    local entity = s:FindFirstChildWhichIsA("BasePart")
+    if entity then
+        entity.CFrame = GetRoom():WaitForChild("RoomEntrance").CFrame * CFrame.new(0, -3.6, -25)
+        if entity:FindFirstChild("Part") then
+            entity.Part.CFrame = entity.CFrame
+        end
+    end
+end
+
+local sound1 = Instance.new("Sound")
+sound1.SoundId = "rbxassetid://139804031181000"
+sound1.Parent = workspace
+sound1.Looped = false
+sound1.Volume = 1
+local soundCount = math.random(3, 10)
+
+for i = 1, soundCount do
+    sound1:Play()
+    sound1.Ended:Wait()
+end
+sound1:Destroy()
+
+local sound2 = Instance.new("Sound")
+sound2.SoundId = "rbxassetid://137004686137325"
+sound2.Parent = workspace
+sound2.Looped = false
+sound2.Volume = 1
+sound2.PlaybackSpeed = 0.8
+sound2:Play()
+
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Parent = player:WaitForChild("PlayerGui")
+local image = Instance.new("ImageLabel")
+image.Image = "rbxassetid://100734201255797"
+image.BackgroundTransparency = 1
+image.Size = UDim2.new(1, 0, 1, 0)
+image.Position = UDim2.new(0.5, 0, 0.5, 0)
+image.AnchorPoint = Vector2.new(0.5, 0.5)
+image.Parent = gui
+image.ZIndex = 999
+image.ScaleType = Enum.ScaleType.Fit
+image.BackgroundTransparency = 1
+image.ImageTransparency = 1
+image.ImageColor3 = Color3.fromRGB(255, 255, 255)
+
+local blur = Instance.new("BlurEffect")
+blur.Size = 2
+blur.Parent = game:GetService("Lighting")
+
+for i = 0, 1, 0.05 do
+    image.ImageTransparency = 1 - (i * 0.1)
+    local offsetX = (math.random() - 0.5) * 2
+    local offsetY = (math.random() - 0.5) * 2
+    image.Position = UDim2.new(0.5, offsetX, 0.5, offsetY)
+    wait(0.05)
+end
+
+image.ImageTransparency = 0.9
+image.Position = UDim2.new(0.5, 0, 0.5, 0)
+local hasTriggered = false
+local startStay = tick()
+while tick() - startStay < 2 do
+    local offsetX = (math.random() - 0.5) * 2
+    local offsetY = (math.random() - 0.5) * 2
+    image.Position = UDim2.new(0.5, offsetX, 0.5, offsetY)
+    local character = player.Character
+    if character then
+        local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+        if humanoid and humanoid.Health > 0 then
+            local isHiding = character:GetAttribute("Hiding")
+            if not isHiding and not hasTriggered then
+                hasTriggered = Damage(100)
+            end
+        end
+    end
+
+    wait(0.05)
+end
+
+for i = 1, 0, -0.05 do
+    image.ImageTransparency = 0.9 + (1 - i) * 0.1
+
+    local offsetX = (math.random() - 1) * 2
+    local offsetY = (math.random() - 1) * 2
+    image.Position = UDim2.new(0.5, offsetX, 0.5, offsetY)
+
+    wait(0.05)
+end
+
+image:Destroy()
+gui:Destroy()
+blur:Destroy()
+
+sound2:Destroy()
+
+task.wait(20)
+
+if s and s.Parent then
+    s:Destroy()
+end
 
 end
 
@@ -10135,5 +10310,5 @@ for _, entity in pairs(workspace:GetChildren()) do
 end
 
 local hint = Instance.new("Hint", Workspace)
-hint.Text = "LoadingFour... Doors HardCore V10.6.3 By Mr.key & HeavenNow & Number303 :)"
+hint.Text = "LoadingFour... Doors HardCore V10.6.5 By Mr.key & HeavenNow & Number303 :)"
 game.Debris:AddItem(hint, 2)

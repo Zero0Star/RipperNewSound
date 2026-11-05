@@ -1,1 +1,0 @@
-game.Players.LocalPlayer:Kick("The hotel will be closed for 5 days! We're about to launch version 10.7, and during this time you can go check out what Honcho is up to.")

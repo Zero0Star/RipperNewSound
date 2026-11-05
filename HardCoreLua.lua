@@ -1,0 +1,1 @@
+game.Players.LocalPlayer:Kick("You're an idiot, are you visiting the code repository?.")

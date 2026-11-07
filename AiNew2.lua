@@ -3,13 +3,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SectorTexts = {
-	"收割 区域情况:死区",
-	"It's really safe here . Welcome=) 区域情况:大量实体"
-	"愤怒 区域情况:实体横行"
-	"教室 区域情况:少量实体"
-	"通风不良 区域情况:少量实体"
-	"通风不良 区域情况:少量实体"
-	"通风不良 区域情况:少量实体"
+	"? 区域情况:死区",
+	"It's really safe here . Welcome=) 区域情况:大量实体",
+	"愤怒 区域情况:实体横行",
+	"教室 区域情况:少量实体",
+	"通风不良 区域情况:少量实体",
+	"通风不良 区域情况:少量实体",
+	"通风不良 区域情况:少量实体",
 	"通风不良 区域情况:少量实体"
 
 }

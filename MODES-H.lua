@@ -15,7 +15,7 @@ else
     end
     local vu5 = game:GetObjects("rbxassetid://85104600103168")[1]
     updt()
-
+    -- Dread now loads its new model when the unchanged event timer fires.
     updt()
     updt()
    
@@ -1247,163 +1247,99 @@ local function shatterLatestRoom()
         moduleEvents.shatter(room, speed, shatterAmount, Random.new(tick()))
     end)
 end
+-- Scope the number distortion strictly to the library hints in room 50.
+-- Keep it separate from Common Sence so changing that monster cannot disable it.
 local function startIconGlitchMonitor()
     local active = true
     local connections = {}
-    local watchedPermUIs = {}
-    local watchedHints = {}
-    local watchedIcons = {}
+    local watchedPermUIs = setmetatable({}, { __mode = "k" })
+    local watchedLabels = setmetatable({}, { __mode = "k" })
     local symbols = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "#", "￥", "*", "!"}
+    local rng = Random.new()
 
     local function connect(signal, callback)
         local connection = signal:Connect(callback)
-        table.insert(connections, connection)
+        connections[#connections + 1] = connection
         return connection
     end
 
-    local function scrambleTextLabel(label)
-        if not active or not label or not label:IsA("TextLabel") then
-            return
+    -- Only PermUI > Hints > Icon > TextLabel, never unrelated icons or HUD text.
+    local function isHintDigitLabel(label)
+        if not label:IsA("TextLabel") then
+            return false
         end
-
-        label.Text = symbols[math.random(1, #symbols)]
+        local icon = label:FindFirstAncestor("Icon")
+        local hints = icon and icon:FindFirstAncestor("Hints")
+        local permUI = hints and hints:FindFirstAncestor("PermUI")
+        return permUI ~= nil and permUI:IsDescendantOf(player)
     end
 
-    local function watchIcon(icon)
-        if not active or not icon or icon.Name ~= "Icon" then
+    local function watchLabel(label)
+        if not active or not isHintDigitLabel(label) or watchedLabels[label] then
             return
         end
 
-        for _, descendant in ipairs(icon:GetDescendants()) do
-            if descendant:IsA("TextLabel") then
-                scrambleTextLabel(descendant)
+        local state = { LastWritten = nil, NativeText = label.Text }
+        watchedLabels[label] = state
+
+        local function scramble()
+            if not active or not label.Parent or not isHintDigitLabel(label) then
+                return
             end
-        end
-
-        if watchedIcons[icon] then
-            return
-        end
-
-        watchedIcons[icon] = true
-
-        connect(icon.DescendantAdded, function(descendant)
-            if descendant:IsA("TextLabel") then
-                scrambleTextLabel(descendant)
-            elseif descendant.Name == "TextLabel" then
-                scrambleTextLabel(descendant)
+            -- A self-written Text change may arrive deferred. Checking the last
+            -- output prevents the callback from recursively changing it forever.
+            if label.Text == state.LastWritten then
+                return
             end
-        end)
 
-        local directLabel = icon:FindFirstChild("TextLabel")
-        if directLabel and directLabel:IsA("TextLabel") then
-            scrambleTextLabel(directLabel)
+            state.NativeText = label.Text
+            local symbol = symbols[rng:NextInteger(1, #symbols)]
+            state.LastWritten = symbol
+            label.Text = symbol
         end
+
+        connect(label:GetPropertyChangedSignal("Text"), scramble)
+        scramble()
     end
 
-    local function inspectHintDescendant(descendant)
-        if not active then
+    local function inspectTree(instance)
+        if not active or not instance then
             return
         end
-
-        if descendant.Name == "Icon" then
-            watchIcon(descendant)
-        elseif descendant:IsA("TextLabel") and descendant.Parent and descendant.Parent.Name == "Icon" then
-            scrambleTextLabel(descendant)
+        if instance:IsA("TextLabel") then
+            watchLabel(instance)
         end
-    end
-
-    local function watchHints(hints)
-        if not active or not hints or watchedHints[hints] then
-            return
-        end
-
-        watchedHints[hints] = true
-
-        for _, descendant in ipairs(hints:GetDescendants()) do
-            inspectHintDescendant(descendant)
-        end
-
-        connect(hints.DescendantAdded, inspectHintDescendant)
-
-        for _, child in ipairs(hints:GetChildren()) do
-            if child.Name == "Icon" then
-                watchIcon(child)
+        for _, descendant in ipairs(instance:GetDescendants()) do
+            if descendant:IsA("TextLabel") then
+                watchLabel(descendant)
             end
         end
     end
 
     local function watchPermUI(permUI)
-        if not active or not permUI or watchedPermUIs[permUI] then
+        if not active or watchedPermUIs[permUI] then
             return
         end
-
         watchedPermUIs[permUI] = true
-
-        for _, descendant in ipairs(permUI:GetDescendants()) do
-            if descendant.Name == "Hints" then
-                watchHints(descendant)
-            elseif descendant.Name == "Icon" then
-                watchIcon(descendant)
-            end
-        end
-
-        connect(permUI.DescendantAdded, function(descendant)
-            if not active then
-                return
-            end
-
-            if descendant.Name == "Hints" then
-                watchHints(descendant)
-            elseif descendant.Name == "Icon" then
-                watchIcon(descendant)
-            elseif descendant:IsA("TextLabel") and descendant.Parent and descendant.Parent.Name == "Icon" then
-                scrambleTextLabel(descendant)
-            end
-        end)
+        inspectTree(permUI)
+        connect(permUI.DescendantAdded, inspectTree)
     end
 
-    local function scanForPermUI()
-        if not active then
-            return
-        end
-
-        local permUI = playerGui:FindFirstChild("PermUI") or player:FindFirstChild("PermUI")
-        if permUI then
-            watchPermUI(permUI)
-        end
-    end
-
-    scanForPermUI()
-
-    connect(playerGui.DescendantAdded, function(descendant)
-        if not active then
-            return
-        end
-
+    -- Existing, late-loaded and re-created hint UIs are all supported.
+    for _, descendant in ipairs(player:GetDescendants()) do
         if descendant.Name == "PermUI" then
             watchPermUI(descendant)
-        elseif descendant.Name == "Hints" then
-            watchHints(descendant)
-        elseif descendant.Name == "Icon" then
-            watchIcon(descendant)
-        elseif descendant:IsA("TextLabel") and descendant.Parent and descendant.Parent.Name == "Icon" then
-            scrambleTextLabel(descendant)
         end
-    end)
+    end
 
     connect(player.DescendantAdded, function(descendant)
         if not active then
             return
         end
-
         if descendant.Name == "PermUI" then
             watchPermUI(descendant)
-        elseif descendant.Name == "Hints" then
-            watchHints(descendant)
-        elseif descendant.Name == "Icon" then
-            watchIcon(descendant)
-        elseif descendant:IsA("TextLabel") and descendant.Parent and descendant.Parent.Name == "Icon" then
-            scrambleTextLabel(descendant)
+        elseif descendant:IsA("TextLabel") then
+            watchLabel(descendant)
         end
     end)
 
@@ -1411,16 +1347,18 @@ local function startIconGlitchMonitor()
         if not active then
             return
         end
-
         active = false
-
         for _, connection in ipairs(connections) do
-            pcall(function()
-                connection:Disconnect()
-            end)
+            connection:Disconnect()
         end
-
         table.clear(connections)
+
+        -- Do not leave a corrupted digit displayed outside the library.
+        for label, state in pairs(watchedLabels) do
+            if label.Parent and label.Text == state.LastWritten then
+                label.Text = state.NativeText
+            end
+        end
     end
 end
 
@@ -2279,6 +2217,23 @@ end
         end
 
         currentRooms.ChildAdded:Connect(handleRoom50)
+
+        -- Room-50 hint-number glitch must run even when Common Sence fails to
+        -- spawn. Start on actual room entry (not on room-50 preloading).
+        local stopRoom50IconGlitch = nil
+        local function updateRoom50IconGlitch()
+            if tonumber(latestRoom.Value) == 50 then
+                if not stopRoom50IconGlitch then
+                    stopRoom50IconGlitch = startIconGlitchMonitor()
+                end
+            elseif stopRoom50IconGlitch then
+                stopRoom50IconGlitch()
+                stopRoom50IconGlitch = nil
+            end
+        end
+
+        latestRoom:GetPropertyChangedSignal("Value"):Connect(updateRoom50IconGlitch)
+        updateRoom50IconGlitch()
     end
 
     if game.ReplicatedStorage.GameData.LatestRoom.Value <= 1 then
@@ -2320,9 +2275,9 @@ end
             task.wait(2)
             vu43("Made by Noonie & Ping (Original author, partly made the models and audio!)")
             task.wait(2)
-            vu43("Some sources of assets Pyxl")
+            vu43("Some of the assets belong to Pyxl")
             task.wait(4)
-            vu43("This Version reset was done by HeavenNow")
+            vu43("This version reset was done by HeavenNow")
             wait(2)
             vu43("Don't use admin, can be played by multiple people")
             wait(2)

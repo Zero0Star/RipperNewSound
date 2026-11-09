@@ -15,7 +15,7 @@ else
     end
     local vu5 = game:GetObjects("rbxassetid://85104600103168")[1]
     updt()
-    -- Dread now loads its new model when the unchanged event timer fires.
+
     updt()
     updt()
    
@@ -2316,13 +2316,13 @@ end
                 "WHATTT?",
                 "..."
             }
-           vu43("Hardcore Initiated")
+           vu43("Hardcore2.0 Initiated")
             task.wait(2)
             vu43("Made by Noonie & Ping (Original author, partly made the models and audio!)")
             task.wait(2)
-            vu43("Some Hardcore Reignite making a comeback")
+            vu43("Some sources of assets Pyxl")
             task.wait(4)
-            vu43("This version reset was done by HeavenNow")
+            vu43("This Version reset was done by HeavenNow")
             wait(2)
             vu43("Don't use admin, can be played by multiple people")
             wait(2)
@@ -7093,6 +7093,55 @@ local RunService = game:GetService("RunService")
             return
         end
 
+        -- Rebound distance shake: noticeable at medium range, stronger near the player.
+        -- This RenderStep tremor also works when individual CameraShaker bursts are subtle.
+        local reboundProximityRange = 160
+        local reboundProximityStep = "HardcoreReboundDistanceShake_"
+            .. game:GetService("HttpService"):GenerateGUID(false)
+        local reboundProximityBound = true
+        local function stopReboundProximityTremor()
+            if reboundProximityBound then
+                reboundProximityBound = false
+                RunService:UnbindFromRenderStep(reboundProximityStep)
+            end
+        end
+        RunService:BindToRenderStep(
+            reboundProximityStep,
+            Enum.RenderPriority.Camera.Value + 6,
+            function()
+                if reboundSealed or not reboundPhaseRunning or not primaryPart.Parent then
+                    stopReboundProximityTremor()
+                    return
+                end
+                local player = game.Players.LocalPlayer
+                local character = player and player.Character
+                local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+                local camera = workspace.CurrentCamera
+                if not humanoid or humanoid.Health <= 0 or not root or not camera
+                    or camera.CameraType == Enum.CameraType.Scriptable then
+                    return
+                end
+                local distance = (primaryPart.Position - root.Position).Magnitude
+                if distance >= reboundProximityRange then
+                    return
+                end
+                local proximity = math.clamp(1 - distance / reboundProximityRange, 0, 1) ^ 1.5
+                local now = os.clock()
+                camera.CFrame = camera.CFrame
+                    * CFrame.new(
+                        math.sin(now * 39) * 0.16 * proximity,
+                        math.sin(now * 47 + 0.8) * 0.13 * proximity,
+                        0
+                    )
+                    * CFrame.Angles(
+                        math.sin(now * 34) * math.rad(1.1) * proximity,
+                        math.cos(now * 28) * math.rad(0.9) * proximity,
+                        math.sin(now * 42) * math.rad(1.5) * proximity
+                    )
+            end
+        )
+
         local lastProximityShake = 0
         task.spawn(function()
             local RunService = game:GetService("RunService")
@@ -7111,21 +7160,25 @@ local RunService = game:GetService("RunService")
                 if humanoid and rootPart and humanoid.Health > 0 then
                     local distance = (primaryPart.Position - rootPart.Position).Magnitude
 
-                    if distance <= 80 and os.clock() - lastProximityShake >= 0.12 then
-                        local alpha = math.clamp(1 - distance / 80, 0, 1)
-                        local amplitude = (0.3 + 8.2 * (alpha ^ 1.35)) * 3
-                        local roughness = (45 + 35 * alpha) * 0.25
+                    if distance <= reboundProximityRange
+                        and not reboundCameraShakeStopped
+                        and os.clock() - lastProximityShake >= 0.12 then
+                        local alpha = math.clamp(1 - distance / reboundProximityRange, 0, 1)
+                        local amplitude = 0.6 + 24 * (alpha ^ 1.4)
+                        local roughness = 45 + 35 * alpha
                         local positionInfluence = 0.35 + 0.4 * alpha
                         local rotationInfluence = 0.3 + 0.4 * alpha
 
-                        reboundCameraShake:ShakeOnce(
-                            amplitude,
-                            roughness,
-                            0.01,
-                            0.16,
-                            positionInfluence,
-                            rotationInfluence
-                        )
+                        pcall(function()
+                            reboundCameraShake:ShakeOnce(
+                                amplitude,
+                                roughness,
+                                0.01,
+                                0.16,
+                                positionInfluence,
+                                rotationInfluence
+                            )
+                        end)
 
                         lastProximityShake = os.clock()
                     end
@@ -10663,6 +10716,56 @@ end
             end
         end)
 
+        -- Ripper distance shake: stronger the closer it is, independent of burst timing.
+        local ripperProximityRange = 160
+        local ripperProximityPart = ripper
+        local ripperProximityStep = "HardcoreRipperDistanceShake_"
+            .. game:GetService("HttpService"):GenerateGUID(false)
+        local ripperProximityBound = true
+        local function stopRipperProximityTremor()
+            if ripperProximityBound then
+                ripperProximityBound = false
+                RunService:UnbindFromRenderStep(ripperProximityStep)
+            end
+        end
+        RunService:BindToRenderStep(
+            ripperProximityStep,
+            Enum.RenderPriority.Camera.Value + 5,
+            function()
+                if ripper ~= ripperProximityPart or not ripperProximityPart.Parent
+                    or crucifixActivated or isJumpScaring or isRipperDespawning then
+                    stopRipperProximityTremor()
+                    return
+                end
+                local player = Players.LocalPlayer
+                local character = player and player.Character
+                local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+                local camera = workspace.CurrentCamera
+                if not humanoid or humanoid.Health <= 0 or not root or not camera
+                    or camera.CameraType == Enum.CameraType.Scriptable then
+                    return
+                end
+                local distance = (ripperProximityPart.Position - root.Position).Magnitude
+                if distance >= ripperProximityRange then
+                    return
+                end
+                local proximity = math.clamp(1 - distance / ripperProximityRange, 0, 1) ^ 1.5
+                local now = os.clock()
+                camera.CFrame = camera.CFrame
+                    * CFrame.new(
+                        math.sin(now * 42) * 0.16 * proximity,
+                        math.sin(now * 51 + 0.4) * 0.13 * proximity,
+                        0
+                    )
+                    * CFrame.Angles(
+                        math.sin(now * 36) * math.rad(1.1) * proximity,
+                        math.cos(now * 30) * math.rad(0.9) * proximity,
+                        math.sin(now * 46) * math.rad(1.5) * proximity
+                    )
+            end
+        )
+
         local lastProximityShake = 0
 
         task.spawn(function()
@@ -10690,24 +10793,26 @@ end
                     if humanoid and rootPart and humanoid.Health > 0 then
                         local distance = (visibleRipper.Position - rootPart.Position).Magnitude
 
-                        if distance <= 80
+                        if distance <= ripperProximityRange
                             and cameraShaker
                             and os.clock() - lastProximityShake >= 0.12
                         then
-                            local alpha = math.clamp(1 - distance / 80, 0, 1)
-                            local amplitude = (0.3 + 8.2 * (alpha ^ 1.35)) * 3
+                            local alpha = math.clamp(1 - distance / ripperProximityRange, 0, 1)
+                            local amplitude = 0.6 + 24 * (alpha ^ 1.4)
                             local roughness = 45 + 35 * alpha
                             local positionInfluence = 0.35 + 0.4 * alpha
                             local rotationInfluence = 0.3 + 0.4 * alpha
 
-                            cameraShaker:ShakeOnce(
-                                amplitude,
-                                roughness,
-                                0.01,
-                                0.16,
-                                positionInfluence,
-                                rotationInfluence
-                            )
+                            pcall(function()
+                                cameraShaker:ShakeOnce(
+                                    amplitude,
+                                    roughness,
+                                    0.01,
+                                    0.16,
+                                    positionInfluence,
+                                    rotationInfluence
+                                )
+                            end)
 
                             lastProximityShake = os.clock()
                         end

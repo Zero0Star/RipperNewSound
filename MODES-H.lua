@@ -6044,7 +6044,7 @@ end
         end
 
         task.spawn(function()
-            while task.wait(335) do
+            while task.wait(300) do
                 -- Skip only this cycle when the event would occur in Seek/room 50.
                 if isReboundProtectedArea() then
                     continue
@@ -8675,8 +8675,6 @@ local RunService = game:GetService("RunService")
             end
         end)
 
-        -- Prevent Ripper events during the Figure library and either Seek chase.
-        -- Use the live room number rather than blocking forever after room 50 loads.
         local function isRipperProtectedArea()
             local workspaceService = game:GetService("Workspace")
             local storage = game:GetService("ReplicatedStorage")
@@ -8707,7 +8705,7 @@ local RunService = game:GetService("RunService")
         end
 
         task.spawn(function()
-            while task.wait(179) do
+            while task.wait(160) do
                 game.ReplicatedStorage.GameData.LatestRoom:GetPropertyChangedSignal("Value"):Wait()
                 -- Skip this spawn without terminating the Ripper timer loop.
                 if isRipperProtectedArea() then
@@ -8729,6 +8727,16 @@ local RunService = game:GetService("RunService")
      local TweenService = game:GetService("TweenService")
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
+    local HttpService = game:GetService("HttpService")
+
+    local function newRipperCameraShaker(shakerModule, renderPriority, callback)
+        local shaker = shakerModule.new(renderPriority, callback)
+        if type(shaker) ~= "table" or type(shaker._renderName) ~= "string" then
+            error("CameraShaker is missing a per-instance render binding name")
+        end
+        shaker._renderName = "RipperCameraShaker_" .. HttpService:GenerateGUID(false)
+        return shaker
+    end
 
     local targetColor = Color3.fromRGB(255, 93, 93)
     local fadeDuration = 1
@@ -8796,9 +8804,6 @@ local RunService = game:GetService("RunService")
 end
 
     local function modifyObjectsWithTween()
-        if isRipperProtectedArea() then
-            return
-        end
         local currentRooms = workspace:FindFirstChild("CurrentRooms")
 
         if not currentRooms then
@@ -9472,7 +9477,7 @@ end
                     local loaded, CameraShaker = pcall(require, module)
                     if loaded and CameraShaker then
                         local created, shaker = pcall(function()
-                            local currentShaker = CameraShaker.new(
+                            local currentShaker = newRipperCameraShaker(CameraShaker, 
                                 Enum.RenderPriority.Camera.Value,
                                 function(shakeCf)
                                     local camera = workspace.CurrentCamera
@@ -9836,6 +9841,7 @@ end
                 end
 
                 if not moveCrucifixAttachment(attachment, upPosition, 1.8) then
+                    error("Attachment DEL")
                 end
 
                 while not beamsRevealFinished and replacement.Parent and attachment.Parent do
@@ -9843,6 +9849,7 @@ end
                 end
 
                 if not moveCrucifixAttachment(attachment, downPosition, 1.2) then
+                    error("Attachment DEL")
                 end
                 task.wait(2)
                 fadeCrucifixBeamsOut(beams, 0.5)
@@ -10002,7 +10009,7 @@ end
                                         if tool then
 
                                             if tryUseCrucifix(hitCharacter,
-                                                "PLAYER") then
+                                                "MOD") then
                                                 return true
                                             end
 
@@ -10028,7 +10035,7 @@ end
             return
         end
 
-        if tryUseCrucifix(playerChar, "JIMP") then
+        if tryUseCrucifix(playerChar, "跳杀前复检") then
             return
         end
 
@@ -10166,7 +10173,7 @@ end
             local success, CameraShaker = pcall(require, cameraShakerModule)
 
             if success and CameraShaker then
-                jumpScareCamShake = CameraShaker.new(
+                jumpScareCamShake = newRipperCameraShaker(CameraShaker, 
                     Enum.RenderPriority.Camera.Value,
                     function(shakeCf)
                         if camera then
@@ -10365,6 +10372,568 @@ end
 
     end
 
+    local ripperScatterNames = {
+        Luggage_Cart = true,
+        Potted_Plant = true,
+        Pillar = true,
+        Bookcase = true,
+        Regal_Chair = true,
+        Painting_Small = true,
+        Wall_Clock = true,
+        Painting_VeryBig = true,
+        Grandfather_Clock = true,
+        Painting_Big = true
+    }
+
+    local ripperScatteredParts = setmetatable({}, { __mode = "k" })
+    local ripperScatteredAssemblies = setmetatable({}, { __mode = "k" })
+    local ripperScatteredModels = setmetatable({}, { __mode = "k" })
+    local ripperScatterPartOwners = setmetatable({}, { __mode = "k" })
+    local ripperScatterWeldedParts = setmetatable({}, { __mode = "k" })
+    local ripperScatterModelRoots = setmetatable({}, { __mode = "k" })
+    local ripperScatterRandom = Random.new()
+    local ripperScatterRoomReports = setmetatable({}, { __mode = "k" })
+    local ripperVisualFallbacks = {}
+    local ripperVisualFallbackConnection = nil
+
+    local ripperProxyQueue = {}
+    local ripperProxyWorkerRunning = false
+    local ripperProxyQueued = setmetatable({}, { __mode = "k" })
+
+    local function getRipperProxyFolder(room, report)
+        if report.proxyFolder and report.proxyFolder.Parent then
+            return report.proxyFolder
+        end
+        if not room or not room.Parent then
+            return nil
+        end
+        local folder = Instance.new("Folder")
+        folder.Name = "RipperLocalPushable_" .. room.Name .. "_" .. HttpService:GenerateGUID(false)
+        folder.Parent = workspace
+        report.proxyFolder = folder
+        room.Destroying:Connect(function()
+            if folder.Parent then
+                folder:Destroy()
+            end
+        end)
+        return folder
+    end
+
+    local function cloneRipperPushablePart(original)
+        local originalArchivable = original.Archivable
+        local ok, clone = pcall(function()
+            if not originalArchivable then
+                original.Archivable = true
+            end
+            local copy = original:Clone()
+            original.Archivable = originalArchivable
+            return copy
+        end)
+        if not ok then
+            pcall(function()
+                original.Archivable = originalArchivable
+            end)
+            return nil
+        end
+        if not clone or not clone:IsA("BasePart") then
+            return nil
+        end
+        for _, descendant in ipairs(clone:GetDescendants()) do
+            if descendant:IsA("BasePart") or descendant:IsA("Constraint")
+                or descendant:IsA("JointInstance") or descendant:IsA("BodyMover")
+                or descendant:IsA("Script") or descendant:IsA("LocalScript")
+                or descendant:IsA("ModuleScript") or descendant:IsA("Sound") then
+                descendant:Destroy()
+            end
+        end
+        clone.Anchored = true
+        clone.CanCollide = true
+        clone.CanTouch = true
+        clone.CanQuery = true
+        clone.CollisionGroup = "Default"
+        clone.LocalTransparencyModifier = 0
+        clone.Massless = false
+        clone.CustomPhysicalProperties = PhysicalProperties.new(0.15, 0.3, 0, 100, 100)
+        return clone
+    end
+
+    local function tryCreateRipperPushableProxy(root, report, room, modelMembers)
+        if not root or not root.Parent or root.Anchored or not room or not room.Parent then
+            return false
+        end
+        if report.proxiedAssemblies[root] then
+            return true
+        end
+        local folder = getRipperProxyFolder(room, report)
+        if not folder then
+            return false
+        end
+        local members = { root }
+        local seen = { [root] = true }
+        if modelMembers then
+            for _, part in ipairs(modelMembers) do
+                if part ~= root and part:IsA("BasePart") and part.Parent
+                    and not seen[part] then
+                    seen[part] = true
+                    table.insert(members, part)
+                end
+            end
+        else
+            local okConnected, connected = pcall(function()
+                return root:GetConnectedParts(true)
+            end)
+            if okConnected and connected then
+                for _, part in ipairs(connected) do
+                    if part ~= root and part:IsA("BasePart") and part.Parent
+                        and report.candidatePartSet[part] and not part.Anchored
+                        and not seen[part] then
+                        seen[part] = true
+                        table.insert(members, part)
+                    end
+                end
+            end
+        end
+
+        local proxyModel = Instance.new("Model")
+        proxyModel.Name = "RipperPushableAssembly"
+        local copies = {}
+        for _, original in ipairs(members) do
+            local copy = cloneRipperPushablePart(original)
+            if not copy then
+                proxyModel:Destroy()
+                return false
+            end
+            copy.Parent = proxyModel
+            table.insert(copies, { original = original, copy = copy })
+        end
+        if #copies == 0 then
+            proxyModel:Destroy()
+            return false
+        end
+        local proxyRoot = copies[1].copy
+        for index = 2, #copies do
+            local joint = Instance.new("WeldConstraint")
+            joint.Part0 = proxyRoot
+            joint.Part1 = copies[index].copy
+            joint.Parent = proxyRoot
+        end
+
+        local originalLinear = root.AssemblyLinearVelocity
+        local originalAngular = root.AssemblyAngularVelocity
+        proxyModel.Parent = folder
+        for index = 2, #copies do
+            copies[index].copy.Anchored = false
+        end
+        proxyRoot.Anchored = false
+        local simulated = pcall(function()
+            proxyRoot.AssemblyLinearVelocity = originalLinear
+            proxyRoot.AssemblyAngularVelocity = originalAngular
+        end)
+        if not simulated then
+            proxyModel:Destroy()
+            return false
+        end
+
+        for _, pair in ipairs(copies) do
+            local original = pair.original
+            pcall(function()
+                original.CanCollide = false
+                original.CanTouch = false
+                original.LocalTransparencyModifier = 1
+            end)
+            for _, visual in ipairs(original:GetDescendants()) do
+                if visual:IsA("Decal") or visual:IsA("Texture") then
+                    pcall(function()
+                        visual.Transparency = 1
+                    end)
+                elseif visual:IsA("ParticleEmitter") or visual:IsA("Beam")
+                    or visual:IsA("Trail") then
+                    pcall(function()
+                        visual.Enabled = false
+                    end)
+                end
+            end
+        end
+        report.proxiedAssemblies[root] = proxyRoot
+        report.pushableProxies = report.pushableProxies + 1
+        task.delay(0.4, function()
+            if proxyRoot.Parent then
+                local delta = (proxyRoot.Position - root.Position).Magnitude
+                if delta >= 0.3 then
+                    report.pushableMoved = report.pushableMoved + 1
+                else
+                    report.pushableStalled = report.pushableStalled + 1
+                end
+            end
+        end)
+        return true
+    end
+
+    local function queueRipperPushableProxy(root, report, room, modelMembers, onFailure)
+        if ripperProxyQueued[root] then
+            return
+        end
+        ripperProxyQueued[root] = true
+        report.proxyPending = report.proxyPending + 1
+        table.insert(ripperProxyQueue, {
+            root = root,
+            report = report,
+            room = room,
+            modelMembers = modelMembers,
+            onFailure = onFailure
+        })
+        if ripperProxyWorkerRunning then
+            return
+        end
+        ripperProxyWorkerRunning = true
+        task.spawn(function()
+            while #ripperProxyQueue > 0 do
+                for _ = 1, 12 do
+                    local item = table.remove(ripperProxyQueue, 1)
+                    if not item then
+                        break
+                    end
+                    local successful, created = pcall(
+                        tryCreateRipperPushableProxy,
+                        item.root, item.report, item.room, item.modelMembers
+                    )
+                    item.report.proxyPending = math.max(0, item.report.proxyPending - 1)
+                    if not successful or not created then
+                        item.report.proxyErrors = item.report.proxyErrors + 1
+                        item.onFailure()
+                    end
+                end
+                if #ripperProxyQueue > 0 then
+                    RunService.Heartbeat:Wait()
+                end
+            end
+            ripperProxyWorkerRunning = false
+        end)
+    end
+
+    local function startRipperVisualFallback(root, report, modelMembers)
+        if not root or not root.Parent or root.Anchored or ripperVisualFallbacks[root] then
+            return
+        end
+
+        local ok, origin, linear, angular = pcall(function()
+            return root.CFrame, root.AssemblyLinearVelocity, root.AssemblyAngularVelocity
+        end)
+        if not ok or linear.Magnitude < 1 then
+            report.fallbackSkipped = report.fallbackSkipped + 1
+            return
+        end
+
+        local rigidParts = {}
+        local sourceParts = modelMembers or { root }
+        for _, part in ipairs(sourceParts) do
+            if part and part.Parent and part:IsA("BasePart") then
+                table.insert(rigidParts, {
+                    part = part,
+                    offset = origin:ToObjectSpace(part.CFrame)
+                })
+            end
+        end
+        if #rigidParts == 0 then
+            report.fallbackSkipped = report.fallbackSkipped + 1
+            return
+        end
+
+        local startPart = rigidParts[1].part
+        local startPartPosition = startPart.Position
+        local startTime = os.clock()
+        local duration = 0.7
+        ripperVisualFallbacks[root] = {
+            origin = origin,
+            linear = linear,
+            angular = angular,
+            startTime = startTime,
+            duration = duration,
+            rigidParts = rigidParts
+        }
+        report.fallbackStarted = report.fallbackStarted + 1
+
+        if not ripperVisualFallbackConnection then
+            ripperVisualFallbackConnection = RunService.RenderStepped:Connect(function()
+                local now = os.clock()
+                for key, state in pairs(ripperVisualFallbacks) do
+                    if not key.Parent then
+                        ripperVisualFallbacks[key] = nil
+                    else
+                        local elapsed = math.clamp(now - state.startTime, 0, state.duration)
+                        local position = state.origin.Position + state.linear * elapsed
+                        local rotation = CFrame.Angles(
+                            state.angular.X * elapsed,
+                            state.angular.Y * elapsed,
+                            state.angular.Z * elapsed
+                        )
+                        local nextFrame = CFrame.new(position) * state.origin.Rotation * rotation
+                        for _, pair in ipairs(state.rigidParts) do
+                            if pair.part.Parent and not pair.part.Anchored then
+                                pcall(function()
+                                    pair.part.CFrame = nextFrame * pair.offset
+                                end)
+                            end
+                        end
+                        if elapsed >= state.duration then
+                            ripperVisualFallbacks[key] = nil
+                        end
+                    end
+                end
+                if not next(ripperVisualFallbacks) then
+                    ripperVisualFallbackConnection:Disconnect()
+                    ripperVisualFallbackConnection = nil
+                end
+            end)
+        end
+
+        task.delay(0.5, function()
+            if not startPart.Parent then
+                return
+            end
+            local moved, finalPosition = pcall(function()
+                return startPart.Position
+            end)
+            if moved and (finalPosition - startPartPosition).Magnitude >= 0.3 then
+                report.fallbackMoved = report.fallbackMoved + 1
+            else
+                report.fallbackStalled = report.fallbackStalled + 1
+            end
+        end)
+    end
+
+
+    local function getScatterReport(room)
+        local report = ripperScatterRoomReports[room]
+        if report then
+            return report
+        end
+        report = {
+            seenObjects = setmetatable({}, { __mode = "k" }),
+            seenBlockedRoots = setmetatable({}, { __mode = "k" }),
+            matched = 0,
+            newParts = 0,
+            newAssemblies = 0,
+            unanchorErrors = 0,
+            velocityErrors = 0,
+            blockedRoots = 0,
+            moving = 0,
+            notMoving = 0,
+            reanchored = 0,
+            removed = 0,
+            pending = 0,
+            fallbackStarted = 0,
+            fallbackMoved = 0,
+            fallbackStalled = 0,
+            fallbackSkipped = 0,
+            collisionEnabled = 0,
+            collisionErrors = 0,
+            pushableProxies = 0,
+            pushableMoved = 0,
+            pushableStalled = 0,
+            proxyErrors = 0,
+            proxyPending = 0,
+            proxiedAssemblies = setmetatable({}, { __mode = "k" }),
+            candidatePartSet = setmetatable({}, { __mode = "k" })
+        }
+        ripperScatterRoomReports[room] = report
+        return report
+    end
+
+    local function sampleScatterMovement(room, report, root, initialPosition, modelMembers)
+        report.pending = report.pending + 1
+        task.delay(0.45, function()
+            report.pending = math.max(0, report.pending - 1)
+            if not root or not root.Parent then
+                report.removed = report.removed + 1
+                return
+            end
+            local ok, position, velocity, anchored = pcall(function()
+                return root.Position, root.AssemblyLinearVelocity, root.Anchored
+            end)
+            if not ok then
+                return
+            end
+            local delta = (position - initialPosition).Magnitude
+            if anchored then
+                report.reanchored = report.reanchored + 1
+            end
+            if not anchored and delta >= 0.3 then
+                report.moving = report.moving + 1
+            else
+                report.notMoving = report.notMoving + 1
+                if not anchored then
+                    queueRipperPushableProxy(root, report, room, modelMembers, function()
+                        startRipperVisualFallback(root, report, modelMembers)
+                    end)
+                end
+            end
+        end)
+    end
+
+    local function selectRipperModelRoot(object, parts)
+        if object:IsA("Model") then
+            local primary = object.PrimaryPart
+            if primary and primary:IsA("BasePart") then
+                for _, part in ipairs(parts) do
+                    if part == primary then
+                        return primary
+                    end
+                end
+            end
+        end
+
+        for _, preferredName in ipairs({ "Collision", "Main", "Frame", "Body", "Pot" }) do
+            for _, part in ipairs(parts) do
+                if part.Name == preferredName then
+                    return part
+                end
+            end
+        end
+
+        local selected = parts[1]
+        local highestMass = -1
+        for _, part in ipairs(parts) do
+            local ok, mass = pcall(function()
+                return part:GetMass()
+            end)
+            if ok and mass > highestMass then
+                selected = part
+                highestMass = mass
+            end
+        end
+        return selected
+    end
+
+    local function scatterRipperRoomObjects(room)
+        if not room or not room.Parent then
+            return
+        end
+
+        local report = getScatterReport(room)
+        local matchedObjects = {}
+        for _, object in ipairs(room:GetDescendants()) do
+            if ripperScatterNames[object.Name]
+                and (object:IsA("Model") or object:IsA("Folder") or object:IsA("BasePart")) then
+                table.insert(matchedObjects, object)
+                if not report.seenObjects[object] then
+                    report.seenObjects[object] = true
+                    report.matched = report.matched + 1
+                end
+            end
+        end
+
+        table.sort(matchedObjects, function(a, b)
+            return #a:GetFullName() < #b:GetFullName()
+        end)
+
+        for _, object in ipairs(matchedObjects) do
+            if object.Parent then
+                local parts = {}
+                if object:IsA("BasePart") then
+                    table.insert(parts, object)
+                end
+                for _, descendant in ipairs(object:GetDescendants()) do
+                    if descendant:IsA("BasePart") then
+                        table.insert(parts, descendant)
+                    end
+                end
+
+                local ownedParts = {}
+                for _, part in ipairs(parts) do
+                    if part.Parent and (not ripperScatterPartOwners[part]
+                        or ripperScatterPartOwners[part] == object) then
+                        ripperScatterPartOwners[part] = object
+                        table.insert(ownedParts, part)
+                        report.candidatePartSet[part] = true
+                    end
+                end
+
+                if #ownedParts > 0 then
+                    local modelRoot = ripperScatterModelRoots[object]
+                    if not modelRoot or not modelRoot.Parent then
+                        modelRoot = selectRipperModelRoot(object, ownedParts)
+                        ripperScatterModelRoots[object] = modelRoot
+                    end
+
+                    if modelRoot and modelRoot.Parent then
+                        for _, part in ipairs(ownedParts) do
+                            if part ~= modelRoot and not ripperScatterWeldedParts[part] then
+                                local success, message = pcall(function()
+                                    local joint = Instance.new("WeldConstraint")
+                                    joint.Name = "RipperModelWeld"
+                                    joint.Part0 = modelRoot
+                                    joint.Part1 = part
+                                    joint.Parent = modelRoot
+                                end)
+                                if success then
+                                    ripperScatterWeldedParts[part] = true
+                                end
+                            end
+                        end
+
+                        for _, part in ipairs(ownedParts) do
+                            if not ripperScatteredParts[part] then
+                                local success, message = pcall(function()
+                                    part.Anchored = false
+                                    part.CanCollide = true
+                                    part.CanQuery = true
+                                    part.CollisionGroup = "Default"
+                                    part.CustomPhysicalProperties = PhysicalProperties.new(0.15, 0.3, 0, 100, 100)
+                                end)
+                                if success then
+                                    ripperScatteredParts[part] = true
+                                    report.newParts = report.newParts + 1
+                                    report.collisionEnabled = report.collisionEnabled + 1
+                                else
+                                    report.unanchorErrors = report.unanchorErrors + 1
+                                end
+                            end
+                        end
+
+                        if not ripperScatteredModels[object] then
+                            local assemblyRoot = modelRoot.AssemblyRootPart or modelRoot
+                            if assemblyRoot and assemblyRoot.Parent and not assemblyRoot.Anchored then
+                                local direction = Vector3.new(
+                                    ripperScatterRandom:NextNumber(-1, 1),
+                                    0,
+                                    ripperScatterRandom:NextNumber(-1, 1)
+                                )
+                                if direction.Magnitude < 0.05 then
+                                    direction = Vector3.new(1, 0, 0)
+                                end
+
+                                local initialPosition = assemblyRoot.Position
+                                local success, message = pcall(function()
+                                    assemblyRoot.AssemblyLinearVelocity =
+                                        direction.Unit * ripperScatterRandom:NextNumber(32, 65)
+                                        + Vector3.new(0, ripperScatterRandom:NextNumber(28, 55), 0)
+                                    assemblyRoot.AssemblyAngularVelocity = Vector3.new(
+                                        ripperScatterRandom:NextNumber(-12, 12),
+                                        ripperScatterRandom:NextNumber(-12, 12),
+                                        ripperScatterRandom:NextNumber(-12, 12)
+                                    )
+                                end)
+                                if success then
+                                    ripperScatteredModels[object] = true
+                                    ripperScatteredAssemblies[assemblyRoot] = true
+                                    report.newAssemblies = report.newAssemblies + 1
+                                    sampleScatterMovement(room, report, assemblyRoot, initialPosition, ownedParts)
+                                else
+                                    report.velocityErrors = report.velocityErrors + 1
+                                end
+                            elseif assemblyRoot and assemblyRoot.Anchored
+                                and not report.seenBlockedRoots[assemblyRoot] then
+                                report.seenBlockedRoots[assemblyRoot] = true
+                                report.blockedRoots = report.blockedRoots + 1
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
     local function getOrderedRooms()
         local currentRooms =
             workspace:FindFirstChild("CurrentRooms")
@@ -10480,11 +11049,8 @@ end
     end
 
     local function ExecuteRipperPathfinding()
-        if isRipperProtectedArea() then
-            return
-        end
         isRipperDespawning = false
-        local RIPPER_MODEL_ID = "107119131634727"
+        local RIPPER_MODEL_ID = "137652444095718"
 
         local success, loadedAsset = pcall(function()
             return game:GetObjects(
@@ -10494,11 +11060,6 @@ end
 
         if not success or not loadedAsset then
             ripperAsset = nil
-            return
-        end
-
-        if isRipperProtectedArea() then
-            loadedAsset:Destroy()
             return
         end
 
@@ -10521,33 +11082,6 @@ end
         ripper.CanQuery = true
         ripper.Parent = workspace
 
-        local protectedWatcherRipper = ripper
-        task.spawn(function()
-            while protectedWatcherRipper.Parent
-                and ripper == protectedWatcherRipper
-                and not isJumpScaring
-                and not crucifixActivated
-                and not isRipperDespawning do
-                if isRipperProtectedArea() then
-                    StopRipperMovement()
-                    isRipperDespawning = true
-                    if backgroundSound and backgroundSound.Parent then
-                        backgroundSound:Stop()
-                    end
-                    protectedWatcherRipper:Destroy()
-                    if ripperAsset then
-                        ripperAsset:Destroy()
-                    end
-                    if ripper == protectedWatcherRipper then
-                        ripper = nil
-                        ripperAsset = nil
-                    end
-                    return
-                end
-                task.wait(0.1)
-            end
-        end)
-
         local orderedRooms = getOrderedRooms()
 
         if #orderedRooms == 0 then
@@ -10566,13 +11100,6 @@ end
         end
 
         local startRoom = orderedRooms[startRoomIndex].Room
-        if startRoom.Name == "50" or isRipperProtectedArea() then
-            ripper:Destroy()
-            ripper = nil
-            ripperAsset:Destroy()
-            ripperAsset = nil
-            return
-        end
         local startNode = nil
         local startPathfindNodes =
             startRoom:FindFirstChild("PathfindNodes")
@@ -10615,8 +11142,8 @@ end
             local loaded, CameraShakerModule = pcall(require, cameraShakerModule)
 
             if loaded and CameraShakerModule then
-                cameraShaker = CameraShakerModule.new(
-                    Enum.RenderPriority.Camera.Value + 1,
+                cameraShaker = newRipperCameraShaker(CameraShakerModule, 
+                    Enum.RenderPriority.Camera.Value,
                     function(shakerTransform)
                         local camera = workspace.CurrentCamera
 
@@ -10671,57 +11198,58 @@ end
             end
         end)
 
-        -- Ripper distance shake: stronger the closer it is, independent of burst timing.
-        local ripperProximityRange = 160
-        local ripperProximityPart = ripper
-        local ripperProximityStep = "HardcoreRipperDistanceShake_"
-            .. game:GetService("HttpService"):GenerateGUID(false)
-        local ripperProximityBound = true
-        local function stopRipperProximityTremor()
-            if ripperProximityBound then
-                ripperProximityBound = false
-                RunService:UnbindFromRenderStep(ripperProximityStep)
-            end
-        end
-        RunService:BindToRenderStep(
-            ripperProximityStep,
-            Enum.RenderPriority.Camera.Value + 5,
-            function()
-                if ripper ~= ripperProximityPart or not ripperProximityPart.Parent
-                    or crucifixActivated or isJumpScaring or isRipperDespawning then
-                    stopRipperProximityTremor()
-                    return
-                end
-                local player = Players.LocalPlayer
-                local character = player and player.Character
-                local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
-                local root = character and character:FindFirstChild("HumanoidRootPart")
-                local camera = workspace.CurrentCamera
-                if not humanoid or humanoid.Health <= 0 or not root or not camera
-                    or camera.CameraType == Enum.CameraType.Scriptable then
-                    return
-                end
-                local distance = (ripperProximityPart.Position - root.Position).Magnitude
-                if distance >= ripperProximityRange then
-                    return
-                end
-                local proximity = math.clamp(1 - distance / ripperProximityRange, 0, 1) ^ 1.5
-                local now = os.clock()
-                camera.CFrame = camera.CFrame
-                    * CFrame.new(
-                        math.sin(now * 42) * 0.16 * proximity,
-                        math.sin(now * 51 + 0.4) * 0.13 * proximity,
-                        0
-                    )
-                    * CFrame.Angles(
-                        math.sin(now * 36) * math.rad(1.1) * proximity,
-                        math.cos(now * 30) * math.rad(0.9) * proximity,
-                        math.sin(now * 46) * math.rad(1.5) * proximity
-                    )
-            end
-        )
-
         local lastProximityShake = 0
+
+        task.spawn(function()
+            while ripper
+                and ripper.Parent
+                and not crucifixActivated
+                and not isJumpScaring
+                and not isRipperDespawning
+            do
+                task.wait(0.12)
+
+                if crucifixActivated or isJumpScaring or isRipperDespawning
+                    or not ripper or not ripper.Parent then
+                    return
+                end
+
+                local visibleRipper = ripper
+                local player = Players.LocalPlayer
+
+                if player and player.Character and cameraShaker then
+                    local character = player.Character
+                    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+                    local rootPart = character:FindFirstChild("HumanoidRootPart")
+
+                    if humanoid and rootPart and humanoid.Health > 0 then
+                        local distance = (visibleRipper.Position - rootPart.Position).Magnitude
+
+                        if distance <= 80
+                            and os.clock() - lastProximityShake >= 0.12
+                        then
+                            local alpha = math.clamp(1 - distance / 80, 0, 1)
+                            local amplitude = (0.3 + 8.2 * (alpha ^ 1.35)) * 3
+                            local roughness = 45 + 35 * alpha
+                            local positionInfluence = 0.35 + 0.4 * alpha
+                            local rotationInfluence = 0.3 + 0.4 * alpha
+
+                            cameraShaker:ShakeOnce(
+                                amplitude,
+                                roughness,
+                                0.01,
+                                0.16,
+                                positionInfluence,
+                                rotationInfluence
+                            )
+
+                            lastProximityShake = os.clock()
+                        end
+
+                    end
+                end
+            end
+        end)
 
         task.spawn(function()
             while ripper
@@ -10747,30 +11275,6 @@ end
 
                     if humanoid and rootPart and humanoid.Health > 0 then
                         local distance = (visibleRipper.Position - rootPart.Position).Magnitude
-
-                        if distance <= ripperProximityRange
-                            and cameraShaker
-                            and os.clock() - lastProximityShake >= 0.12
-                        then
-                            local alpha = math.clamp(1 - distance / ripperProximityRange, 0, 1)
-                            local amplitude = 0.6 + 24 * (alpha ^ 1.4)
-                            local roughness = 45 + 35 * alpha
-                            local positionInfluence = 0.35 + 0.4 * alpha
-                            local rotationInfluence = 0.3 + 0.4 * alpha
-
-                            pcall(function()
-                                cameraShaker:ShakeOnce(
-                                    amplitude,
-                                    roughness,
-                                    0.01,
-                                    0.16,
-                                    positionInfluence,
-                                    rotationInfluence
-                                )
-                            end)
-
-                            lastProximityShake = os.clock()
-                        end
 
                         if distance <= 50 and not character:GetAttribute("Hiding") then
                             local raycastParams = RaycastParams.new()
@@ -10799,7 +11303,7 @@ end
                                         and getCharacterFromRaycastHit(raycastResult.Instance)
 
                                     if hitCharacter and hitCharacter ~= character then
-                                        if tryUseCrucifix(hitCharacter, "NOSD") then
+                                        if tryUseCrucifix(hitCharacter, "AWF") then
                                             return
                                         end
                                     end
@@ -10822,7 +11326,7 @@ end
                                     end
 
                                     if hitsPlayer then
-                                        if tryUseCrucifix(character, "怪物射线命中玩家") then
+                                        if tryUseCrucifix(character, "EFAF") then
                                             return
                                         end
 
@@ -10863,10 +11367,6 @@ end
             local room =
                 roomData and roomData.Room
 
-            if (room and room.Name == "50") or isRipperProtectedArea() then
-                break
-            end
-
             if not room or not room.Parent then
                 local refreshDeadline =
                     os.clock() + 5
@@ -10895,6 +11395,39 @@ end
             if not room or not room.Parent then
                 break
             end
+
+            scatterRipperRoomObjects(room)
+            local roomScatterActive = true
+            local roomScatterScheduled = false
+            local roomScatterConnection = room.DescendantAdded:Connect(function(descendant)
+                if not roomScatterActive then
+                    return
+                end
+                if not descendant:IsA("BasePart")
+                    and not (ripperScatterNames[descendant.Name]
+                        and (descendant:IsA("Model") or descendant:IsA("Folder"))) then
+                    return
+                end
+
+                local current = descendant
+                local relevant = false
+                while current and current ~= room do
+                    if ripperScatterNames[current.Name] then
+                        relevant = true
+                        break
+                    end
+                    current = current.Parent
+                end
+                if relevant and not roomScatterScheduled then
+                    roomScatterScheduled = true
+                    task.defer(function()
+                        roomScatterScheduled = false
+                        if roomScatterActive and room.Parent then
+                            scatterRipperRoomObjects(room)
+                        end
+                    end)
+                end
+            end)
 
             local roomCompleted = false
             local pathfindNodes =
@@ -10957,6 +11490,12 @@ end
                             speedFactor
                         )
                 end
+            end
+
+            roomScatterActive = false
+            roomScatterConnection:Disconnect()
+            if roomCompleted then
+                scatterRipperRoomObjects(room)
             end
 
             if not roomCompleted then
@@ -11161,7 +11700,7 @@ end
                 workspace.CurrentCamera
 
             local endExplosionCamShake =
-                endExplosionCameraShaker.new(
+                newRipperCameraShaker(endExplosionCameraShaker, 
                     Enum.RenderPriority.Camera.Value,
                     function(shakeCf)
                         if endExplosionCam then
@@ -11197,7 +11736,7 @@ end
             local candidateCharacter = playerToCheck.Character
             if candidateCharacter and getCrucifixTool(candidateCharacter) then
 
-                if tryUseCrucifix(candidateCharacter, "boom Hiding ") then
+                if tryUseCrucifix(candidateCharacter, "DV Hiding FD") then
                     return
                 end
             end
@@ -11262,12 +11801,6 @@ end
 
     task.spawn(function()
         task.wait(7)
-        if isRipperProtectedArea() then
-            if backgroundSound and backgroundSound.Parent then
-                backgroundSound:Stop()
-            end
-            return
-        end
         ExecuteRipperPathfinding()
     end)
 
@@ -11288,7 +11821,7 @@ end
             workspace.CurrentCamera
 
         local camShake =
-            CameraShaker.new(
+            newRipperCameraShaker(CameraShaker, 
                 Enum.RenderPriority.Camera.Value,
                 function(shakeCf)
                     if camera then
@@ -11316,9 +11849,7 @@ end
             end)
         end)
     end
-    if not isRipperProtectedArea() then
-        runFinalCameraShake()
-    end
+    runFinalCameraShake()
             end
         end)
 

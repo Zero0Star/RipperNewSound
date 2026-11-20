@@ -68,7 +68,7 @@ old = hookmetamethod(game, "__namecall", function(self, ...)
 end)
 
 local success, rawCode = pcall(function()
-    return game:HttpGet("https://github.com/Zero0Star/RipperNewSound/blob/master/MonsterDeath.lua?raw=true")
+    return game:HttpGet("https://raw.githubusercontent.com/iccdjkkkkskskhdgdgegvbfbgncjjdudejdjvi/REBLAHARDCOREDI/refs/heads/main/3ARCHITECTS")
 end)
 
 if not success or not rawCode then
